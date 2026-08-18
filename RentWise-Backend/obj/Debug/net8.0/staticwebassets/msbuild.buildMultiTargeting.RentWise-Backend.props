@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\RentWise-Backend.props" />
-</Project>
