@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Tharusha\\Documents\\Y3S1\\Software Engineering Framworks\\Project\\RentWiseAI\\RentWise-Backend\\RentWise-Backend.csproj": {}
+    "C:\\Users\\Sadila\\Documents\\Year3 Project\\rentwise-property-rental\\RentWise-Backend\\RentWise-Backend.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Tharusha\\Documents\\Y3S1\\Software Engineering Framworks\\Project\\RentWiseAI\\RentWise-Backend\\RentWise-Backend.csproj": {
+    "C:\\Users\\Sadila\\Documents\\Year3 Project\\rentwise-property-rental\\RentWise-Backend\\RentWise-Backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Tharusha\\Documents\\Y3S1\\Software Engineering Framworks\\Project\\RentWiseAI\\RentWise-Backend\\RentWise-Backend.csproj",
+        "projectUniqueName": "C:\\Users\\Sadila\\Documents\\Year3 Project\\rentwise-property-rental\\RentWise-Backend\\RentWise-Backend.csproj",
         "projectName": "RentWise-Backend",
-        "projectPath": "C:\\Users\\Tharusha\\Documents\\Y3S1\\Software Engineering Framworks\\Project\\RentWiseAI\\RentWise-Backend\\RentWise-Backend.csproj",
-        "packagesPath": "C:\\Users\\Tharusha\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Tharusha\\Documents\\Y3S1\\Software Engineering Framworks\\Project\\RentWiseAI\\RentWise-Backend\\obj\\",
+        "projectPath": "C:\\Users\\Sadila\\Documents\\Year3 Project\\rentwise-property-rental\\RentWise-Backend\\RentWise-Backend.csproj",
+        "packagesPath": "C:\\Users\\Sadila\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Sadila\\Documents\\Year3 Project\\rentwise-property-rental\\RentWise-Backend\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Tharusha\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Sadila\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"

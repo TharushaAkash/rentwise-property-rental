@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RentWise-Backend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f749f22bc6afd0705477575989f474cf1cac81dd")]
 [assembly: System.Reflection.AssemblyProductAttribute("RentWise-Backend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RentWise-Backend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
