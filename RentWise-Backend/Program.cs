@@ -12,6 +12,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
 builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
 builder.Services.AddScoped<IApplicationService, ApplicationService>();
+builder.Services.AddScoped<ITenantPreferenceService, TenantPreferenceService>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
