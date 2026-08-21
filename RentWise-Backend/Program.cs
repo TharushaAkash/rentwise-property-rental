@@ -3,16 +3,20 @@ using RentWise_Backend.Data;
 using RentWise_Backend.Services;
 using RentWise_Backend.Services.Interfaces;
 
-
-
 var builder = WebApplication.CreateBuilder(args);
 
+// Add controllers
 builder.Services.AddControllers();
-builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
 
+// Register services
+builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
+builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
+
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// PostgreSQL database connection
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")
@@ -21,6 +25,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var app = builder.Build();
 
+// Swagger UI
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
