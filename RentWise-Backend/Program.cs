@@ -11,6 +11,7 @@ builder.Services.AddControllers();
 // Register services
 builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
 builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
