@@ -1,48 +1,24 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RentWise_Backend.Models;
-using RentWise_Backend.Data;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+using RentWise_Backend.DTOs;
+using RentWise_Backend.Services;
 
-namespace RentWise_Backend.Controllers
+namespace RentWise_Backend.Controllers;
+
+[Route("api/agreements/{agreementId:int}/payments")]
+[ApiController]
+[ComponentCApiBoundary]
+public sealed class PaymentController(PaymentService service) : ControllerBase
 {
-    // Routes to /api/agreements/{agreementId}/payments
-    [Route("api/agreements/{agreementId}/payments")]
-    [ApiController]
-    public class PaymentController : ControllerBase
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<PaymentResponse>>> GetPaymentHistory(int agreementId,
+        CancellationToken cancellationToken)
+        => Ok(await service.GetHistoryAsync(agreementId, cancellationToken));
+
+    [HttpPost]
+    public async Task<ActionResult<PaymentResponse>> MakePayment(int agreementId, CreatePaymentRequest request,
+        CancellationToken cancellationToken)
     {
-        private readonly AppDbContext _context;
-
-        public PaymentController(AppDbContext context)
-        {
-            _context = context;
-        }
-
-        // GET: /api/agreements/{agreementId}/payments
-        [HttpGet]
-        public async Task<IActionResult> GetPaymentHistory(Guid agreementId)
-        {
-            var payments = await _context.Payments
-                .Where(p => p.RentalAgreementId == agreementId)
-                .ToListAsync();
-                
-            return Ok(payments);
-        }
-
-        // POST: /api/agreements/{agreementId}/payments
-        [HttpPost]
-        public async Task<IActionResult> MakePayment(Guid agreementId, [FromBody] Payment payment)
-        {
-            // Link the payment to the agreement ID from the URL
-            payment.RentalAgreementId = agreementId;
-            payment.CreatedAt = DateTime.UtcNow;
-            
-            _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
-            
-            return Ok(payment);
-        }
+        var payment = await service.CreateAsync(agreementId, request, cancellationToken);
+        return CreatedAtAction(nameof(GetPaymentHistory), new { agreementId }, payment);
     }
 }

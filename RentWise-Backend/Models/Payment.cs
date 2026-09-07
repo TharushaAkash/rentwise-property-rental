@@ -5,7 +5,8 @@ namespace RentWise_Backend.Models
     public class Payment
     {
         public Guid Id { get; set; }
-        public Guid RentalAgreementId { get; set; } // Foreign Key
+        public int RentalAgreementId { get; set; }
+        public RentalAgreement RentalAgreement { get; set; } = null!;
         
         public decimal Amount { get; set; }
         public DateTime PaymentDate { get; set; }

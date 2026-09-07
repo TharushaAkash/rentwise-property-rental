@@ -1,10 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using RentWise_Backend.Data;
+using RentWise_Backend.Services;
+using RentWise_Backend.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.Add<ComponentCExceptionFilter>());
+builder.Services.AddScoped<RentalAgreementService>();
+builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<RentReminderService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IAgreementApprovalIntegration, UnavailableAgreementApprovalIntegration>();
 
 // Register AppDbContext with PostgreSQL (Moved BEFORE builder.Build())
 builder.Services.AddDbContext<AppDbContext>(options =>

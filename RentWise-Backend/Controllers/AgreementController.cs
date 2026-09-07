@@ -1,55 +1,37 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RentWise_Backend.Models;
-using RentWise_Backend.Data;
-using System;
-using System.Threading.Tasks;
+using RentWise_Backend.DTOs;
+using RentWise_Backend.Services;
 
-namespace RentWise_Backend.Controllers
+namespace RentWise_Backend.Controllers;
+
+[Route("api/agreements")]
+[ApiController]
+[ComponentCApiBoundary]
+public sealed class AgreementController(RentalAgreementService service) : ControllerBase
 {
-    [Route("api/agreements")]
-    [ApiController]
-    public class AgreementController : ControllerBase
+    [HttpPost("draft")]
+    public async Task<ActionResult<AgreementResponse>> DraftAgreement(CreateAgreementDraftRequest request,
+        CancellationToken cancellationToken)
     {
-        private readonly AppDbContext _context;
-
-        public AgreementController(AppDbContext context)
-        {
-            _context = context;
-        }
-
-        // POST: /api/agreements/draft
-        // Business-specific: triggers the Agreement & Pricing Agent
-        [HttpPost("draft")]
-        public IActionResult DraftAgreement([FromBody] object draftRequest)
-        {
-            // TODO: Call the Agentic AI Python service here
-            return Ok(new { message = "Agentic AI triggered to draft agreement." });
-        }
-
-        // GET: /api/agreements/{id}
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetAgreement(Guid id)
-        {
-            var agreement = await _context.RentalAgreements.FindAsync(id);
-            if (agreement == null) return NotFound();
-            return Ok(agreement);
-        }
-
-        // PUT: /api/agreements/{id}/decision
-        // Handles Owner approval, rejection, or revision requests
-        [HttpPut("{id}/decision")]
-        public async Task<IActionResult> OwnerDecision(Guid id, [FromBody] string decision)
-        {
-            var agreement = await _context.RentalAgreements.FindAsync(id);
-            if (agreement == null) return NotFound();
-
-            // Apply state transition logic (e.g., Pending Owner Approval -> Active)
-            agreement.Status = decision;
-            agreement.UpdatedAt = DateTime.UtcNow;
-            
-            await _context.SaveChangesAsync();
-            return Ok(new { message = $"Agreement {id} status updated to {decision}." });
-        }
+        var agreement = await service.CreateDraftAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(GetAgreement), new { id = agreement.Id }, agreement);
     }
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<AgreementResponse>> GetAgreement(int id, CancellationToken cancellationToken)
+        => Ok(await service.GetAsync(id, cancellationToken));
+
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<AgreementResponse>>> List(CancellationToken cancellationToken,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        => Ok(await service.ListAsync(page, pageSize, cancellationToken));
+
+    [HttpPost("{id:int}/submit")]
+    public async Task<ActionResult<AgreementResponse>> Submit(int id, CancellationToken cancellationToken)
+        => Ok(await service.SubmitForApprovalAsync(id, cancellationToken));
+
+    [HttpPut("{id:int}/decision")]
+    public async Task<ActionResult<AgreementResponse>> OwnerDecision(int id, AgreementDecisionRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await service.DecideAsync(id, request, cancellationToken));
 }
