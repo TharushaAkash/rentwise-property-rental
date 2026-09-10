@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RentWise_Backend.Data;
 using RentWise_Backend.Services;
 using RentWise_Backend.Controllers;
+using RentWise_Backend.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,17 +14,24 @@ builder.Services.AddScoped<RentReminderService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IAgreementApprovalIntegration, UnavailableAgreementApprovalIntegration>();
 
-// Register AppDbContext with PostgreSQL (Moved BEFORE builder.Build())
+// Register tenant services.
+builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
+builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
+builder.Services.AddScoped<ITenantPreferenceService, TenantPreferenceService>();
+
+// Register database contexts with PostgreSQL.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
