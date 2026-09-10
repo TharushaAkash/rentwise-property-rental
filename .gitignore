@@ -1,0 +1,35 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Visual Studio
+.vs/
+
+# Node / React
+node_modules/
+dist/
+build/
+.env
+.env.local
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# IDE / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
