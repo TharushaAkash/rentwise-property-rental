@@ -1,0 +1,21 @@
+using System;
+using RentWise.API.Common;
+using RentWise.API.Modules.Users;
+
+namespace RentWise.API.Modules.PropertyManagement.Entities
+{
+    public class VerificationRecord : BaseEntity
+    {
+        public Guid PropertyId { get; set; }
+        public Property Property { get; set; } = null!;
+
+        public Guid? AdminId { get; set; }
+        public User? Admin { get; set; }
+
+        public bool IsApproved { get; set; }
+        public string Comments { get; set; } = string.Empty;
+        
+        // Output from the Property Verification Agent
+        public string AgentReport { get; set; } = string.Empty;
+    }
+}
