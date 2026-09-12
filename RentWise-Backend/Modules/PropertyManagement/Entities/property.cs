@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using RentWise.API.Common;
-using RentWise.API.Modules.Users;
+using RentWise_Backend.Models;
 
-namespace RentWise.API.Modules.PropertyManagement.Entities
+namespace RentWise_Backend.Models.PropertyManagement
 {
     public class Property : BaseEntity
     {
