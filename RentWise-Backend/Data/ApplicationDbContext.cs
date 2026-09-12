@@ -11,6 +11,8 @@ namespace RentWise_Backend.Data
         {
         }
 
+        public DbSet<User> Users { get; set; }
+
         public DbSet<TenantProfile> TenantProfiles { get; set; }
 
         public DbSet<SavedProperty> SavedProperties { get; set; }

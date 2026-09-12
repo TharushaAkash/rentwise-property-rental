@@ -4,11 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace RentWise_Backend.Models
 {
     [Table("Users")]
-    public class User
+    public class User : BaseEntity
     {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
-
         [Required]
         [MaxLength(150)]
         public string Name { get; set; } = string.Empty;
@@ -27,9 +24,5 @@ namespace RentWise_Backend.Models
 
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }
