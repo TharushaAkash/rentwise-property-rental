@@ -19,6 +19,12 @@ namespace RentWise_Backend.Data
 
         public DbSet<Application> Applications { get; set; }
 
+        // Property Management Module
+        public DbSet<RentWise_Backend.Models.PropertyManagement.Property> Properties { get; set; }
+        public DbSet<RentWise_Backend.Models.PropertyManagement.PropertyPhoto> PropertyPhotos { get; set; }
+        public DbSet<RentWise_Backend.Models.PropertyManagement.PropertyDocument> PropertyDocuments { get; set; }
+        public DbSet<RentWise_Backend.Models.PropertyManagement.VerificationRecord> VerificationRecords { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
