@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RentWise.API.Modules.PropertyManagement.Entities;
+using RentWise_Backend.Models.PropertyManagement;
 using RentWise.API.Modules.PropertyManagement.Interfaces;
 
 namespace RentWise.API.Modules.PropertyManagement.Controllers

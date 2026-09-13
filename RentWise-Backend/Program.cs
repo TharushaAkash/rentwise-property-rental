@@ -5,6 +5,11 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using RentWise_Backend.Data;
 using RentWise_Backend.Services;
+using RentWise_Backend.Common.Interfaces;
+using RentWise_Backend.Common.Services;
+using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise.API.Modules.PropertyManagement.Services;
+using Supabase;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,7 +68,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Register Module Services
 // builder.Services.AddScoped<IPropertyService, PropertyService>();
-// builder.Services.AddScoped<IPropertyPhotoService, PropertyPhotoService>();
+builder.Services.AddScoped<IPropertyPhotoService, PropertyPhotoService>();
 // builder.Services.AddScoped<IPropertyDocumentService, PropertyDocumentService>();
 // builder.Services.AddScoped<IVerificationRecordService, VerificationRecordService>();
 
@@ -80,6 +85,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // builder.Services.AddScoped<IRequestStatusLogService, RequestStatusLogService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Configure Supabase
+var supabaseUrl = builder.Configuration["Supabase:Url"];
+var supabaseKey = builder.Configuration["Supabase:Key"];
+var supabaseOptions = new SupabaseOptions { AutoConnectRealtime = true };
+var supabaseClient = new Supabase.Client(supabaseUrl, supabaseKey, supabaseOptions);
+builder.Services.AddSingleton(supabaseClient);
+builder.Services.AddScoped<ISupabaseStorageService, SupabaseStorageService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
