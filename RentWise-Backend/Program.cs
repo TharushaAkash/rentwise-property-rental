@@ -12,6 +12,7 @@ using RentWise.API.Modules.PropertyManagement.Services;
 using Supabase;
 
 var builder = WebApplication.CreateBuilder(args);
+DotNetEnv.Env.Load();
 
 // Add services to the container.
 builder.Services.AddControllers(options =>
@@ -87,8 +88,8 @@ builder.Services.AddScoped<IPropertyPhotoService, PropertyPhotoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Configure Supabase
-var supabaseUrl = builder.Configuration["Supabase:Url"];
-var supabaseKey = builder.Configuration["Supabase:Key"];
+var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? builder.Configuration["Supabase:Url"];
+var supabaseKey = Environment.GetEnvironmentVariable("SUPABASE_KEY") ?? builder.Configuration["Supabase:Key"];
 var supabaseOptions = new SupabaseOptions { AutoConnectRealtime = true };
 var supabaseClient = new Supabase.Client(supabaseUrl, supabaseKey, supabaseOptions);
 builder.Services.AddSingleton(supabaseClient);
