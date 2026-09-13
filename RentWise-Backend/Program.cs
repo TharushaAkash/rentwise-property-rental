@@ -3,10 +3,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using RentWise_Backend.Data;
-using RentWise_Backend.Services;
+using RentWise.API.Data;
+using RentWise.API.Common.Interfaces;
+using RentWise.API.Common.Repositories;
+using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise.API.Modules.PropertyManagement.Services;
+using RentWise.API.Modules.TenantMatching.Interfaces;
+using RentWise.API.Modules.TenantMatching.Services;
+using RentWise.API.Modules.Agreements.Interfaces;
+using RentWise.API.Modules.Agreements.Services;
+using RentWise.API.Modules.Maintenance.Interfaces;
+using RentWise.API.Modules.Maintenance.Services;
+using RentWise.API.Modules.Users.Services;
+using RentWise.API.Common.Services;
+using Supabase;
 
 var builder = WebApplication.CreateBuilder(args);
+DotNetEnv.Env.Load();
 
 // Add services to the container.
 builder.Services.AddControllers(options =>
@@ -59,27 +72,35 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register Generic Repository
-// builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register Module Services
-// builder.Services.AddScoped<IPropertyService, PropertyService>();
-// builder.Services.AddScoped<IPropertyPhotoService, PropertyPhotoService>();
-// builder.Services.AddScoped<IPropertyDocumentService, PropertyDocumentService>();
-// builder.Services.AddScoped<IVerificationRecordService, VerificationRecordService>();
+builder.Services.AddScoped<IPropertyService, PropertyService>();
+builder.Services.AddScoped<IPropertyPhotoService, PropertyPhotoService>();
+builder.Services.AddScoped<IPropertyDocumentService, PropertyDocumentService>();
+builder.Services.AddScoped<IVerificationRecordService, VerificationRecordService>();
 
-// builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
-// builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
-// builder.Services.AddScoped<IApplicationService, ApplicationService>();
-
-// builder.Services.AddScoped<IRentalAgreementService, RentalAgreementService>();
-// builder.Services.AddScoped<IPaymentService, PaymentService>();
-// builder.Services.AddScoped<IRentReminderService, RentReminderService>();
-
-// builder.Services.AddScoped<IMaintenanceRequestService, MaintenanceRequestService>();
-// builder.Services.AddScoped<IServiceProviderService, ServiceProviderService>();
-// builder.Services.AddScoped<IRequestStatusLogService, RequestStatusLogService>();
+builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
+builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddScoped<IRentalAgreementService, RentalAgreementService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IRentReminderService, RentReminderService>();
+
+builder.Services.AddScoped<IMaintenanceRequestService, MaintenanceRequestService>();
+builder.Services.AddScoped<IServiceProviderService, ServiceProviderService>();
+builder.Services.AddScoped<IRequestStatusLogService, RequestStatusLogService>();
+
+// Configure Supabase
+var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? builder.Configuration["Supabase:Url"];
+var supabaseKey = Environment.GetEnvironmentVariable("SUPABASE_SECRET_KEY") ?? builder.Configuration["Supabase:SecretKey"];
+var supabaseOptions = new SupabaseOptions { AutoConnectRealtime = true };
+var supabaseClient = new Supabase.Client(supabaseUrl, supabaseKey, supabaseOptions);
+builder.Services.AddSingleton(supabaseClient);
+builder.Services.AddScoped<ISupabaseStorageService, RentWise.API.Common.Services.SupabaseStorageService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -99,6 +120,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+// Initialize Supabase Client
+using (var scope = app.Services.CreateScope())
+{
+    var client = scope.ServiceProvider.GetRequiredService<Supabase.Client>();
+    await client.InitializeAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
