@@ -87,7 +87,7 @@ namespace RentWise_Backend.Services
 
         private string GenerateJwtToken(User user)
         {
-            var jwtSecret = _configuration["Jwt:SecretKey"] ?? "RentWiseAI_SuperSecretKey_For_JwtTokenGeneration_2026";
+            var jwtSecret = _configuration["Jwt:Key"] ?? "RentWiseAI_SuperSecretKey_For_JwtTokenGeneration_2026";
             var issuer = _configuration["Jwt:Issuer"] ?? "RentWiseApi";
             var audience = _configuration["Jwt:Audience"] ?? "RentWiseUsers";
 

@@ -68,7 +68,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register Module Services
-// builder.Services.AddScoped<IPropertyService, PropertyService>();
+builder.Services.AddScoped<IPropertyService, PropertyService>();
 builder.Services.AddScoped<IPropertyPhotoService, PropertyPhotoService>();
 // builder.Services.AddScoped<IPropertyDocumentService, PropertyDocumentService>();
 // builder.Services.AddScoped<IVerificationRecordService, VerificationRecordService>();
@@ -89,7 +89,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Configure Supabase
 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? builder.Configuration["Supabase:Url"];
-var supabaseKey = Environment.GetEnvironmentVariable("SUPABASE_KEY") ?? builder.Configuration["Supabase:Key"];
+var supabaseKey = Environment.GetEnvironmentVariable("SUPABASE_SECRET_KEY") ?? builder.Configuration["Supabase:SecretKey"];
 var supabaseOptions = new SupabaseOptions { AutoConnectRealtime = true };
 var supabaseClient = new Supabase.Client(supabaseUrl, supabaseKey, supabaseOptions);
 builder.Services.AddSingleton(supabaseClient);
