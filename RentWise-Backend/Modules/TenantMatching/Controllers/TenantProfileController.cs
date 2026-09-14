@@ -94,5 +94,17 @@ namespace RentWise_Backend.Controllers
                 });
             }
         }
+        // DELETE: api/tenant-profile/1
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> DeleteProfile(int userId)
+        {
+            var result = await _tenantProfileService.DeleteAsync(userId);
+            if (!result)
+            {
+                return NotFound(new { message = "Tenant profile not found." });
+            }
+
+            return NoContent();
+        }
     }
 }

@@ -13,5 +13,7 @@ namespace RentWise_Backend.Services.Interfaces
         Task<TenantProfile?> UpdateAsync(
             int userId,
             UpdateTenantProfileDto dto);
+
+        Task<bool> DeleteAsync(int userId);
     }
 }

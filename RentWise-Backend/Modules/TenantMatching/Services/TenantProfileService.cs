@@ -109,5 +109,19 @@ namespace RentWise_Backend.Services
 
             return profile;
         }
+        public async Task<bool> DeleteAsync(int userId)
+        {
+            var profile = await _context.TenantProfiles
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+
+            if (profile == null)
+            {
+                return false;
+            }
+
+            _context.TenantProfiles.Remove(profile);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
