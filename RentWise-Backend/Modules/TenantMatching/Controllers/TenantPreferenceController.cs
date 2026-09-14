@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using RentWise_Backend.Services.Interfaces;
-
 namespace RentWise_Backend.Controllers
 {
     [ApiController]
@@ -9,24 +8,21 @@ namespace RentWise_Backend.Controllers
     {
         private readonly ITenantPreferenceService
             _tenantPreferenceService;
-
         public TenantPreferenceController(
             ITenantPreferenceService tenantPreferenceService)
         {
             _tenantPreferenceService =
                 tenantPreferenceService;
         }
-
         // GET: api/tenant-preferences/1
         [HttpGet("{tenantProfileId}")]
         public async Task<IActionResult> GetPreferences(
-            int tenantProfileId)
+            Guid tenantProfileId)
         {
             var preferences =
                 await _tenantPreferenceService
                     .GetSearchPreferencesAsync(
                         tenantProfileId);
-
             if (preferences == null)
             {
                 return NotFound(new
@@ -34,7 +30,6 @@ namespace RentWise_Backend.Controllers
                     message = "Tenant profile not found."
                 });
             }
-
             return Ok(preferences);
         }
     }
