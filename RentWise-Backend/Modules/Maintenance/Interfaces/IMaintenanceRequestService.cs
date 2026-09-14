@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using RentWise.API.Modules.Maintenance.Entities;
+using RentWise_Backend.Models;
 
-namespace RentWise.API.Modules.Maintenance.Interfaces
+namespace RentWise_Backend.Services.Interfaces
 {
     public interface IMaintenanceRequestService
     {

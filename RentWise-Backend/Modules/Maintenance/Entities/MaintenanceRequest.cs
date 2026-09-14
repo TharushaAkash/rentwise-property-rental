@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace RentWise_Backend.MaintenanceManagement.Models
+namespace RentWise_Backend.Models
 {
     [Table("MaintenanceRequests")]
     public class MaintenanceRequest

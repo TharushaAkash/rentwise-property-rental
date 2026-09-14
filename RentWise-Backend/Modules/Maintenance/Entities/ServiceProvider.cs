@@ -1,6 +1,6 @@
-using RentWise.API.Common;
+using RentWise_Backend.Common;
 
-namespace RentWise.API.Modules.Maintenance.Entities
+namespace RentWise_Backend.Models
 {
     public class ServiceProvider : BaseEntity
     {

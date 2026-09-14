@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 
-namespace RentWise.API.Modules.PropertyManagement.Controllers
+namespace RentWise_Backend.Controllers
 {
     [ApiController]
     [Route("api/property-applications")]
