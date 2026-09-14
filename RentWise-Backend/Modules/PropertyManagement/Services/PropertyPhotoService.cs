@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise_Backend.Services.Interfaces;
 using RentWise_Backend.Data;
 using RentWise_Backend.Models.PropertyManagement;
 using System;
@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace RentWise.API.Modules.PropertyManagement.Services
+namespace RentWise_Backend.Services
 {
     public class PropertyPhotoService : IPropertyPhotoService
     {
