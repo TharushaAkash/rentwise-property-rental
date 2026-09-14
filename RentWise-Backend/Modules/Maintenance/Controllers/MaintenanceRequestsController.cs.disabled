@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RentWise.API.Modules.Maintenance.Interfaces;
-using RentWise.API.Modules.Maintenance.Entities;
-using RentWise.API.Data;
+using RentWise_Backend.Services.Interfaces;
+using RentWise_Backend.Models;
+using RentWise_Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
-namespace RentWise.API.Modules.Maintenance.Controllers
+namespace RentWise_Backend.Controllers
 {
     public class UpdateMaintenanceStatusDto
     {

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using RentWise_Backend.Models.PropertyManagement;
-using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise_Backend.Services.Interfaces;
 using RentWise_Backend.Data;
 
-namespace RentWise.API.Modules.PropertyManagement.Services
+namespace RentWise_Backend.Services
 {
     public class PropertyService : IPropertyService
     {

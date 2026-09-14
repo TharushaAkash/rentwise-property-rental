@@ -1,4 +1,4 @@
-namespace RentWise.API.Modules.Maintenance.Entities
+namespace RentWise_Backend.Models
 {
     public enum MaintenanceStatus
     {
