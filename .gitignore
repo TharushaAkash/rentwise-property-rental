@@ -1,3 +1,22 @@
+# .NET
+**/bin/
+**/obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+
+# Node / React
+node_modules/
+dist/
+build/
+
 # Environments
 .env
 .env.local
@@ -5,19 +24,20 @@
 .env.test
 .env.production
 
-# Build results
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
 
-# Visual Studio / VS Code
-.vscode/
-.vs/
-*.user
-*.userosscache
-*.sln.docstates
+# Python
+__pycache__/
+*.pyc
+venv/
 
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
