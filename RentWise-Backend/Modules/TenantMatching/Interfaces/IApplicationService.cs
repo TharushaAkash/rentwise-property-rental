@@ -17,5 +17,9 @@ namespace RentWise_Backend.Services.Interfaces
         Task<Application?> UpdateStatusAsync(
             int applicationId,
             UpdateApplicationStatusDto dto);
+
+        Task<List<Application>> GetAllApplicationsAsync();
+
+        Task<bool> DeleteApplicationAsync(int applicationId);
     }
 }

@@ -115,5 +115,26 @@ namespace RentWise_Backend.Services
 
             return application;
         }
+        public async Task<List<Application>> GetAllApplicationsAsync()
+        {
+            return await _context.Applications
+                .OrderByDescending(a => a.AppliedAt)
+                .ToListAsync();
+        }
+
+        public async Task<bool> DeleteApplicationAsync(int applicationId)
+        {
+            var application = await _context.Applications
+                .FirstOrDefaultAsync(a => a.Id == applicationId);
+
+            if (application == null)
+            {
+                return false;
+            }
+
+            _context.Applications.Remove(application);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

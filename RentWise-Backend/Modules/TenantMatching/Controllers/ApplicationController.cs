@@ -107,5 +107,26 @@ namespace RentWise_Backend.Controllers
                 });
             }
         }
+
+        // GET: api/applications
+        [HttpGet]
+        public async Task<IActionResult> GetAllApplications()
+        {
+            var applications = await _applicationService.GetAllApplicationsAsync();
+            return Ok(applications);
+        }
+
+        // DELETE: api/applications/1
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteApplication(int id)
+        {
+            var result = await _applicationService.DeleteApplicationAsync(id);
+            if (!result)
+            {
+                return NotFound(new { message = "Application not found." });
+            }
+
+            return NoContent();
+        }
     }
 }
