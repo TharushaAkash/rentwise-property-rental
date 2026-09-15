@@ -4,11 +4,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using RentWise_Backend.Data;
+using RentWise_Backend.Services;
+using RentWise_Backend.Services.Interfaces;
+using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise.API.Modules.PropertyManagement.Services;
 using RentWise_Backend.Common.Interfaces;
 // using RentWise_Backend.Common.Repositories;
-using RentWise_Backend.Services.Interfaces;
-using RentWise_Backend.Services;
-using RentWise_Backend.Services;
 using RentWise_Backend.Common.Services;
 using Supabase;
 
@@ -65,6 +66,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // Register Generic Repository
 // builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
@@ -80,9 +84,11 @@ builder.Services.AddScoped<IApplicationService, ApplicationService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// builder.Services.AddScoped<IRentalAgreementService, RentalAgreementService>();
-// builder.Services.AddScoped<IPaymentService, PaymentService>();
-// builder.Services.AddScoped<IRentReminderService, RentReminderService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IAgreementApprovalIntegration, UnavailableAgreementApprovalIntegration>();
+builder.Services.AddScoped<RentalAgreementService>();
+builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<RentReminderService>();
 
 // builder.Services.AddScoped<IMaintenanceRequestService, MaintenanceRequestService>();
 // builder.Services.AddScoped<IServiceProviderService, ServiceProviderService>();

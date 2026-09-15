@@ -6,6 +6,7 @@ namespace RentWise_Backend.Models.PropertyManagement
     public class VerificationRecord : BaseEntity
     {
         public Guid PropertyId { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public Property Property { get; set; } = null!;
 
         public Guid? AdminId { get; set; }

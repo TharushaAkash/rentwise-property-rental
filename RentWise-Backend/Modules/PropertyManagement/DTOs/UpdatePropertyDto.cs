@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using RentWise_Backend.Models;
+using RentWise_Backend.Models.PropertyManagement;
 
-namespace RentWise_Backend.Models.PropertyManagement
+namespace RentWise_Backend.Modules.PropertyManagement.DTOs
 {
-    public class Property : BaseEntity
+    public class UpdatePropertyDto
     {
-        public Guid OwnerId { get; set; }
-        public User Owner { get; set; } = null!;
-
         [Required]
         public string Title { get; set; } = string.Empty;
 
@@ -24,16 +21,13 @@ namespace RentWise_Backend.Models.PropertyManagement
         public int Bedrooms { get; set; }
         public int Bathrooms { get; set; }
         
-        public string Facilities { get; set; } = string.Empty; // Comma separated for simplicity
+        public string Facilities { get; set; } = string.Empty;
 
         public int Sqft { get; set; }
         public string PropertyType { get; set; } = string.Empty;
         public List<string> FeatureTags { get; set; } = new List<string>();
         public int PhotoCount { get; set; }
-        public PropertyStatus Status { get; set; } = PropertyStatus.PendingVerification;
 
-        public ICollection<PropertyPhoto> Photos { get; set; } = new List<PropertyPhoto>();
-        public ICollection<PropertyDocument> Documents { get; set; } = new List<PropertyDocument>();
-        public ICollection<VerificationRecord> VerificationRecords { get; set; } = new List<VerificationRecord>();
+        public PropertyStatus? Status { get; set; } // Admins can update this
     }
 }
