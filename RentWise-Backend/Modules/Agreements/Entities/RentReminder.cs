@@ -1,10 +1,14 @@
+using System;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace RentWise_Backend.Models
 {
-    public class RentReminder
+    [Table("RentReminders")]
+    public class RentReminder : BaseEntity
     {
-        public int Id { get; set; }
-
-        public int RentalAgreementId { get; set; }
+        public Guid RentalAgreementId { get; set; }
+        
+        [ForeignKey("RentalAgreementId")]
         public RentalAgreement RentalAgreement { get; set; } = null!;
 
         public DateTime DueDate { get; set; }
