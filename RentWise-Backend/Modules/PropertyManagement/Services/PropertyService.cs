@@ -21,6 +21,7 @@ namespace RentWise.API.Modules.PropertyManagement.Services
         {
             return await _context.Properties
                 .Include(p => p.Photos)
+                .Include(p => p.Owner)
                 .ToListAsync();
         }
 
@@ -28,6 +29,7 @@ namespace RentWise.API.Modules.PropertyManagement.Services
         {
             return await _context.Properties
                 .Include(p => p.Photos)
+                .Include(p => p.Owner)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 

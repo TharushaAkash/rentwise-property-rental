@@ -53,7 +53,11 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             };
 
             var createdProperty = await _propertyService.CreatePropertyAsync(property);
-            return CreatedAtAction(nameof(GetProperties), new { id = createdProperty.Id }, createdProperty);
+            
+            // Explicitly load the Owner so it's included in the response
+            var propertyWithOwner = await _propertyService.GetPropertyByIdAsync(createdProperty.Id);
+            
+            return CreatedAtAction(nameof(GetProperties), new { id = createdProperty.Id }, propertyWithOwner);
         }
 
         [HttpPut("{id}")]
