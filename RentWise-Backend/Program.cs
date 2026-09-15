@@ -9,6 +9,7 @@ using RentWise_Backend.Services.Interfaces;
 using RentWise.API.Modules.PropertyManagement.Interfaces;
 using RentWise.API.Modules.PropertyManagement.Services;
 using RentWise_Backend.Common.Interfaces;
+// using RentWise_Backend.Common.Repositories;
 using RentWise_Backend.Common.Services;
 using Supabase;
 
@@ -68,7 +69,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register Generic Repository - missing in this branch
+// Register Generic Repository
 // builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register Module Services

@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RentWise_Backend.Models.PropertyManagement;
-using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise_Backend.Services.Interfaces;
 using RentWise_Backend.Common.Interfaces;
 using Microsoft.AspNetCore.Http;
 
-namespace RentWise.API.Modules.PropertyManagement.Controllers
+namespace RentWise_Backend.Controllers
 {
     [ApiController]
     [Route("api/properties/{propertyId}/photos")]

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace RentWise.API.Modules.PropertyManagement.Interfaces
+namespace RentWise_Backend.Services.Interfaces
 {
     public interface IPropertyDocumentService
     {

@@ -3,24 +3,20 @@ using RentWise_Backend.Data;
 using RentWise_Backend.DTOs.Tenant;
 using RentWise_Backend.Models;
 using RentWise_Backend.Services.Interfaces;
-
 namespace RentWise_Backend.Services
 {
     public class TenantProfileService : ITenantProfileService
     {
         private readonly ApplicationDbContext _context;
-
         public TenantProfileService(ApplicationDbContext context)
         {
             _context = context;
         }
-
-        public async Task<TenantProfile?> GetByUserIdAsync(int userId)
+        public async Task<TenantProfile?> GetByUserIdAsync(Guid userId)
         {
             return await _context.TenantProfiles
                 .FirstOrDefaultAsync(t => t.UserId == userId);
         }
-
         public async Task<TenantProfile> CreateAsync(
             CreateTenantProfileDto dto)
         {
@@ -33,21 +29,18 @@ namespace RentWise_Backend.Services
                     "Minimum budget cannot be greater than maximum budget."
                 );
             }
-
             // Check whether this user already has a profile
             var existingProfile =
                 await _context.TenantProfiles
                     .FirstOrDefaultAsync(
                         t => t.UserId == dto.UserId
                     );
-
             if (existingProfile != null)
             {
                 throw new InvalidOperationException(
                     "Tenant profile already exists."
                 );
             }
-
             var profile = new TenantProfile
             {
                 UserId = dto.UserId,
@@ -58,16 +51,12 @@ namespace RentWise_Backend.Services
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-
             _context.TenantProfiles.Add(profile);
-
             await _context.SaveChangesAsync();
-
             return profile;
         }
-
         public async Task<TenantProfile?> UpdateAsync(
-            int userId,
+            Guid userId,
             UpdateTenantProfileDto dto)
         {
             var profile =
@@ -75,12 +64,10 @@ namespace RentWise_Backend.Services
                     .FirstOrDefaultAsync(
                         t => t.UserId == userId
                     );
-
             if (profile == null)
             {
                 return null;
             }
-
             if (dto.PreferredBudgetMin.HasValue &&
                 dto.PreferredBudgetMax.HasValue &&
                 dto.PreferredBudgetMin > dto.PreferredBudgetMax)
@@ -89,25 +76,30 @@ namespace RentWise_Backend.Services
                     "Minimum budget cannot be greater than maximum budget."
                 );
             }
-
             profile.PreferredBudgetMin =
                 dto.PreferredBudgetMin;
-
             profile.PreferredBudgetMax =
                 dto.PreferredBudgetMax;
-
             profile.PreferredLocationText =
                 dto.PreferredLocationText;
-
             profile.Occupation =
                 dto.Occupation;
-
             profile.UpdatedAt =
                 DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
-
             return profile;
+        }
+        public async Task<bool> DeleteAsync(Guid userId)
+        {
+            var profile = await _context.TenantProfiles
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+            if (profile == null)
+            {
+                return false;
+            }
+            _context.TenantProfiles.Remove(profile);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

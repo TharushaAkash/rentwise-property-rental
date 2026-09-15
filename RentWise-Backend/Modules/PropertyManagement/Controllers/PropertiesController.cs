@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RentWise_Backend.Models.PropertyManagement;
-using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise_Backend.Services.Interfaces;
 
-namespace RentWise.API.Modules.PropertyManagement.Controllers
+namespace RentWise_Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
