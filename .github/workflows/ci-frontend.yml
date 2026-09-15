@@ -1,0 +1,38 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'RentWise-Frontend/**'
+  pull_request:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'RentWise-Frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./RentWise-Frontend
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './RentWise-Frontend/package-lock.json'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Lint
+      run: npm run lint
+      continue-on-error: true # Depending on how strict we want the CI to be initially
+      
+    - name: Build
+      run: npm run build
