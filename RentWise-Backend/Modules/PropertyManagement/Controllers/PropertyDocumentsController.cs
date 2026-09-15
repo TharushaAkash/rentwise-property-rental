@@ -33,7 +33,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "PropertyOwner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> CreateDocument(Guid propertyId, [FromBody] PropertyDocument document)
         {
             document.PropertyId = propertyId;
@@ -42,7 +42,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyOwner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> UpdateDocument(Guid propertyId, Guid id, [FromBody] PropertyDocument document)
         {
             if (id != document.Id || propertyId != document.PropertyId) return BadRequest();
@@ -51,7 +51,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyOwner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteDocument(Guid propertyId, Guid id)
         {
             await _documentService.DeleteDocumentAsync(id);

@@ -37,7 +37,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "PropertyOwner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> CreatePhoto(Guid propertyId, IFormFile file, [FromForm] bool isPrimary = false)
         {
             if (file == null || file.Length == 0)
@@ -62,7 +62,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyOwner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> UpdatePhoto(Guid propertyId, Guid id, [FromBody] PropertyPhoto photo)
         {
             if (id != photo.Id || propertyId != photo.PropertyId) return BadRequest();
@@ -71,7 +71,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyOwner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeletePhoto(Guid propertyId, Guid id)
         {
             await _photoService.DeletePhotoAsync(id);

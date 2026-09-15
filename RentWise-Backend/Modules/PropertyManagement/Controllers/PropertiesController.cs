@@ -33,7 +33,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "PropertyOwner,Administrator")]
+        [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> CreateProperty([FromBody] Property property)
         {
             var createdProperty = await _propertyService.CreatePropertyAsync(property);
@@ -41,7 +41,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyOwner,Admin,Administrator")]
+        [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> UpdateProperty(Guid id, [FromBody] Property property)
         {
             if (id != property.Id) return BadRequest();
@@ -49,7 +49,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var existingProperty = await _propertyService.GetPropertyByIdAsync(id);
             if (existingProperty == null) return NotFound();
 
-            bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator");
+            bool isAdmin = User.IsInRole("Admin");
 
             // Manually map fields to avoid EF tracking conflicts
             existingProperty.Title = property.Title;
@@ -76,7 +76,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyOwner,Administrator")]
+        [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> DeleteProperty(Guid id)
         {
             await _propertyService.DeletePropertyAsync(id);

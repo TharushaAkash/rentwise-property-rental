@@ -33,7 +33,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "SystemAdmin")] // Assuming only admins verify properties
+        [Authorize(Roles = "Admin")] // Assuming only admins verify properties
         public async Task<IActionResult> CreateRecord(Guid propertyId, [FromBody] VerificationRecord record)
         {
             record.PropertyId = propertyId;
@@ -42,7 +42,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "SystemAdmin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateRecord(Guid propertyId, Guid id, [FromBody] VerificationRecord record)
         {
             if (id != record.Id || propertyId != record.PropertyId) return BadRequest();
@@ -51,7 +51,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "SystemAdmin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteRecord(Guid propertyId, Guid id)
         {
             await _recordService.DeleteRecordAsync(id);
