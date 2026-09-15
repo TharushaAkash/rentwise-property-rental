@@ -59,6 +59,10 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             existingProperty.Bedrooms = property.Bedrooms;
             existingProperty.Bathrooms = property.Bathrooms;
             existingProperty.Facilities = property.Facilities;
+            existingProperty.Sqft = property.Sqft;
+            existingProperty.PropertyType = property.PropertyType;
+            existingProperty.FeatureTags = property.FeatureTags;
+            existingProperty.PhotoCount = property.PhotoCount;
             
             if (isAdmin)
             {
