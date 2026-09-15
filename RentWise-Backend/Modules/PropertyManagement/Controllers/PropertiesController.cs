@@ -24,6 +24,13 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             return Ok(properties);
         }
 
+        [HttpGet("owner/{ownerId}")]
+        public async Task<IActionResult> GetPropertiesByOwner(Guid ownerId)
+        {
+            var properties = await _propertyService.GetPropertiesByOwnerIdAsync(ownerId);
+            return Ok(properties);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProperty(Guid id)
         {

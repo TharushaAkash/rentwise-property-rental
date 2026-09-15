@@ -33,6 +33,15 @@ namespace RentWise.API.Modules.PropertyManagement.Services
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
+        public async Task<IEnumerable<Property>> GetPropertiesByOwnerIdAsync(Guid ownerId)
+        {
+            return await _context.Properties
+                .Where(p => p.OwnerId == ownerId)
+                .Include(p => p.Photos)
+                .Include(p => p.Owner)
+                .ToListAsync();
+        }
+
         public async Task<Property> CreatePropertyAsync(Property property)
         {
             await _context.Properties.AddAsync(property);
