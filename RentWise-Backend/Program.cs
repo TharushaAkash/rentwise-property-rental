@@ -6,8 +6,7 @@ using System.Text;
 using RentWise_Backend.Data;
 using RentWise_Backend.Services;
 using RentWise_Backend.Services.Interfaces;
-using RentWise.API.Modules.PropertyManagement.Interfaces;
-using RentWise.API.Modules.PropertyManagement.Services;
+
 using RentWise_Backend.Common.Interfaces;
 // using RentWise_Backend.Common.Repositories;
 using RentWise_Backend.Common.Services;

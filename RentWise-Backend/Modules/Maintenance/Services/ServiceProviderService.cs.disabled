@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using RentWise.API.Common.Interfaces;
-using RentWise.API.Modules.Maintenance.Entities;
-using RentWise.API.Modules.Maintenance.Interfaces;
-using ServiceProvider = RentWise.API.Modules.Maintenance.Entities.ServiceProvider;
+using RentWise_Backend.Common.Interfaces;
+using RentWise_Backend.Models;
+using RentWise_Backend.Services.Interfaces;
+using ServiceProvider = RentWise_Backend.Models.ServiceProvider;
 
-namespace RentWise.API.Modules.Maintenance.Services
+namespace RentWise_Backend.Services
 {
     public class ServiceProviderService : IServiceProviderService
     {
