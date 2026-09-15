@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RentWise_Backend.Data;
@@ -12,9 +13,11 @@ using RentWise_Backend.Data;
 namespace RentWise_Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915040221_AddPropertyFields")]
+    partial class AddPropertyFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,15 +28,17 @@ namespace RentWise_Backend.Migrations
 
             modelBuilder.Entity("RentWise_Backend.Models.Application", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("AppliedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("PropertyId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -42,8 +47,8 @@ namespace RentWise_Backend.Migrations
                         .HasColumnType("character varying(30)")
                         .HasDefaultValue("Submitted");
 
-                    b.Property<Guid>("TenantProfileId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("TenantProfileId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -228,18 +233,20 @@ namespace RentWise_Backend.Migrations
 
             modelBuilder.Entity("RentWise_Backend.Models.SavedProperty", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("PropertyId")
-                        .HasColumnType("uuid");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("SavedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("TenantProfileId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("TenantProfileId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -251,9 +258,11 @@ namespace RentWise_Backend.Migrations
 
             modelBuilder.Entity("RentWise_Backend.Models.TenantProfile", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -275,8 +284,8 @@ namespace RentWise_Backend.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

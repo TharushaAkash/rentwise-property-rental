@@ -21,6 +21,7 @@ namespace RentWise_Backend.Services
         {
             return await _context.Properties
                 .Include(p => p.Photos)
+                .Include(p => p.Owner)
                 .ToListAsync();
         }
 
@@ -28,7 +29,17 @@ namespace RentWise_Backend.Services
         {
             return await _context.Properties
                 .Include(p => p.Photos)
+                .Include(p => p.Owner)
                 .FirstOrDefaultAsync(p => p.Id == id);
+        }
+
+        public async Task<IEnumerable<Property>> GetPropertiesByOwnerIdAsync(Guid ownerId)
+        {
+            return await _context.Properties
+                .Where(p => p.OwnerId == ownerId)
+                .Include(p => p.Photos)
+                .Include(p => p.Owner)
+                .ToListAsync();
         }
 
         public async Task<Property> CreatePropertyAsync(Property property)

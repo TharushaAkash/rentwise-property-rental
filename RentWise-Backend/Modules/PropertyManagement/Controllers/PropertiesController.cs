@@ -24,6 +24,13 @@ namespace RentWise_Backend.Controllers
             return Ok(properties);
         }
 
+        [HttpGet("owner/{ownerId}")]
+        public async Task<IActionResult> GetPropertiesByOwner(Guid ownerId)
+        {
+            var properties = await _propertyService.GetPropertiesByOwnerIdAsync(ownerId);
+            return Ok(properties);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProperty(Guid id)
         {
@@ -33,36 +40,58 @@ namespace RentWise_Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "PropertyOwner,Administrator")]
-        public async Task<IActionResult> CreateProperty([FromBody] Property property)
+        [Authorize(Roles = "Owner,Admin")]
+        public async Task<IActionResult> CreateProperty([FromBody] RentWise_Backend.Modules.PropertyManagement.DTOs.CreatePropertyDto dto)
         {
+            var property = new Property
+            {
+                OwnerId = dto.OwnerId,
+                Title = dto.Title,
+                Description = dto.Description,
+                Address = dto.Address,
+                MonthlyRent = dto.MonthlyRent,
+                Bedrooms = dto.Bedrooms,
+                Bathrooms = dto.Bathrooms,
+                Facilities = dto.Facilities,
+                Sqft = dto.Sqft,
+                PropertyType = dto.PropertyType,
+                FeatureTags = dto.FeatureTags,
+                PhotoCount = dto.PhotoCount
+            };
+
             var createdProperty = await _propertyService.CreatePropertyAsync(property);
-            return CreatedAtAction(nameof(GetProperties), new { id = createdProperty.Id }, createdProperty);
+            
+            // Explicitly load the Owner so it's included in the response
+            var propertyWithOwner = await _propertyService.GetPropertyByIdAsync(createdProperty.Id);
+            
+            return CreatedAtAction(nameof(GetProperties), new { id = createdProperty.Id }, propertyWithOwner);
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyOwner,Admin,Administrator")]
-        public async Task<IActionResult> UpdateProperty(Guid id, [FromBody] Property property)
+        [Authorize(Roles = "Owner,Admin")]
+        public async Task<IActionResult> UpdateProperty(Guid id, [FromBody] RentWise_Backend.Modules.PropertyManagement.DTOs.UpdatePropertyDto dto)
         {
-            if (id != property.Id) return BadRequest();
-
             var existingProperty = await _propertyService.GetPropertyByIdAsync(id);
             if (existingProperty == null) return NotFound();
 
-            bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator");
+            bool isAdmin = User.IsInRole("Admin");
 
-            // Manually map fields to avoid EF tracking conflicts
-            existingProperty.Title = property.Title;
-            existingProperty.Description = property.Description;
-            existingProperty.Address = property.Address;
-            existingProperty.MonthlyRent = property.MonthlyRent;
-            existingProperty.Bedrooms = property.Bedrooms;
-            existingProperty.Bathrooms = property.Bathrooms;
-            existingProperty.Facilities = property.Facilities;
+            // Map fields from DTO
+            existingProperty.Title = dto.Title;
+            existingProperty.Description = dto.Description;
+            existingProperty.Address = dto.Address;
+            existingProperty.MonthlyRent = dto.MonthlyRent;
+            existingProperty.Bedrooms = dto.Bedrooms;
+            existingProperty.Bathrooms = dto.Bathrooms;
+            existingProperty.Facilities = dto.Facilities;
+            existingProperty.Sqft = dto.Sqft;
+            existingProperty.PropertyType = dto.PropertyType;
+            existingProperty.FeatureTags = dto.FeatureTags;
+            existingProperty.PhotoCount = dto.PhotoCount;
             
-            if (isAdmin)
+            if (isAdmin && dto.Status.HasValue)
             {
-                existingProperty.Status = property.Status;
+                existingProperty.Status = dto.Status.Value;
             }
             
             existingProperty.UpdatedAt = DateTime.UtcNow;
@@ -72,7 +101,7 @@ namespace RentWise_Backend.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyOwner,Administrator")]
+        [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> DeleteProperty(Guid id)
         {
             await _propertyService.DeletePropertyAsync(id);

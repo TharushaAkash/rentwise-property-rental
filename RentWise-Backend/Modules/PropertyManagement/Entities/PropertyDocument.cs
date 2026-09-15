@@ -7,6 +7,7 @@ namespace RentWise_Backend.Models.PropertyManagement
     public class PropertyDocument : BaseEntity
     {
         public Guid PropertyId { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public Property Property { get; set; } = null!;
 
         [Required]

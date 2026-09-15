@@ -16,6 +16,7 @@ namespace RentWise_Backend.Models
 
         [Required]
         [MaxLength(300)]
+        [System.Text.Json.Serialization.JsonIgnore]
         public string PasswordHash { get; set; } = string.Empty;
 
         [Required]
