@@ -26,6 +26,10 @@ namespace RentWise_Backend.Models.PropertyManagement
         
         public string Facilities { get; set; } = string.Empty; // Comma separated for simplicity
 
+        public int Sqft { get; set; }
+        public string PropertyType { get; set; } = string.Empty;
+        public List<string> FeatureTags { get; set; } = new List<string>();
+        public int PhotoCount { get; set; }
         public PropertyStatus Status { get; set; } = PropertyStatus.PendingVerification;
 
         public ICollection<PropertyPhoto> Photos { get; set; } = new List<PropertyPhoto>();
