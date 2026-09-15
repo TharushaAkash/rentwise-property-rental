@@ -65,6 +65,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // Register Generic Repository - missing in this branch
 // builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
@@ -80,6 +83,8 @@ builder.Services.AddScoped<IApplicationService, ApplicationService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IAgreementApprovalIntegration, UnavailableAgreementApprovalIntegration>();
 builder.Services.AddScoped<RentalAgreementService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<RentReminderService>();
