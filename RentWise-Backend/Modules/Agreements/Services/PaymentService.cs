@@ -5,9 +5,9 @@ using RentWise_Backend.Models;
 
 namespace RentWise_Backend.Services;
 
-public sealed class PaymentService(AppDbContext context)
+public sealed class PaymentService(ApplicationDbContext context)
 {
-    public async Task<PaymentResponse> CreateAsync(int agreementId, CreatePaymentRequest request,
+    public async Task<PaymentResponse> CreateAsync(Guid agreementId, CreatePaymentRequest request,
         CancellationToken cancellationToken = default)
     {
         ComponentCValidation.Validate(request);
@@ -34,7 +34,7 @@ public sealed class PaymentService(AppDbContext context)
         return Map(payment);
     }
 
-    public async Task<IReadOnlyList<PaymentResponse>> GetHistoryAsync(int agreementId,
+    public async Task<IReadOnlyList<PaymentResponse>> GetHistoryAsync(Guid agreementId,
         CancellationToken cancellationToken = default)
     {
         if (!await context.RentalAgreements.AnyAsync(a => a.Id == agreementId, cancellationToken))

@@ -5,9 +5,9 @@ using RentWise_Backend.Models;
 
 namespace RentWise_Backend.Services;
 
-public sealed class RentReminderService(AppDbContext context, TimeProvider clock)
+public sealed class RentReminderService(ApplicationDbContext context, TimeProvider clock)
 {
-    public async Task<RentReminderResponse> CreateAsync(int agreementId, CreateRentReminderRequest request,
+    public async Task<RentReminderResponse> CreateAsync(Guid agreementId, CreateRentReminderRequest request,
         CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow().UtcDateTime;
@@ -24,13 +24,13 @@ public sealed class RentReminderService(AppDbContext context, TimeProvider clock
             && r.DueDate == request.DueDate, cancellationToken))
             throw new ComponentCException(409, "A reminder already exists for this agreement and due date.");
 
-        var reminder = new RentReminder { RentalAgreementId = agreementId, DueDate = request.DueDate };
+        var reminder = new RentReminder { Id = Guid.NewGuid(), RentalAgreementId = agreementId, DueDate = request.DueDate };
         context.RentReminders.Add(reminder);
         await context.SaveChangesAsync(cancellationToken);
         return Map(reminder, now);
     }
 
-    public async Task<IReadOnlyList<RentReminderResponse>> GetForAgreementAsync(int agreementId,
+    public async Task<IReadOnlyList<RentReminderResponse>> GetForAgreementAsync(Guid agreementId,
         CancellationToken cancellationToken = default)
     {
         if (!await context.RentalAgreements.AnyAsync(a => a.Id == agreementId, cancellationToken))
@@ -42,7 +42,7 @@ public sealed class RentReminderService(AppDbContext context, TimeProvider clock
         return reminders.Select(r => Map(r, now)).ToList();
     }
 
-    public async Task<RentReminderResponse> UpdateAsync(int agreementId, int reminderId,
+    public async Task<RentReminderResponse> UpdateAsync(Guid agreementId, Guid reminderId,
         UpdateRentReminderRequest request, CancellationToken cancellationToken = default)
     {
         ComponentCValidation.Validate(request);

@@ -6,7 +6,7 @@ using RentWise_Backend.Models;
 namespace RentWise_Backend.Services;
 
 // Internal rules only. HTTP access stays closed until shared authorization exists.
-public sealed class RentalAgreementService(AppDbContext context, IAgreementApprovalIntegration approvals)
+public sealed class RentalAgreementService(ApplicationDbContext context, IAgreementApprovalIntegration approvals)
 {
     public async Task<AgreementResponse> CreateDraftAsync(CreateAgreementDraftRequest request,
         CancellationToken cancellationToken = default)
@@ -22,6 +22,7 @@ public sealed class RentalAgreementService(AppDbContext context, IAgreementAppro
         // These IDs are provisional internal inputs, not trusted client identity claims.
         var agreement = new RentalAgreement
         {
+            Id = Guid.NewGuid(),
             ApplicationId = request.ApplicationId, PropertyId = request.PropertyId,
             TenantId = request.TenantId, OwnerId = request.OwnerId, MonthlyRent = request.MonthlyRent,
             StartDate = request.StartDate, EndDate = request.EndDate
@@ -31,7 +32,7 @@ public sealed class RentalAgreementService(AppDbContext context, IAgreementAppro
         return Map(agreement);
     }
 
-    public async Task<AgreementResponse> GetAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<AgreementResponse> GetAsync(Guid id, CancellationToken cancellationToken = default)
         => Map(await context.RentalAgreements.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, cancellationToken)
             ?? throw new ComponentCException(404, "Agreement not found."));
 
@@ -46,18 +47,18 @@ public sealed class RentalAgreementService(AppDbContext context, IAgreementAppro
         return agreements.Select(Map).ToList();
     }
 
-    public Task<AgreementResponse> SubmitForApprovalAsync(int id, CancellationToken cancellationToken = default)
+    public Task<AgreementResponse> SubmitForApprovalAsync(Guid id, CancellationToken cancellationToken = default)
         => TransitionAsync(id, AgreementStatuses.PendingOwnerApproval, cancellationToken);
 
-    public Task<AgreementResponse> RedraftAsync(int id, CancellationToken cancellationToken = default)
+    public Task<AgreementResponse> RedraftAsync(Guid id, CancellationToken cancellationToken = default)
         => TransitionAsync(id, AgreementStatuses.Drafted, cancellationToken);
 
-    public Task<AgreementResponse> EndAsync(int id, CancellationToken cancellationToken = default)
+    public Task<AgreementResponse> EndAsync(Guid id, CancellationToken cancellationToken = default)
         => TransitionAsync(id, AgreementStatuses.Ended, cancellationToken);
 
     // TODO(auth): require verified Owner ownership before invoking; persist approval atomically
     // with shared workflow state when integrated. Never invoke this method from an AI agent.
-    public Task<AgreementResponse> DecideAsync(int id, AgreementDecisionRequest request,
+    public Task<AgreementResponse> DecideAsync(Guid id, AgreementDecisionRequest request,
         CancellationToken cancellationToken = default)
     {
         ComponentCValidation.Validate(request);
@@ -71,7 +72,7 @@ public sealed class RentalAgreementService(AppDbContext context, IAgreementAppro
         return TransitionAsync(id, next, cancellationToken, request);
     }
 
-    private async Task<AgreementResponse> TransitionAsync(int id, string next, CancellationToken cancellationToken,
+    private async Task<AgreementResponse> TransitionAsync(Guid id, string next, CancellationToken cancellationToken,
         AgreementDecisionRequest? decision = null)
     {
         var agreement = await context.RentalAgreements.SingleOrDefaultAsync(a => a.Id == id, cancellationToken)
@@ -96,5 +97,5 @@ public sealed class RentalAgreementService(AppDbContext context, IAgreementAppro
     }
 
     private static AgreementResponse Map(RentalAgreement a) => new(a.Id, a.ApplicationId, a.PropertyId,
-        a.TenantId, a.OwnerId, a.MonthlyRent, a.StartDate, a.EndDate, a.Status, a.CreatedAt, a.UpdatedAt);
+        a.TenantId, a.OwnerId, a.MonthlyRent, a.StartDate, a.EndDate, a.Status, a.CreatedAt, a.UpdatedAt ?? a.CreatedAt);
 }
