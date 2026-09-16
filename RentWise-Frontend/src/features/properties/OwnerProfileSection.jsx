@@ -17,9 +17,7 @@ import {
   EyeOff, 
   KeyRound,
   Building,
-  Sparkles,
-  Phone,
-  CreditCard
+  Sparkles
 } from 'lucide-react';
 
 export const OwnerProfileSection = () => {
@@ -31,8 +29,6 @@ export const OwnerProfileSection = () => {
     lastName: '',
     email: '',
     fullName: '',
-    phoneNumber: '',
-    nicNumber: '',
     role: '',
     createdAt: ''
   });
@@ -65,9 +61,7 @@ export const OwnerProfileSection = () => {
             firstName: res.data.firstName || '',
             lastName: res.data.lastName || '',
             email: res.data.email || user?.email || '',
-            fullName: res.data.fullName || res.data.name || `${res.data.firstName || ''} ${res.data.lastName || ''}`.trim(),
-            phoneNumber: res.data.phoneNumber || '',
-            nicNumber: res.data.nicNumber || '',
+            fullName: res.data.fullName || `${res.data.firstName || ''} ${res.data.lastName || ''}`.trim(),
             role: res.data.role || user?.role || 'PropertyOwner',
             createdAt: res.data.createdAt || ''
           });
@@ -80,8 +74,6 @@ export const OwnerProfileSection = () => {
           lastName: user?.fullName?.includes(' ') ? user.fullName.split(' ').slice(1).join(' ') : '',
           email: user?.email || '',
           fullName: user?.fullName || user?.email || '',
-          phoneNumber: user?.phoneNumber || '',
-          nicNumber: user?.nicNumber || '',
           role: user?.role || 'PropertyOwner',
           createdAt: ''
         });
@@ -99,26 +91,12 @@ export const OwnerProfileSection = () => {
     setProfileSuccessMsg('');
     setProfileErrorMsg('');
 
-    // Validate Phone Number (10 digits)
-    if (profileData.phoneNumber && !/^\d{10}$/.test(profileData.phoneNumber.trim())) {
-      setProfileErrorMsg('Phone number must be exactly 10 digits (e.g. 0712345678).');
-      return;
-    }
-
-    // Validate NIC (12 digits or 9 digits with 'v'/'V')
-    if (profileData.nicNumber && !/^([0-9]{9}[vV]|[0-9]{12})$/.test(profileData.nicNumber.trim())) {
-      setProfileErrorMsg("NIC must be 12 digits or 9 digits followed by 'V' (e.g. 123456789V or 200012345678).");
-      return;
-    }
-
     try {
       setIsSavingProfile(true);
       const res = await api.put('/auth/profile', {
         firstName: profileData.firstName.trim(),
         lastName: profileData.lastName.trim(),
-        fullName: `${profileData.firstName.trim()} ${profileData.lastName.trim()}`.trim(),
-        phoneNumber: profileData.phoneNumber ? profileData.phoneNumber.trim() : null,
-        nicNumber: profileData.nicNumber ? profileData.nicNumber.trim().toUpperCase() : null
+        fullName: `${profileData.firstName.trim()} ${profileData.lastName.trim()}`.trim()
       });
 
       setProfileSuccessMsg('Profile details updated successfully!');
@@ -133,15 +111,8 @@ export const OwnerProfileSection = () => {
       setTimeout(() => setProfileSuccessMsg(''), 5000);
     } catch (err) {
       console.error('Profile update failed:', err);
-      let msg = 'Failed to update profile. Please check your inputs.';
-      if (err.response?.data?.errors) {
-        msg = Object.values(err.response.data.errors).flat().join(' ');
-      } else if (err.response?.data?.message) {
-        msg = err.response.data.message;
-      } else if (typeof err.response?.data === 'string') {
-        msg = err.response.data;
-      }
-      setProfileErrorMsg(msg);
+      const msg = err.response?.data || 'Failed to update profile. Please check your inputs.';
+      setProfileErrorMsg(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setIsSavingProfile(false);
     }
@@ -163,8 +134,8 @@ export const OwnerProfileSection = () => {
       return;
     }
 
-    if (passwordData.newPassword.length < 8) {
-      setPasswordErrorMsg('New password must be at least 8 characters.');
+    if (passwordData.newPassword.length < 6) {
+      setPasswordErrorMsg('New password must be at least 6 characters.');
       return;
     }
 
@@ -249,18 +220,6 @@ export const OwnerProfileSection = () => {
                   <Mail className="w-4 h-4 text-slate-400" />
                   {profileData.email}
                 </span>
-                {profileData.phoneNumber && (
-                  <span className="flex items-center gap-1.5">
-                    <Phone className="w-4 h-4 text-slate-400" />
-                    {profileData.phoneNumber}
-                  </span>
-                )}
-                {profileData.nicNumber && (
-                  <span className="flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4 text-slate-400" />
-                    NIC: {profileData.nicNumber}
-                  </span>
-                )}
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-slate-400" />
                   Member since {formattedDate}
@@ -292,7 +251,7 @@ export const OwnerProfileSection = () => {
                     Personal Information
                   </CardTitle>
                   <p className="text-sm text-gray-500 mt-1">
-                    Update your account contact details, phone, NIC, and public name.
+                    Update your account contact details and public name.
                   </p>
                 </div>
                 <Badge variant="default" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
@@ -331,45 +290,6 @@ export const OwnerProfileSection = () => {
                     value={profileData.lastName}
                     onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
                   />
-                </div>
-
-                {/* Phone & NIC inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="w-full space-y-1">
-                    <label className="text-sm font-medium text-gray-700 block">
-                      Phone Number
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        placeholder="0712345678"
-                        value={profileData.phoneNumber}
-                        onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
-                        className="flex h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pl-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                      />
-                      <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                    <p className="text-[11px] text-gray-400">10 digits (e.g. 0712345678)</p>
-                  </div>
-
-                  <div className="w-full space-y-1">
-                    <label className="text-sm font-medium text-gray-700 block">
-                      NIC Number
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        maxLength={12}
-                        placeholder="123456789V or 2000..."
-                        value={profileData.nicNumber}
-                        onChange={(e) => setProfileData({ ...profileData, nicNumber: e.target.value.toUpperCase() })}
-                        className="flex h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pl-9 text-sm text-gray-900 uppercase placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                      />
-                      <CreditCard className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                    <p className="text-[11px] text-gray-400">12 digits or 9 digits + 'V'</p>
-                  </div>
                 </div>
 
                 <div className="w-full space-y-1">
