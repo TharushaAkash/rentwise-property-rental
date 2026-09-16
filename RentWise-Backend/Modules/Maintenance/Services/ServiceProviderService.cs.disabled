@@ -1,0 +1,49 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using RentWise_Backend.Common.Interfaces;
+using RentWise_Backend.Models;
+using RentWise_Backend.Services.Interfaces;
+using ServiceProvider = RentWise_Backend.Models.ServiceProvider;
+
+namespace RentWise_Backend.Services
+{
+    public class ServiceProviderService : IServiceProviderService
+    {
+        private readonly IRepository<ServiceProvider> _repository;
+
+        public ServiceProviderService(IRepository<ServiceProvider> repository)
+        {
+            _repository = repository;
+        }
+
+        public async Task<IEnumerable<ServiceProvider>> GetAllProvidersAsync()
+        {
+            return await _repository.GetAllAsync();
+        }
+
+        public async Task<ServiceProvider?> GetProviderByIdAsync(Guid id)
+        {
+            return await _repository.GetByIdAsync(id);
+        }
+
+        public async Task<ServiceProvider> CreateProviderAsync(ServiceProvider provider)
+        {
+            return await _repository.AddAsync(provider);
+        }
+
+        public async Task UpdateProviderAsync(ServiceProvider provider)
+        {
+            await _repository.UpdateAsync(provider);
+        }
+
+        public async Task DeleteProviderAsync(Guid id)
+        {
+            var entity = await _repository.GetByIdAsync(id);
+            if (entity != null)
+            {
+                await _repository.DeleteAsync(entity);
+            }
+        }
+    }
+}

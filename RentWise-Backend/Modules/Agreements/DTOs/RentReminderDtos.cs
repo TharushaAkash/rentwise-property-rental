@@ -17,5 +17,5 @@ public sealed class UpdateRentReminderRequest
     public RentReminderAction Action { get; init; }
 }
 
-public sealed record RentReminderResponse(int Id, int RentalAgreementId, DateTime DueDate,
+public sealed record RentReminderResponse(Guid Id, Guid RentalAgreementId, DateTime DueDate,
     DateTime? ReminderSentAt, string Status);

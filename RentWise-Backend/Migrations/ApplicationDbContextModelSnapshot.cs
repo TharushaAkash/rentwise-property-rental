@@ -53,6 +53,48 @@ namespace RentWise_Backend.Migrations
                     b.ToTable("Applications");
                 });
 
+            modelBuilder.Entity("RentWise_Backend.Models.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("RentalAgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RentalAgreementId", "PaymentDate");
+
+                    b.ToTable("Payments");
+                });
+
             modelBuilder.Entity("RentWise_Backend.Models.PropertyManagement.Property", b =>
                 {
                     b.Property<Guid>("Id")
@@ -226,6 +268,100 @@ namespace RentWise_Backend.Migrations
                     b.ToTable("VerificationRecords");
                 });
 
+            modelBuilder.Entity("RentWise_Backend.Models.RentReminder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RentalAgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RentalAgreementId", "DueDate")
+                        .IsUnique();
+
+                    b.ToTable("RentReminders");
+                });
+
+            modelBuilder.Entity("RentWise_Backend.Models.RentalAgreement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MonthlyRent")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("OwnerId", "Status");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("RentalAgreements");
+                });
+
             modelBuilder.Entity("RentWise_Backend.Models.SavedProperty", b =>
                 {
                     b.Property<Guid>("Id")
@@ -330,6 +466,17 @@ namespace RentWise_Backend.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("RentWise_Backend.Models.Payment", b =>
+                {
+                    b.HasOne("RentWise_Backend.Models.RentalAgreement", "RentalAgreement")
+                        .WithMany("Payments")
+                        .HasForeignKey("RentalAgreementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RentalAgreement");
+                });
+
             modelBuilder.Entity("RentWise_Backend.Models.PropertyManagement.Property", b =>
                 {
                     b.HasOne("RentWise_Backend.Models.User", "Owner")
@@ -380,6 +527,52 @@ namespace RentWise_Backend.Migrations
                     b.Navigation("Property");
                 });
 
+            modelBuilder.Entity("RentWise_Backend.Models.RentReminder", b =>
+                {
+                    b.HasOne("RentWise_Backend.Models.RentalAgreement", "RentalAgreement")
+                        .WithMany("RentReminders")
+                        .HasForeignKey("RentalAgreementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RentalAgreement");
+                });
+
+            modelBuilder.Entity("RentWise_Backend.Models.RentalAgreement", b =>
+                {
+                    b.HasOne("RentWise_Backend.Models.Application", "Application")
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RentWise_Backend.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RentWise_Backend.Models.PropertyManagement.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RentWise_Backend.Models.User", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Property");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("RentWise_Backend.Models.PropertyManagement.Property", b =>
                 {
                     b.Navigation("Documents");
@@ -387,6 +580,13 @@ namespace RentWise_Backend.Migrations
                     b.Navigation("Photos");
 
                     b.Navigation("VerificationRecords");
+                });
+
+            modelBuilder.Entity("RentWise_Backend.Models.RentalAgreement", b =>
+                {
+                    b.Navigation("Payments");
+
+                    b.Navigation("RentReminders");
                 });
 #pragma warning restore 612, 618
         }
