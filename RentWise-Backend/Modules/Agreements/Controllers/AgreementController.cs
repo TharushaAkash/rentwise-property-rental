@@ -17,8 +17,8 @@ public sealed class AgreementController(RentalAgreementService service) : Contro
         return CreatedAtAction(nameof(GetAgreement), new { id = agreement.Id }, agreement);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<AgreementResponse>> GetAgreement(int id, CancellationToken cancellationToken)
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<AgreementResponse>> GetAgreement(Guid id, CancellationToken cancellationToken)
         => Ok(await service.GetAsync(id, cancellationToken));
 
     [HttpGet]
@@ -26,12 +26,12 @@ public sealed class AgreementController(RentalAgreementService service) : Contro
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
         => Ok(await service.ListAsync(page, pageSize, cancellationToken));
 
-    [HttpPost("{id:int}/submit")]
-    public async Task<ActionResult<AgreementResponse>> Submit(int id, CancellationToken cancellationToken)
+    [HttpPost("{id:guid}/submit")]
+    public async Task<ActionResult<AgreementResponse>> Submit(Guid id, CancellationToken cancellationToken)
         => Ok(await service.SubmitForApprovalAsync(id, cancellationToken));
 
-    [HttpPut("{id:int}/decision")]
-    public async Task<ActionResult<AgreementResponse>> OwnerDecision(int id, AgreementDecisionRequest request,
+    [HttpPut("{id:guid}/decision")]
+    public async Task<ActionResult<AgreementResponse>> OwnerDecision(Guid id, AgreementDecisionRequest request,
         CancellationToken cancellationToken)
         => Ok(await service.DecideAsync(id, request, cancellationToken));
 }
