@@ -8,7 +8,7 @@ import {
   CreditCard, 
   Wrench, 
   UserRound, 
-  CalendarDays,
+  CalendarDays, 
   CheckCircle2, 
   XCircle, 
   Clock, 
@@ -16,20 +16,34 @@ import {
   ArrowRight, 
   Building2, 
   Receipt, 
-  ShieldCheck,
-  Plus,
-  Mail,
-  Phone,
-  ChevronRight,
-  FileText
+  ShieldCheck, 
+  Plus, 
+  Mail, 
+  Phone, 
+  ChevronRight, 
+  FileText, 
+  User, 
+  Lock, 
+  Eye, 
+  EyeOff,
+  Star,
+  Camera,
+  Share2,
+  Bell,
+  Bookmark,
+  X,
+  Sliders,
+  ChevronLeft
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
 import { BookingModal } from './BookingModal';
 import { PaymentModal } from './PaymentModal';
+import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
 
 const money = (value) => `Rs. ${Number(value || 0).toLocaleString()}`;
 
@@ -48,11 +62,22 @@ export const parseBookingDetails = (rawMessage) => {
   return { duration, startDate, endDate, note };
 };
 
+const formatLankaPrice = (amount) => {
+  const num = Number(amount || 0);
+  if (num >= 1000000) {
+    const m = num / 1000000;
+    return `Rs. ${m % 1 === 0 ? m.toFixed(0) : m.toFixed(2)}M`;
+  }
+  return `Rs. ${num.toLocaleString()}`;
+};
+
 export const TenantPropertyPortal = () => {
   const navigate = useNavigate();
-  const [properties, setProperties] = useState([]);
+  const [dbProperties, setDbProperties] = useState([]);
   const [selectedPropertyForBooking, setSelectedPropertyForBooking] = useState(null);
   const [query, setQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
   const [maxRent, setMaxRent] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
@@ -61,24 +86,82 @@ export const TenantPropertyPortal = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Local Storage Saved/Favorite Properties
+  const [savedIds, setSavedIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleSave = (propId, e) => {
+    e?.stopPropagation();
+    setSavedIds((prev) => {
+      const next = prev.includes(propId) ? prev.filter((id) => id !== propId) : [...prev, propId];
+      try {
+        localStorage.setItem('rentwise_saved_properties', JSON.stringify(next));
+      } catch (err) {
+        console.error('Failed to save to localStorage:', err);
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
     api.get('/properties')
-      .then((response) => setProperties(response.data || []))
-      .catch(() => setMessage('Unable to load property listings.'))
+      .then((response) => setDbProperties(response.data || []))
+      .catch(() => setMessage('Unable to load server property listings.'))
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = useMemo(() => {
-    const source = aiMatches || properties;
-    return source.filter((property) => {
-      const text = `${property.title} ${property.address} ${property.facilities || ''}`.toLowerCase();
-      return (
-        (!query || text.includes(query.toLowerCase())) &&
-        (!maxRent || Number(property.monthlyRent) <= Number(maxRent)) &&
-        (!bedrooms || Number(property.bedrooms) >= Number(bedrooms))
-      );
+  // Map ONLY real database properties
+  const realProperties = useMemo(() => {
+    return dbProperties.map((p) => {
+      const primaryPhoto = p.photos && Array.isArray(p.photos) && p.photos.length > 0 
+        ? (p.photos.find((ph) => ph.isPrimary || ph.IsPrimary)?.photoUrl || 
+           p.photos.find((ph) => ph.isPrimary || ph.IsPrimary)?.PhotoUrl || 
+           p.photos[0]?.photoUrl || 
+           p.photos[0]?.PhotoUrl || 
+           p.photos[0]?.url)
+        : (p.photoUrl || p.PhotoUrl || PROPERTY_PLACEHOLDER_IMAGE);
+
+      return {
+        ...p,
+        city: p.city || p.address?.split(',').pop()?.trim() || 'Colombo',
+        propertyType: p.propertyType || (p.title?.toLowerCase().includes('apartment') ? 'Apartment' : 'House'),
+        photosCount: p.photos?.length || (primaryPhoto && primaryPhoto !== PROPERTY_PLACEHOLDER_IMAGE ? 1 : 0),
+        photoUrl: primaryPhoto,
+        photos: p.photos || [],
+        sqft: p.sqft || (p.bedrooms ? p.bedrooms * 750 + 500 : 1200),
+        featureTag: p.facilities?.split(',')[0]?.trim() || (p.status || 'Verified Listing'),
+        isUrgent: p.status === 'Urgent' || Boolean(p.isUrgent)
+      };
     });
-  }, [properties, aiMatches, query, maxRent, bedrooms]);
+  }, [dbProperties]);
+
+  const filtered = useMemo(() => {
+    const source = aiMatches || realProperties;
+    return source.filter((property) => {
+      const text = `${property.title} ${property.address} ${property.city || ''} ${property.facilities || ''}`.toLowerCase();
+      const matchesQuery = !query || text.includes(query.toLowerCase());
+      const matchesType = !selectedType || (property.propertyType && property.propertyType.toLowerCase() === selectedType.toLowerCase()) || text.includes(selectedType.toLowerCase());
+      const matchesCity = !selectedCity || (property.city && property.city.toLowerCase().includes(selectedCity.toLowerCase())) || text.includes(selectedCity.toLowerCase());
+      const matchesRent = !maxRent || Number(property.monthlyRent) <= Number(maxRent);
+      const matchesBeds = !bedrooms || Number(property.bedrooms) >= Number(bedrooms);
+
+      return matchesQuery && matchesType && matchesCity && matchesRent && matchesBeds;
+    });
+  }, [realProperties, aiMatches, query, selectedType, selectedCity, maxRent, bedrooms]);
+
+  const resetAllFilters = () => {
+    setQuery('');
+    setSelectedType('');
+    setSelectedCity('');
+    setMaxRent('');
+    setBedrooms('');
+    setAiMatches(null);
+  };
 
   const askAi = async (event) => {
     event.preventDefault();
@@ -97,183 +180,572 @@ export const TenantPropertyPortal = () => {
     }
   };
 
-  const book = async (property) => {
-    try {
-      await api.post('/property-applications', {
-        propertyId: property.id,
-        message: 'Booking request from tenant portal.'
-      });
-      setMessage(`Booking request sent for ${property.title}.`);
-    } catch (error) {
-      setMessage(error.response?.data || 'Unable to send booking request.');
-    }
-  };
-
   return (
-    <div className="space-y-10 font-sans">
-      <section className="relative -mx-4 overflow-visible bg-[#0f172a] px-6 pb-24 pt-20 text-white sm:-mx-8 sm:px-12 lg:-mx-12 lg:px-20 rounded-b-3xl">
-        <div
-          className="absolute inset-0 opacity-40 rounded-b-3xl"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 20% 20%, #2563eb 0, transparent 35%), radial-gradient(circle at 80% 10%, #4f46e5 0, transparent 35%), linear-gradient(135deg, #0f172a, #020617)'
-          }}
-        />
-        <div className="relative mx-auto max-w-6xl">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-400">
-            RentWise Luxury Homes
-          </p>
-          <h1 className="mt-4 max-w-3xl text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
-            Find a place made for your life.
-          </h1>
-          <p className="mt-4 max-w-xl text-base sm:text-lg text-slate-300">
-            Explore verified luxury rental homes, compare monthly rent, and book directly with landlords.
-          </p>
-          <button
-            onClick={() => navigate('/tenants')}
-            className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white hover:text-slate-900 transition-all"
-          >
-            <UserRound className="w-4 h-4" />
-            <span>View My Profile & Bookings</span>
-          </button>
-        </div>
-
-        {/* Floating Quick Search */}
-        <div className="absolute -bottom-10 left-1/2 w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 rounded-2xl bg-white p-3 shadow-2xl sm:w-[calc(100%-6rem)] border border-gray-100">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <div className="flex flex-1 items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
-              <Search className="h-5 w-5 text-blue-600" />
+    <div className="font-sans space-y-6 pb-16">
+      
+      {/* 1. LankaPropertyWeb Style Segmented Quick Search Bar */}
+      <section className="bg-white border-b border-gray-200 py-5 px-3 sm:px-6 -mx-4 sm:-mx-8 lg:-mx-12 shadow-sm">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-lg bg-white shadow-md border border-gray-300 flex flex-col md:flex-row md:items-stretch divide-y md:divide-y-0 md:divide-x divide-gray-200">
+            {/* City or Location */}
+            <div className="flex flex-1 items-center gap-2.5 px-3.5 py-2.5 bg-white rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
+              <MapPin className="h-4 w-4 text-[#008037] shrink-0" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full bg-transparent text-gray-900 outline-none text-sm"
-                placeholder="Search by location, address, or property title..."
+                className="w-full bg-transparent text-gray-900 outline-none text-xs sm:text-sm font-medium placeholder-gray-400"
+                placeholder="City or Location (e.g. Colombo, Kandy, Negombo)..."
               />
             </div>
-            <select
-              value={bedrooms}
-              onChange={(e) => setBedrooms(e.target.value)}
-              className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none"
-            >
-              <option value="">Any Bedrooms</option>
-              <option value="1">1+ Bedroom</option>
-              <option value="2">2+ Bedrooms</option>
-              <option value="3">3+ Bedrooms</option>
-            </select>
-            <input
-              value={maxRent}
-              onChange={(e) => setMaxRent(e.target.value)}
-              type="number"
-              className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none"
-              placeholder="Max rent (Rs.)"
-            />
-            <button
-              onClick={() => document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' })}
-              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-8 py-3 font-bold uppercase tracking-wider text-xs text-white transition-all shadow-md"
-            >
-              Search
-            </button>
+
+            {/* Select Radius / City */}
+            <div className="flex items-center px-3 py-2 bg-white">
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                className="w-full bg-transparent text-xs sm:text-sm text-gray-700 font-medium outline-none cursor-pointer"
+              >
+                <option value="">Select Radius / Area</option>
+                <option value="Colombo">Colombo (within 10 km)</option>
+                <option value="Kandy">Kandy & Suburbs</option>
+                <option value="Negombo">Negombo</option>
+                <option value="Panadura">Panadura</option>
+                <option value="Nugegoda">Nugegoda</option>
+                <option value="Battaramulla">Battaramulla</option>
+                <option value="Rajagiriya">Rajagiriya</option>
+                <option value="Pelawatte">Pelawatte</option>
+                <option value="Nawala">Nawala</option>
+                <option value="Galle">Galle</option>
+              </select>
+            </div>
+
+            {/* Property Type */}
+            <div className="flex items-center px-3 py-2 bg-white">
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="w-full bg-transparent text-xs sm:text-sm text-gray-700 font-medium outline-none cursor-pointer"
+              >
+                <option value="">All Property Types</option>
+                <option value="House">House</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Villa">Villa</option>
+                <option value="Annex">Annex</option>
+                <option value="Studio">Studio</option>
+              </select>
+            </div>
+
+            {/* Price Range */}
+            <div className="flex items-center px-3 py-2 bg-white min-w-[140px]">
+              <input
+                value={maxRent}
+                onChange={(e) => setMaxRent(e.target.value)}
+                type="number"
+                className="w-full bg-transparent text-xs sm:text-sm text-gray-700 font-medium outline-none placeholder-gray-400"
+                placeholder="Price Range (Rs.)"
+              />
+            </div>
+
+            {/* Bedrooms */}
+            <div className="flex items-center px-3 py-2 bg-white">
+              <select
+                value={bedrooms}
+                onChange={(e) => setBedrooms(e.target.value)}
+                className="w-full bg-transparent text-xs sm:text-sm text-gray-700 font-medium outline-none cursor-pointer"
+              >
+                <option value="">Beds</option>
+                <option value="1">1+ Bed</option>
+                <option value="2">2+ Beds</option>
+                <option value="3">3+ Beds</option>
+                <option value="4">4+ Beds</option>
+                <option value="5">5+ Beds</option>
+              </select>
+            </div>
+
+            {/* Search Button (Vivid LankaPropertyWeb Orange #ff5a00) */}
+            <div className="p-1.5 bg-white rounded-b-lg md:rounded-r-lg md:rounded-bl-none flex items-center justify-center">
+              <button
+                onClick={() => document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full md:w-auto rounded bg-[#ff5a00] hover:bg-[#e04f00] px-7 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-white transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Search className="w-4 h-4" />
+                <span>Search</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Active Filter Tags */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            {selectedType && (
+              <span className="inline-flex items-center gap-1.5 rounded bg-gray-100 border border-gray-300 px-2.5 py-1 font-semibold text-gray-800">
+                <span>{selectedType}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedType('')}
+                  className="text-gray-400 hover:text-gray-700 font-bold"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+
+            {selectedCity && (
+              <span className="inline-flex items-center gap-1.5 rounded bg-gray-100 border border-gray-300 px-2.5 py-1 font-semibold text-gray-800">
+                <span>{selectedCity}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCity('')}
+                  className="text-gray-400 hover:text-gray-700 font-bold"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+
+            {query && (
+              <span className="inline-flex items-center gap-1.5 rounded bg-gray-100 border border-gray-300 px-2.5 py-1 font-semibold text-gray-800">
+                <span>"{query}"</span>
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="text-gray-400 hover:text-gray-700 font-bold"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+
+            {(selectedType || selectedCity || query || maxRent || bedrooms) && (
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="text-[11px] font-bold text-[#0066cc] hover:underline uppercase tracking-wide ml-1"
+              >
+                RESET ALL
+              </button>
+            )}
           </div>
         </div>
       </section>
 
-      {/* AI Property Search */}
-      <Card className="border-blue-100 bg-gradient-to-br from-blue-50/50 to-white mt-16">
-        <CardContent className="p-6">
-          <form onSubmit={askAi} className="flex flex-col gap-3 md:flex-row">
-            <div className="flex flex-1 items-center rounded-xl border border-blue-200 bg-white px-4 shadow-sm">
-              <Sparkles className="mr-3 h-5 w-5 text-blue-600" />
-              <input
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                className="w-full py-3 outline-none text-sm text-gray-900"
-                placeholder="Ask AI: Find a 2-bedroom modern apartment near Colombo under Rs. 150,000..."
-              />
+      {/* 2. Breadcrumbs, Header Title, and Actions Toolbar */}
+      <div className="space-y-3 pt-2">
+        <div className="text-[11.5px] text-gray-500 flex items-center gap-1">
+          <button onClick={() => navigate('/properties')} className="hover:text-[#008037]">Home</button>
+          <span>&gt;</span>
+          <button onClick={() => navigate('/agreements')} className="hover:text-[#008037]">Rentals</button>
+          <span>&gt;</span>
+          <span className="text-gray-800 font-medium">{selectedType || 'Houses'}</span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-3">
+          <div>
+            <h1 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">
+              {selectedType ? `${selectedType}s` : 'Houses and Properties'} for rent in Sri Lanka{' '}
+              <span className="text-gray-500 font-normal text-sm">
+                ({filtered.length} properties)
+              </span>
+            </h1>
+          </div>
+
+          {/* Action Pills & Pagination */}
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              onClick={() => setMessage('Search filters saved to your account.')}
+              className="inline-flex items-center gap-1 border border-gray-300 rounded px-2.5 py-1 text-gray-700 hover:bg-gray-50 font-medium"
+            >
+              <Bookmark className="w-3.5 h-3.5 text-gray-500" />
+              <span>Save Search</span>
+            </button>
+            <button
+              onClick={() => {
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(window.location.href);
+                  setMessage('Property search link copied to clipboard!');
+                }
+              }}
+              className="inline-flex items-center gap-1 border border-gray-300 rounded px-2.5 py-1 text-gray-700 hover:bg-gray-50 font-medium"
+            >
+              <Share2 className="w-3.5 h-3.5 text-gray-500" />
+              <span>Share</span>
+            </button>
+
+            {/* Pagination numbers */}
+            <div className="hidden sm:flex items-center gap-1 ml-2">
+              <span className="w-6 h-6 rounded bg-[#008037] text-white font-bold flex items-center justify-center text-xs shadow-sm">
+                1
+              </span>
+              <span className="w-6 h-6 rounded border border-gray-200 text-gray-600 font-medium flex items-center justify-center text-xs hover:bg-gray-50 cursor-pointer">
+                2
+              </span>
+              <span className="w-6 h-6 rounded border border-gray-200 text-gray-600 font-medium flex items-center justify-center text-xs hover:bg-gray-50 cursor-pointer">
+                3
+              </span>
+              <span className="w-6 h-6 rounded border border-gray-200 text-gray-600 font-medium flex items-center justify-center text-xs hover:bg-gray-50 cursor-pointer">
+                &gt;
+              </span>
             </div>
-            <Button type="submit" isLoading={aiLoading} className="bg-blue-600 hover:bg-blue-700">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Ask AI Matcher
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+
+        {/* Quick Filter Pills Row 1: Property Types */}
+        <div className="flex flex-wrap items-center gap-2 text-xs pt-1">
+          <span className="text-gray-500 font-semibold text-[11px] uppercase mr-1">Add to search:</span>
+          {[
+            { label: '+ Apartments', val: 'Apartment' },
+            { label: '+ Houses', val: 'House' },
+            { label: '+ Commercial', val: 'Commercial' },
+            { label: '+ Villas', val: 'Villa' },
+            { label: '+ Rooms', val: 'Room' },
+            { label: '+ Studios', val: 'Studio' }
+          ].map((pill) => {
+            const count = realProperties.filter((p) => 
+              (p.propertyType && p.propertyType.toLowerCase() === pill.val.toLowerCase()) || 
+              (p.title && p.title.toLowerCase().includes(pill.val.toLowerCase()))
+            ).length;
+
+            return (
+              <button
+                key={pill.val}
+                type="button"
+                onClick={() => setSelectedType(selectedType === pill.val ? '' : pill.val)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                  selectedType === pill.val
+                    ? 'border-[#008037] bg-emerald-50 text-[#008037] font-bold shadow-xs'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+              >
+                <span>{pill.label}</span>
+                {count > 0 && <span className="ml-1 text-[11px] font-bold text-emerald-700">({count})</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Quick Filter Pills Row 2: Top Sri Lankan Cities */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-gray-500 font-semibold text-[11px] uppercase mr-1">Try Cities:</span>
+          {['Colombo', 'Dehiwala', 'Nugegoda', 'Kandy', 'Rajagiriya', 'Battaramulla', 'Negombo', 'Galle'].map((cityName) => (
+            <button
+              key={cityName}
+              type="button"
+              onClick={() => setSelectedCity(cityName)}
+              className={`rounded-full border px-3 py-0.5 text-xs font-medium transition-all ${
+                selectedCity === cityName
+                  ? 'border-[#008037] bg-emerald-50 text-[#008037] font-bold shadow-xs'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              {cityName}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {message && (
-        <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-700 font-medium">
-          {message}
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 flex items-center justify-between shadow-xs">
+          <span>{message}</span>
+          <button onClick={() => setMessage('')} className="text-emerald-700 font-bold ml-2">✕</button>
         </div>
       )}
 
-      {/* Listings Grid */}
-      <div id="listings">
-        {loading ? (
-          <div className="py-16 text-center text-gray-500">Loading properties...</div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-300 p-16 text-center text-gray-500">
-            No properties match your filters.
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((property) => (
-              <Card key={property.id} className="overflow-hidden border border-gray-200/80 hover:shadow-lg transition-all flex flex-col justify-between">
-                <div className="relative h-44 bg-gradient-to-br from-blue-100 to-slate-100 flex items-center justify-center overflow-hidden">
-                  {property.photos && property.photos.length > 0 ? (
-                    <img 
-                      src={property.photos.find(p => p.isPrimary)?.photoUrl || property.photos[0].photoUrl} 
-                      alt={property.title} 
-                      className="w-full h-full object-cover" 
-                    />
-                  ) : (
-                    <Home className="h-12 w-12 text-blue-400" />
-                  )}
-                  <div className="absolute top-3 right-3">
-                    <Badge variant="success">{property.status || 'Active'}</Badge>
-                  </div>
-                </div>
+      {/* 3. Main Content: 3-Column LankaPropertyWeb Card Grid + Right Sidebar */}
+      <div id="listings" className="flex flex-col lg:flex-row gap-6 items-start">
+        
+        {/* Left Side: Property Listings Cards */}
+        <div className="flex-1 min-w-0">
+          {loading ? (
+            <div className="py-24 text-center text-gray-500 font-medium">
+              Loading verified property catalog...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 p-16 text-center text-gray-500 bg-white">
+              <p className="font-bold text-gray-700 text-base">
+                {dbProperties.length === 0 ? 'No Properties Added Yet' : 'No properties match your current search.'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {dbProperties.length === 0 
+                  ? 'Real properties created in the system will appear here.'
+                  : 'Try resetting your filters or clearing search criteria.'}
+              </p>
+              {dbProperties.length > 0 && (
+                <button
+                  onClick={resetAllFilters}
+                  className="mt-4 rounded bg-[#ff5a00] hover:bg-[#e04f00] px-5 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filtered.map((property, index) => {
+                const isSaved = savedIds.includes(property.id);
 
-                <CardContent className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">{property.title}</h3>
-                    <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      {property.address}
-                    </p>
-                    <div className="mt-4 flex gap-4 text-xs font-semibold text-gray-600">
-                      <span>{property.bedrooms} Bedrooms</span>
-                      <span>•</span>
-                      <span>{property.bathrooms} Bathrooms</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+                return (
+                  <React.Fragment key={property.id}>
+                    {index === 9 && (
+                      <div className="col-span-1 sm:col-span-2 xl:col-span-3 rounded-lg border border-gray-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 my-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl">
+                            👤
+                          </div>
+                          <div>
+                            <span className="text-xs sm:text-sm font-bold text-gray-900 block">
+                              Verified Tenant Services &amp; Exclusive Inquiries
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Direct owner contact, lease agreement drafting, and instant viewing scheduling.
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <button
+                            onClick={() => navigate('/agreements')}
+                            className="px-5 py-2 rounded bg-[#008037] hover:bg-[#00662c] text-white text-xs font-bold uppercase tracking-wider shadow-xs transition-all cursor-pointer"
+                          >
+                            My Agreements
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div
+                      onClick={() => navigate(`/properties/${property.id}`, { state: { property } })}
+                      className="rounded-lg bg-white border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between group cursor-pointer"
+                    >
+                    {/* Property Image & Overlay Badges */}
                     <div>
-                      <p className="text-xl font-extrabold text-blue-600">
-                        {money(property.monthlyRent)}
-                      </p>
-                      <span className="text-[11px] text-gray-400">per month</span>
+                      <div className="relative h-52 sm:h-56 bg-gray-100 overflow-hidden">
+                        <img
+                          src={property.photoUrl}
+                          alt={property.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                          onClick={() => navigate(`/properties/${property.id}`, { state: { property } })}
+                          onError={handleImageError}
+                        />
+
+                        {/* Top-Left: Photos Count Badge */}
+                        <div className="absolute top-2.5 left-2.5 bg-black/65 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-xs">
+                          <Camera className="w-3 h-3" />
+                          <span>{property.photosCount > 0 ? property.photosCount : 1}</span>
+                        </div>
+
+                        {/* Top-Right: Urgent Badge (if urgent) */}
+                        {property.isUrgent && (
+                          <div className="absolute top-2.5 right-2.5 bg-[#b91c1c] text-white text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-sm animate-pulse">
+                            URGENT
+                          </div>
+                        )}
+
+                        {/* Bottom-Right: City / Area Location Chip */}
+                        <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-xs font-bold px-2.5 py-0.5 rounded shadow-xs">
+                          {property.city || 'Colombo'}
+                        </div>
+                      </div>
+
+                      {/* Specs Row: Beds, Sqft, Type, Star */}
+                      <div className="flex items-center justify-between px-3.5 pt-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          <span className="flex items-center gap-1">
+                            <span>🛏️</span>
+                            <span>{property.bedrooms || 3}</span>
+                          </span>
+                          <span className="text-gray-300">•</span>
+                          <span className="flex items-center gap-1">
+                            <span>📐</span>
+                            <span>{property.sqft ? `${Number(property.sqft).toLocaleString()} sqft` : `${(property.bedrooms || 3) * 800} sqft`}</span>
+                          </span>
+                          <span className="ml-1 inline-block border border-[#008037] text-[#008037] text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50/40">
+                            {property.propertyType || 'House'}
+                          </span>
+                        </div>
+
+                        {/* Star Favorite Toggle */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleSave(property.id, e)}
+                          title={isSaved ? 'Remove from saved' : 'Save this property'}
+                          className="p-1 text-gray-400 hover:text-amber-500 transition-colors"
+                        >
+                          <Star
+                            className={`w-4 h-4 ${
+                              isSaved ? 'fill-amber-400 text-amber-400' : 'text-gray-400 hover:text-amber-400'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Price Row (Bold Vibrant Green) */}
+                      <div className="px-3.5 pt-1.5 flex items-baseline gap-1">
+                        <span className="text-xl sm:text-2xl font-black text-[#008037] tracking-tight">
+                          {formatLankaPrice(property.monthlyRent)}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">Per Month</span>
+                      </div>
+
+                      {/* Property Title (Blue, Clickable) */}
+                      <div className="px-3.5 pt-1">
+                        <h3
+                          onClick={() => navigate(`/properties/${property.id}`, { state: { property } })}
+                          className="text-sm font-bold text-[#0066cc] hover:underline cursor-pointer line-clamp-2 leading-snug"
+                        >
+                          {property.title}
+                        </h3>
+                      </div>
+
+                      {/* Address with Pin Icon */}
+                      <div className="px-3.5 pt-1 flex items-center gap-1 text-xs text-gray-800 font-semibold truncate">
+                        <MapPin className="w-3.5 h-3.5 text-gray-900 shrink-0" />
+                        <span className="truncate">{property.address}</span>
+                      </div>
+
+                      {/* Description Snippet */}
+                      <div className="px-3.5 pt-1 text-[11px] text-gray-500 line-clamp-2 leading-relaxed">
+                        {property.description}
+                        <span
+                          onClick={() => navigate(`/properties/${property.id}`, { state: { property } })}
+                          className="text-[#0066cc] font-bold hover:underline cursor-pointer ml-1"
+                        >
+                          more &gt;
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => setSelectedPropertyForBooking(property)} 
-                        className="bg-blue-600 hover:bg-blue-700 text-xs font-bold shadow-sm shadow-blue-500/20"
+                    {/* Card Footer: Feature Bullet & Book Now CTA */}
+                    <div className="px-3.5 py-2.5 mt-3 border-t border-gray-100 flex items-center justify-between text-xs bg-gray-50/50">
+                      <div className="text-[11px] font-bold text-emerald-700 flex items-center gap-1 truncate max-w-[140px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block shrink-0" />
+                        <span className="truncate">{property.featureTag || 'Luxury Specs'}</span>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/properties/${property.id}?book=true`, { state: { property } });
+                        }}
+                        className="bg-[#ff5a00] hover:bg-[#e04f00] text-white text-xs font-bold px-3 py-1.5 rounded shadow-xs transition-all active:scale-95 cursor-pointer"
                       >
-                        Book Property
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/properties/${property.id}`)} className="text-xs">
-                        Details
-                      </Button>
+                        View & Book
+                      </button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar: Featured Projects, Other Top Cities, Top Searches */}
+        <div className="w-full lg:w-80 shrink-0 space-y-6">
+          
+          {/* Featured Projects Card */}
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-xs">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-3">
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                Featured Projects
+              </h4>
+            </div>
+            <div className="relative rounded-lg overflow-hidden border border-gray-100 bg-slate-900 text-white group">
+              <img
+                src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80"
+                alt="Park Road Residencies"
+                className="w-full h-44 object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-3 flex flex-col justify-end">
+                <span className="text-[10px] uppercase font-bold text-amber-400">Luxury Apartments</span>
+                <h5 className="text-sm font-black text-white">Park Road Residencies</h5>
+                <p className="text-[11px] text-gray-300">Havelock Town, Colombo 5</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setSelectedCity('Colombo'); document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' }); }}
+              className="mt-3 w-full py-1.5 text-xs font-bold text-[#008037] border border-[#008037] rounded hover:bg-emerald-50 transition-colors text-center"
+            >
+              Find out more &rarr;
+            </button>
           </div>
-        )}
+
+          {/* Other Top Cities Card */}
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-xs">
+            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2 mb-3">
+              Other Top Cities
+            </h4>
+            <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-xs">
+              {[
+                'Nawala', 'Negombo',
+                'Maharagama', 'Battaramulla',
+                'Mount Lavinia', 'Malabe',
+                'Hanwella', 'Kelaniya',
+                'Piliyandala', 'Galle'
+              ].map((city) => (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => { setSelectedCity(city); document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' }); }}
+                  className="text-left text-gray-700 hover:text-[#008037] hover:underline font-medium truncate"
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Banner: GET 2X MORE VIEWS MORE LEADS */}
+          <div className="rounded-lg overflow-hidden bg-gradient-to-r from-sky-600 to-blue-700 p-4 text-white shadow-sm flex flex-col justify-between">
+            <div className="text-xs font-black tracking-wider uppercase text-sky-200">Exclusive Advertiser</div>
+            <div className="text-base font-black leading-tight mt-1">GET 2X MORE VIEWS MORE LEADS</div>
+            <p className="text-[11px] text-sky-100 mt-1">Post your property advertisement on RentWise PropertyWeb today.</p>
+            <button
+              onClick={() => setMessage('Advertising portal will launch soon for agency partners.')}
+              className="mt-3 py-1.5 px-3 bg-white text-[#0066cc] rounded text-xs font-bold hover:bg-sky-50 transition-all text-center shadow-xs cursor-pointer"
+            >
+              Post Your Ad Now
+            </button>
+          </div>
+
+          {/* Top Searches Card */}
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-xs">
+            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2 mb-3">
+              Top Searches
+            </h4>
+            <ul className="space-y-2 text-xs">
+              {[
+                'Houses for rent in Sri Lanka',
+                'Apartments for rent in Sri Lanka',
+                'Office spaces for rent in Sri Lanka',
+                'Bungalows for rent in Sri Lanka',
+                'Villas for rent in Sri Lanka',
+                'Annexes for rent in Sri Lanka',
+                'Boarding places & Rooms for rent in Sri Lanka',
+                'Houses for rent in Sri Lanka for less than 50,000',
+                'Houses for rent in Sri Lanka for less than 30,000'
+              ].map((searchItem) => (
+                <li key={searchItem}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (searchItem.includes('50,000')) setMaxRent('50000');
+                      else if (searchItem.includes('30,000')) setMaxRent('30000');
+                      else if (searchItem.includes('Apartment')) setSelectedType('Apartment');
+                      else if (searchItem.includes('Villa')) setSelectedType('Villa');
+                      else setQuery(searchItem.split(' ')[0]);
+                      document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="text-left text-gray-600 hover:text-[#008037] hover:underline text-[11.5px]"
+                  >
+                    {searchItem}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
 
-      {/* Booking Modal asking for rental duration in months, start date, and note */}
+      {/* Booking Modal */}
       <BookingModal
         isOpen={!!selectedPropertyForBooking}
         onClose={() => setSelectedPropertyForBooking(null)}
@@ -288,7 +760,7 @@ export const TenantPropertyPortal = () => {
 
 export const TenantProfilePortal = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   
   const [profile, setProfile] = useState(null);
   const [agreements, setAgreements] = useState([]);
@@ -299,6 +771,126 @@ export const TenantProfilePortal = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Edit Profile States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    nicNumber: ''
+  });
+  const [editPasswordData, setEditPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showEditCurrentPassword, setShowEditCurrentPassword] = useState(false);
+  const [showEditNewPassword, setShowEditNewPassword] = useState(false);
+  const [showEditConfirmPassword, setShowEditConfirmPassword] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editProfileError, setEditProfileError] = useState('');
+  const [editProfileSuccess, setEditProfileSuccess] = useState('');
+
+  const handleOpenEditProfile = () => {
+    setEditProfileError('');
+    setEditProfileSuccess('');
+    setEditFormData({
+      fullName: profile?.fullName || profile?.name || user?.fullName || '',
+      phoneNumber: profile?.phoneNumber || user?.phoneNumber || profile?.telephoneNumber || '',
+      nicNumber: profile?.nicNumber || user?.nicNumber || ''
+    });
+    setEditPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setEditProfileError('');
+    setEditProfileSuccess('');
+
+    if (!editFormData.fullName.trim()) {
+      setEditProfileError('Full name is required.');
+      return;
+    }
+
+    if (editFormData.phoneNumber && !/^\d{10}$/.test(editFormData.phoneNumber.trim())) {
+      setEditProfileError('Phone number must be exactly 10 digits (e.g. 0712345678).');
+      return;
+    }
+
+    if (editFormData.nicNumber && !/^([0-9]{9}[vV]|[0-9]{12})$/.test(editFormData.nicNumber.trim())) {
+      setEditProfileError("NIC must be 12 digits or 9 digits followed by 'V' (e.g. 123456789V or 200012345678).");
+      return;
+    }
+
+    if (editPasswordData.newPassword) {
+      if (!editPasswordData.currentPassword) {
+        setEditProfileError('Please enter your current password to set a new password.');
+        return;
+      }
+      if (editPasswordData.newPassword.length < 8) {
+        setEditProfileError('New password must be at least 8 characters.');
+        return;
+      }
+      if (editPasswordData.newPassword !== editPasswordData.confirmPassword) {
+        setEditProfileError('New password and confirm password do not match.');
+        return;
+      }
+    }
+
+    try {
+      setIsSavingProfile(true);
+      const res = await api.put('/auth/profile', {
+        fullName: editFormData.fullName.trim(),
+        phoneNumber: editFormData.phoneNumber ? editFormData.phoneNumber.trim() : null,
+        nicNumber: editFormData.nicNumber ? editFormData.nicNumber.trim().toUpperCase() : null
+      });
+
+      if (editPasswordData.newPassword) {
+        await api.post('/auth/change-password', {
+          currentPassword: editPasswordData.currentPassword,
+          newPassword: editPasswordData.newPassword
+        });
+      }
+
+      setProfile((prev) => ({
+        ...(prev || {}),
+        ...(res.data?.user || {}),
+        fullName: editFormData.fullName.trim(),
+        phoneNumber: editFormData.phoneNumber.trim(),
+        nicNumber: editFormData.nicNumber.trim().toUpperCase()
+      }));
+
+      if (res.data?.token) {
+        updateUser(res.data.token, res.data.user);
+      } else if (res.data?.user) {
+        updateUser(null, res.data.user);
+      }
+
+      setEditProfileSuccess('Profile updated successfully!');
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+        setEditProfileSuccess('');
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      let msg = 'Failed to update profile. Please check your inputs.';
+      if (err.response?.data?.errors) {
+        msg = Object.values(err.response.data.errors).flat().join(' ');
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (typeof err.response?.data === 'string') {
+        msg = err.response.data;
+      }
+      setEditProfileError(msg);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleOpenPayment = (agreement) => {
     setSelectedAgreementForPayment(agreement);
@@ -313,13 +905,22 @@ export const TenantProfilePortal = () => {
     setIsLoading(true);
     Promise.all([
       api.get('/auth/profile').catch(() => null),
-      api.get('/agreements/mine').catch(() => ({ data: [] })),
-      api.get('/maintenance-requests/mine').catch(() => ({ data: [] })),
-      api.get('/property-applications').catch(() => ({ data: [] }))
+      api.get('/agreements/mine').catch(() => api.get('/agreements').catch(() => ({ data: [] }))),
+      api.get('/maintenance-requests/mine').catch(() => api.get('/maintenance-requests').catch(() => ({ data: [] }))),
+      api.get('/property-applications').catch(() => ({ data: [] })),
+      api.get('/properties').catch(() => ({ data: [] }))
     ])
-      .then(async ([profileRes, agreementRes, maintenanceRes, bookingsRes]) => {
+      .then(async ([profileRes, agreementRes, maintenanceRes, bookingsRes, propertiesRes]) => {
         let agreementData = Array.isArray(agreementRes?.data) ? agreementRes.data : [];
         let bookingData = Array.isArray(bookingsRes?.data) ? bookingsRes.data : [];
+        let rawMaintenance = Array.isArray(maintenanceRes?.data) ? maintenanceRes.data : [];
+        const propertiesData = Array.isArray(propertiesRes?.data) ? propertiesRes.data : [];
+
+        // Build property lookup dictionary
+        const propLookup = new Map();
+        propertiesData.forEach((p) => {
+          if (p && p.id) propLookup.set(p.id, p);
+        });
 
         // Synchronize with client-side confirmed agreements and bookings
         try {
@@ -344,9 +945,46 @@ export const TenantProfilePortal = () => {
           console.error('Tenant profile sync error:', e);
         }
 
+        // Synchronize maintenance requests with localStorage and server data
+        try {
+          const localMaintenance = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+          const mMap = new Map();
+
+          // Add server requests
+          rawMaintenance.forEach((m) => {
+            if (m && m.id) {
+              const matchedProp = propLookup.get(m.propertyId) || m.property;
+              mMap.set(m.id, {
+                ...m,
+                propertyTitle: m.propertyTitle || matchedProp?.title || `Property #${String(m.propertyId).slice(0, 8)}`,
+                propertyAddress: m.propertyAddress || matchedProp?.address || ''
+              });
+            }
+          });
+
+          // Merge client-side cached requests
+          localMaintenance.forEach((lm) => {
+            if (lm && lm.id && (!lm.tenantId || !user?.id || lm.tenantId === user?.id)) {
+              if (!mMap.has(lm.id)) {
+                const matchedProp = propLookup.get(lm.propertyId) || lm.property;
+                mMap.set(lm.id, {
+                  ...lm,
+                  propertyTitle: lm.propertyTitle || matchedProp?.title || `Property #${String(lm.propertyId).slice(0, 8)}`,
+                  propertyAddress: lm.propertyAddress || matchedProp?.address || ''
+                });
+              }
+            }
+          });
+
+          rawMaintenance = Array.from(mMap.values());
+          rawMaintenance.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        } catch (e) {
+          console.error('Tenant maintenance sync error:', e);
+        }
+
         setProfile(profileRes?.data || null);
         setAgreements(agreementData);
-        setMaintenance(maintenanceRes?.data || []);
+        setMaintenance(rawMaintenance);
         setMyBookings(bookingData);
 
         // Fetch payments for tenant's agreements
@@ -355,7 +993,6 @@ export const TenantProfilePortal = () => {
             api.get(`/agreements/${agreement.id}/payments`).catch(() => ({ data: [] }))
           )
         );
-        setPayments(paymentResponses.flatMap((res) => res.data || []));
         let allPayments = paymentResponses.flatMap((res) => res.data || []);
 
         // Synchronize with client-side recorded payments
@@ -375,7 +1012,7 @@ export const TenantProfilePortal = () => {
       })
       .catch(() => setError('Unable to load some of your tenant profile details.'))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [user]);
 
   // Compute total spent on rent
   const totalPaid = useMemo(() => {
@@ -429,10 +1066,16 @@ export const TenantProfilePortal = () => {
                   <Mail className="w-4 h-4 text-slate-400" />
                   {profile?.email || user?.email}
                 </span>
-                {profile?.telephoneNumber && (
+                {(profile?.phoneNumber || profile?.telephoneNumber || user?.phoneNumber) && (
                   <span className="flex items-center gap-1.5">
                     <Phone className="w-4 h-4 text-slate-400" />
-                    {profile.telephoneNumber}
+                    {profile?.phoneNumber || profile?.telephoneNumber || user?.phoneNumber}
+                  </span>
+                )}
+                {(profile?.nicNumber || user?.nicNumber) && (
+                  <span className="flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-slate-400" />
+                    NIC: {profile?.nicNumber || user?.nicNumber}
                   </span>
                 )}
               </div>
@@ -441,6 +1084,13 @@ export const TenantProfilePortal = () => {
 
           {/* Quick Actions */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleOpenEditProfile}
+              className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tracking-wide uppercase backdrop-blur-md border border-white/20 transition-all flex items-center gap-2"
+            >
+              <User className="w-4 h-4" />
+              <span>Edit Profile</span>
+            </button>
             <button
               onClick={() => navigate('/properties')}
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold tracking-wide uppercase shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2"
@@ -1077,6 +1727,28 @@ export const TenantProfilePortal = () => {
                       </h3>
                     </div>
 
+                    {/* Property info */}
+                    {(request.propertyTitle || request.property?.title) && (
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium bg-blue-50/60 px-3 py-1.5 rounded-xl border border-blue-100/70">
+                        <Home className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="truncate font-bold text-gray-800">
+                          {request.propertyTitle || request.property?.title}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Photo thumbnail if present */}
+                    {request.photoUrl && (
+                      <div className="relative rounded-xl overflow-hidden border border-gray-200 h-28 bg-gray-50">
+                        <img 
+                          src={request.photoUrl} 
+                          alt="Maintenance proof" 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+
                     <div className="p-3 bg-gray-50 rounded-2xl text-xs space-y-1.5 text-gray-600">
                       <div className="flex justify-between">
                         <span className="text-gray-400">Priority:</span>
@@ -1116,6 +1788,173 @@ export const TenantProfilePortal = () => {
         agreement={selectedAgreementForPayment}
         onSuccess={handlePaymentSuccess}
       />
+
+      {/* Edit Profile Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit My Profile"
+        className="max-w-lg"
+      >
+        {editProfileSuccess && (
+          <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{editProfileSuccess}</span>
+          </div>
+        )}
+
+        {editProfileError && (
+          <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
+            <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{editProfileError}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveProfile} className="space-y-4">
+          {/* Full Name */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block">
+              Full Name
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={editFormData.fullName}
+                onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })}
+                placeholder="Your full name"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-sm text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+              />
+              <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Phone Number & NIC Number Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* Phone */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block">
+                Phone Number
+              </label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  maxLength={10}
+                  value={editFormData.phoneNumber}
+                  onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
+                  placeholder="0712345678"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-sm text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                />
+                <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+              <p className="text-[10px] text-gray-400">10 digits (e.g. 0712345678)</p>
+            </div>
+
+            {/* NIC */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block">
+                NIC Number
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={12}
+                  value={editFormData.nicNumber}
+                  onChange={(e) => setEditFormData({ ...editFormData, nicNumber: e.target.value.toUpperCase() })}
+                  placeholder="123456789V / 2000..."
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50/50 text-sm uppercase text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                />
+                <CreditCard className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+              <p className="text-[10px] text-gray-400">12 digits or 9 digits + 'V'</p>
+            </div>
+          </div>
+
+          {/* Password Change Sub-section */}
+          <div className="pt-3 border-t border-gray-100">
+            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2.5">
+              Change Password (Optional)
+            </h4>
+            <div className="space-y-3">
+              <div>
+                <div className="relative">
+                  <input
+                    type={showEditCurrentPassword ? 'text' : 'password'}
+                    value={editPasswordData.currentPassword}
+                    onChange={(e) => setEditPasswordData({ ...editPasswordData, currentPassword: e.target.value })}
+                    placeholder="Current Password"
+                    className="w-full pl-10 pr-10 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCurrentPassword(!showEditCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showEditCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="relative">
+                  <input
+                    type={showEditNewPassword ? 'text' : 'password'}
+                    value={editPasswordData.newPassword}
+                    onChange={(e) => setEditPasswordData({ ...editPasswordData, newPassword: e.target.value })}
+                    placeholder="New Password (min 8)"
+                    className="w-full pl-9 pr-9 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditNewPassword(!showEditNewPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showEditNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showEditConfirmPassword ? 'text' : 'password'}
+                    value={editPasswordData.confirmPassword}
+                    onChange={(e) => setEditPasswordData({ ...editPasswordData, confirmPassword: e.target.value })}
+                    placeholder="Confirm New Password"
+                    className="w-full pl-9 pr-9 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditConfirmPassword(!showEditConfirmPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showEditConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <Button
+              type="submit"
+              isLoading={isSavingProfile}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2 rounded-xl shadow-md shadow-blue-600/20"
+            >
+              Save Profile
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
     </div>
   );
