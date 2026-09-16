@@ -1,13 +1,17 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using RentWise_Backend.Models.PropertyManagement;
+
 namespace RentWise_Backend.Models
 {
-    public class RentalAgreement
+    [Table("RentalAgreements")]
+    public class RentalAgreement : BaseEntity
     {
-        public int Id { get; set; }
-
-        public int ApplicationId { get; set; }
-        public int PropertyId { get; set; }
-        public int TenantId { get; set; }
-        public int OwnerId { get; set; }
+        public Guid ApplicationId { get; set; }
+        public Guid PropertyId { get; set; }
+        public Guid TenantId { get; set; }
+        public Guid OwnerId { get; set; }
 
         public decimal MonthlyRent { get; set; }
 
@@ -19,6 +23,19 @@ namespace RentWise_Backend.Models
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
         public ICollection<RentReminder> RentReminders { get; set; } = new List<RentReminder>();
 
+        // Navigation properties
+        [ForeignKey("ApplicationId")]
+        public Application Application { get; set; }
+
+        [ForeignKey("PropertyId")]
+        public Property Property { get; set; }
+
+        [ForeignKey("TenantId")]
+        public User Tenant { get; set; }
+
+        [ForeignKey("OwnerId")]
+        public User Owner { get; set; }
+
         internal void TransitionTo(string next)
         {
             if (!AgreementStatuses.CanTransition(Status, next))
@@ -27,8 +44,5 @@ namespace RentWise_Backend.Models
             Status = next;
             UpdatedAt = DateTime.UtcNow;
         }
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

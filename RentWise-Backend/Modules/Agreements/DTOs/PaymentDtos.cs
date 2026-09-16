@@ -8,5 +8,5 @@ public sealed class CreatePaymentRequest
     [Required, StringLength(50)] public string PaymentMethod { get; init; } = string.Empty;
 }
 
-public sealed record PaymentResponse(Guid Id, int RentalAgreementId, decimal Amount,
+public sealed record PaymentResponse(Guid Id, Guid RentalAgreementId, decimal Amount,
     DateTime PaymentDate, string Status, string PaymentMethod, DateTime CreatedAt);
