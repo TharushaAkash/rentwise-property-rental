@@ -1,53 +1,30 @@
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic;
+using RentWise_Backend.Models;
+using RentWise_Backend.Models.PropertyManagement;
 
-namespace RentWise_Backend.Models
+namespace RentWise_Backend.Modules.Maintenance.Entities
 {
-    [Table("MaintenanceRequests")]
-    public class MaintenanceRequest
+    public class MaintenanceRequest : BaseEntity
     {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
-
-        public Guid? PropertyId { get; set; }
-
-        [Required]
         public Guid TenantId { get; set; }
+        public User Tenant { get; set; } = null!;
 
-        public Guid? AssignedToUserId { get; set; }
+        public Guid PropertyId { get; set; }
+        public Property Property { get; set; } = null!;
 
-        [Required]
-        [MaxLength(200)]
-        public string Title { get; set; } = string.Empty;
-
-        [Required]
         public string Description { get; set; } = string.Empty;
+        public string PhotoUrl { get; set; } = string.Empty; // Mobile camera integration
 
-        [Required]
-        [MaxLength(50)]
-        public string Category { get; set; } = "General";
+        public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Reported;
 
-        [Required]
-        [MaxLength(20)]
-        public string Priority { get; set; } = "Medium";
+        // Output from Maintenance Triage Agent
+        public string AICategory { get; set; } = string.Empty;
+        public string AIPriority { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(20)]
-        public string Status { get; set; } = "Pending";
+        public Guid? AssignedServiceProviderId { get; set; }
+        public ServiceProvider? AssignedServiceProvider { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? EstimatedCost { get; set; }
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? ActualCost { get; set; }
-
-        public string? ResolutionNotes { get; set; }
-
-        public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
-
-        public DateTime? ResolvedAt { get; set; }
-
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public ICollection<RequestStatusLog> StatusLogs { get; set; } = new List<RequestStatusLog>();
     }
 }

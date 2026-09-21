@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using RentWise_Backend.Common.Interfaces;
-using RentWise_Backend.Models;
-using RentWise_Backend.Services.Interfaces;
+using RentWise_Backend.Modules.Maintenance.Entities;
+using RentWise_Backend.Modules.Maintenance.Interfaces;
 
-namespace RentWise_Backend.Services
+namespace RentWise_Backend.Modules.Maintenance.Services
 {
     public class RequestStatusLogService : IRequestStatusLogService
     {
