@@ -5,7 +5,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
-from .state import AgentWorkflowState
+from ..state import AgentWorkflowState
 
 @tool
 def get_property_submission(property_id: str) -> str:
@@ -44,40 +44,67 @@ def get_property_submission(property_id: str) -> str:
         return json.dumps({"error": f"Failed to fetch property details: {str(e)}"})
 
 @tool
-def check_document_consistency(documents: str) -> str:
-    """Analyzes documents for consistency and returns a report."""
-    # Handle case where LLM passes a python list/dict instead of string
-    if isinstance(documents, list):
-        docs = documents
-    elif isinstance(documents, dict):
-        docs = [documents]
-    else:
-        try:
-            docs = json.loads(documents)
-            if not isinstance(docs, list):
-                docs = [docs]
-        except:
-            return "Inconsistent: Could not read documents."
-            
-    names = [doc.get("content", "") for doc in docs if isinstance(doc, dict) and "John Doe" in doc.get("content", "")]
-    if len(names) >= 2:
-        return "Consistent: The names match across the deed and ID."
-    return "Inconsistent: Documents do not match or are missing."
+def check_document_consistency(property_address: str, document_url: str) -> str:
+    """Analyzes a document image for consistency with the property address using OCR."""
+    if not document_url:
+        return "Inconsistent: No document URL provided."
+        
+    try:
+        # Use a vision-capable model
+        vision_llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite")
+        
+        # Prepare multimodal message
+        message = HumanMessage(
+            content=[
+                {
+                    "type": "text",
+                    "text": f"Extract the address from this document. Does it match or closely resemble the following property address: '{property_address}'? Respond with 'Consistent: <reason>' or 'Inconsistent: <reason>'."
+                },
+                {
+                    "type": "image_url",
+                    "image_url": document_url
+                }
+            ]
+        )
+        
+        response = vision_llm.invoke([message])
+        return response.content
+    except Exception as e:
+        return f"Error analyzing document: {str(e)}"
+
+@tool
+def check_duplicate_property(address: str) -> str:
+    """Checks if a property with the given address already exists in the system."""
+    backend_url = os.getenv("BACKEND_API_URL", "http://localhost:5002").rstrip('/')
+    api_key = os.getenv("BACKEND_API_KEY", "")
+    headers = {"X-Api-Key": api_key}
+    
+    try:
+        resp = requests.get(f"{backend_url}/api/Properties/check-duplicate", params={"address": address}, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("exists"):
+            return f"Duplicate found: Property ID {data.get('propertyId')} with status {data.get('status')} already has this address."
+        return "No duplicate property found. Address is unique."
+    except Exception as e:
+        return f"Error checking duplicate property: {str(e)}"
 
 system_prompt = """You are the Property Verification Agent for RentWise AI.
 Your job is to check a new property listing for completeness and internal consistency.
 
-Use the `get_property_submission` tool to get the details of the property.
-Pass the documents to the `check_document_consistency` tool to verify them.
+Steps:
+1. Use the `get_property_submission` tool to get the details of the property, including its address and document URLs.
+2. If there is a document URL (like an electricity bill), pass the property address and the document URL to the `check_document_consistency` tool to verify the address via OCR.
+3. Use the `check_duplicate_property` tool with the property address to ensure no duplicates exist.
 
 After checking everything, you must output a final report in JSON format with exactly two fields:
 - "recommendation": must be one of "Approve-ready", "Needs Review", or "Reject-recommended"
-- "reasoning": a short sentence explaining your recommendation.
+- "reasoning": a short sentence explaining your recommendation based on the document consistency and duplicate checks.
 """
 
 def get_property_verification_agent():
     llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite")
-    tools = [get_property_submission, check_document_consistency]
+    tools = [get_property_submission, check_document_consistency, check_duplicate_property]
     agent = create_react_agent(llm, tools, prompt=system_prompt)
     return agent
 

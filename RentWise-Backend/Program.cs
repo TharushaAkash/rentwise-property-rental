@@ -8,7 +8,7 @@ using RentWise_Backend.Services;
 using RentWise_Backend.Services.Interfaces;
 
 using RentWise_Backend.Common.Interfaces;
-// using RentWise_Backend.Common.Repositories;
+using RentWise_Backend.Common.Repositories;
 using RentWise_Backend.Common.Services;
 using Supabase;
 
@@ -68,7 +68,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 
 // Register Generic Repository
-// builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register Module Services
 builder.Services.AddScoped<IPropertyService, PropertyService>();
@@ -88,9 +88,9 @@ builder.Services.AddScoped<RentalAgreementService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<RentReminderService>();
 
-// builder.Services.AddScoped<IMaintenanceRequestService, MaintenanceRequestService>();
-// builder.Services.AddScoped<IServiceProviderService, ServiceProviderService>();
-// builder.Services.AddScoped<IRequestStatusLogService, RequestStatusLogService>();
+builder.Services.AddScoped<RentWise_Backend.Modules.Maintenance.Interfaces.IMaintenanceRequestService, RentWise_Backend.Modules.Maintenance.Services.MaintenanceRequestService>();
+builder.Services.AddScoped<RentWise_Backend.Modules.Maintenance.Interfaces.IServiceProviderService, RentWise_Backend.Modules.Maintenance.Services.ServiceProviderService>();
+builder.Services.AddScoped<RentWise_Backend.Modules.Maintenance.Interfaces.IRequestStatusLogService, RentWise_Backend.Modules.Maintenance.Services.RequestStatusLogService>();
 
 // Configure Supabase
 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? builder.Configuration["Supabase:Url"];

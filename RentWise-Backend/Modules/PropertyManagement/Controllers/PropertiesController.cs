@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RentWise_Backend.Models.PropertyManagement;
 using RentWise_Backend.Services.Interfaces;
+using System.Linq;
 
 namespace RentWise_Backend.Controllers
 {
@@ -37,6 +38,23 @@ namespace RentWise_Backend.Controllers
             var property = await _propertyService.GetPropertyByIdAsync(id);
             if (property == null) return NotFound();
             return Ok(property);
+        }
+
+        [HttpGet("check-duplicate")]
+        public async Task<IActionResult> CheckDuplicate([FromQuery] string address)
+        {
+            if (string.IsNullOrWhiteSpace(address))
+                return BadRequest("Address is required.");
+
+            var allProperties = await _propertyService.GetAllPropertiesAsync();
+            var duplicate = allProperties.FirstOrDefault(p => p.Address.Equals(address, StringComparison.OrdinalIgnoreCase));
+            
+            if (duplicate != null)
+            {
+                return Ok(new { exists = true, propertyId = duplicate.Id, status = duplicate.Status.ToString() });
+            }
+            
+            return Ok(new { exists = false });
         }
 
         [HttpPost]

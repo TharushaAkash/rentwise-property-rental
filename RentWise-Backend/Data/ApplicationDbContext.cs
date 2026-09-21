@@ -30,6 +30,11 @@ namespace RentWise_Backend.Data
         public DbSet<Payment> Payments { get; set; }
         public DbSet<RentReminder> RentReminders { get; set; }
 
+        // Maintenance Module
+        public DbSet<RentWise_Backend.Modules.Maintenance.Entities.MaintenanceRequest> MaintenanceRequests { get; set; }
+        public DbSet<RentWise_Backend.Modules.Maintenance.Entities.RequestStatusLog> RequestStatusLogs { get; set; }
+        public DbSet<RentWise_Backend.Modules.Maintenance.Entities.ServiceProvider> ServiceProviders { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

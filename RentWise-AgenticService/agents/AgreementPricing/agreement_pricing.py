@@ -1,5 +1,5 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from .state import AgentWorkflowState
+from ..state import AgentWorkflowState
 
 def get_agreement_pricing_agent():
     llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite")

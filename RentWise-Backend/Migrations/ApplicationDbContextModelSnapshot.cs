@@ -466,6 +466,134 @@ namespace RentWise_Backend.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("RentWise_Backend.Modules.Maintenance.Entities.MaintenanceRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AICategory")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AIPriority")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("AssignedServiceProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PhotoUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedServiceProviderId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("MaintenanceRequests");
+                });
+
+            modelBuilder.Entity("RentWise_Backend.Modules.Maintenance.Entities.RequestStatusLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MaintenanceRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NewStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("OldStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaintenanceRequestId");
+
+                    b.ToTable("RequestStatusLogs");
+                });
+
+            modelBuilder.Entity("RentWise_Backend.Modules.Maintenance.Entities.ServiceProvider", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContactNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ServiceArea")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServiceProviders");
+                });
+
             modelBuilder.Entity("RentWise_Backend.Models.Payment", b =>
                 {
                     b.HasOne("RentWise_Backend.Models.RentalAgreement", "RentalAgreement")
@@ -573,6 +701,42 @@ namespace RentWise_Backend.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("RentWise_Backend.Modules.Maintenance.Entities.MaintenanceRequest", b =>
+                {
+                    b.HasOne("RentWise_Backend.Modules.Maintenance.Entities.ServiceProvider", "AssignedServiceProvider")
+                        .WithMany()
+                        .HasForeignKey("AssignedServiceProviderId");
+
+                    b.HasOne("RentWise_Backend.Models.PropertyManagement.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RentWise_Backend.Models.User", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AssignedServiceProvider");
+
+                    b.Navigation("Property");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("RentWise_Backend.Modules.Maintenance.Entities.RequestStatusLog", b =>
+                {
+                    b.HasOne("RentWise_Backend.Modules.Maintenance.Entities.MaintenanceRequest", "MaintenanceRequest")
+                        .WithMany("StatusLogs")
+                        .HasForeignKey("MaintenanceRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MaintenanceRequest");
+                });
+
             modelBuilder.Entity("RentWise_Backend.Models.PropertyManagement.Property", b =>
                 {
                     b.Navigation("Documents");
@@ -587,6 +751,11 @@ namespace RentWise_Backend.Migrations
                     b.Navigation("Payments");
 
                     b.Navigation("RentReminders");
+                });
+
+            modelBuilder.Entity("RentWise_Backend.Modules.Maintenance.Entities.MaintenanceRequest", b =>
+                {
+                    b.Navigation("StatusLogs");
                 });
 #pragma warning restore 612, 618
         }
