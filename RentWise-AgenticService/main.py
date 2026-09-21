@@ -47,4 +47,23 @@ def run_verification_workflow(req: WorkflowRequest):
         "report": result.get("verification_report", {})
     }
 
-# Other endpoints for specific agents can be added here
+@app.post("/workflow/maintenance-triage")
+def run_maintenance_workflow(req: WorkflowRequest):
+    if not req.objective:
+        return {"error": "objective (description of the issue) is required"}
+    
+    from agents.orchestrator import build_maintenance_graph
+    graph = build_maintenance_graph()
+    
+    initial_state = {
+        "objective": req.objective,
+        "property_id": req.property_id,
+        "current_agent": "MaintenanceTriage"
+    }
+    
+    result = graph.invoke(initial_state)
+    
+    return {
+        "status": "completed", 
+        "ticket": result.get("maintenance_ticket", {})
+    }

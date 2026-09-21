@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RentWise_Backend.Models;
-using RentWise_Backend.Services.Interfaces;
-using RentWise_Backend.Data;
-using Microsoft.EntityFrameworkCore;
-//added
-namespace RentWise_Backend.Controllers
+using RentWise_Backend.Modules.Maintenance.Entities;
+using RentWise_Backend.Modules.Maintenance.Interfaces;
+
+namespace RentWise_Backend.Modules.Maintenance.Controllers
 {
     [ApiController]
     [Route("api/maintenance-requests/{requestId}/logs")]
@@ -13,22 +11,17 @@ namespace RentWise_Backend.Controllers
     public class RequestStatusLogsController : ControllerBase
     {
         private readonly IRequestStatusLogService _service;
-        private readonly ApplicationDbContext _context;
 
-        public RequestStatusLogsController(IRequestStatusLogService service, ApplicationDbContext context)
+        public RequestStatusLogsController(IRequestStatusLogService service)
         {
             _service = service;
-            _context = context;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetLogs(Guid requestId)
         {
-            var logs = await _context.RequestStatusLogs
-                .Where(l => l.MaintenanceRequestId == requestId)
-                .OrderByDescending(l => l.CreatedAt)
-                .ToListAsync();
-            return Ok(logs);
+            var result = await _service.GetAllLogsAsync(requestId);
+            return Ok(result);
         }
 
         [HttpGet("{id}")]
@@ -40,7 +33,7 @@ namespace RentWise_Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "PropertyOwner,SystemAdmin,Tenant")]
+        [Authorize(Roles = "PropertyOwner,SystemAdmin")]
         public async Task<IActionResult> CreateLog(Guid requestId, [FromBody] RequestStatusLog log)
         {
             log.MaintenanceRequestId = requestId;
@@ -66,4 +59,3 @@ namespace RentWise_Backend.Controllers
         }
     }
 }
-

@@ -5,7 +5,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
-from .state import AgentWorkflowState
+from ..state import AgentWorkflowState
 
 @tool
 def get_property_submission(property_id: str) -> str:

@@ -14,9 +14,7 @@ def agreement_pricing_node(state: AgentWorkflowState):
     print("Running Agreement & Pricing Agent...")
     return {"current_agent": "AgreementPricing"}
 
-def maintenance_triage_node(state: AgentWorkflowState):
-    print("Running Maintenance Triage Agent...")
-    return {"current_agent": "MaintenanceTriage"}
+from .MaintenanceTriage.maintenance_triage_agent import run_maintenance_triage_agent as maintenance_triage_node
 
 def build_workflow_graph():
     graph = StateGraph(AgentWorkflowState)
@@ -38,7 +36,7 @@ def build_workflow_graph():
 def build_verification_graph():
     graph = StateGraph(AgentWorkflowState)
     
-    from .property_verification import run_property_verification_agent
+    from .PropertyVerification.property_verification import run_property_verification_agent
     
     # Add nodes
     graph.add_node("property_verification", run_property_verification_agent)
@@ -49,4 +47,10 @@ def build_verification_graph():
     
     return graph.compile()
 
-# You can define other graphs for other workflows (e.g., verification only)
+def build_maintenance_graph():
+    graph = StateGraph(AgentWorkflowState)
+    from .MaintenanceTriage.maintenance_triage_agent import run_maintenance_triage_agent
+    graph.add_node("maintenance_triage", run_maintenance_triage_agent)
+    graph.add_edge(START, "maintenance_triage")
+    graph.add_edge("maintenance_triage", END)
+    return graph.compile()
