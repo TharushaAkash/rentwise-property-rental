@@ -13,7 +13,9 @@ function getUserFromToken(token) {
       id: decoded.sub,
       email: decoded.email,
       fullName: decoded.FullName || decoded.name || decoded.unique_name || '',
-      role: decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+      role: decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+      phoneNumber: decoded.PhoneNumber || decoded.phoneNumber || '',
+      nicNumber: decoded.NicNumber || decoded.nicNumber || ''
     };
   } catch {
     localStorage.removeItem('token');
