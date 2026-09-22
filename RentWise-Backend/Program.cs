@@ -79,6 +79,7 @@ builder.Services.AddScoped<IPropertyDocumentService, PropertyDocumentService>();
 builder.Services.AddScoped<ITenantProfileService, TenantProfileService>();
 builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
 builder.Services.AddScoped<IApplicationService, ApplicationService>();
+builder.Services.AddHttpClient<RentWise_Backend.Modules.TenantMatching.Interfaces.ILocationService, RentWise_Backend.Modules.TenantMatching.Services.LocationService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
