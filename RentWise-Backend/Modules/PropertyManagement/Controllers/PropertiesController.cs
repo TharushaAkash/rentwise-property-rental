@@ -158,5 +158,15 @@ namespace RentWise_Backend.Controllers
             await _propertyService.DeletePropertyAsync(id);
             return NoContent();
         }
+
+        [HttpPut("{id}/status")]
+        [Authorize(Roles = "Admin,admin")]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] RentWise_Backend.Modules.PropertyManagement.DTOs.UpdatePropertyStatusDto dto)
+        {
+            var result = await _propertyService.UpdatePropertyStatusAsync(id, dto.Status);
+            if (!result) return NotFound();
+
+            return Ok(new { message = "Status updated successfully", newStatus = dto.Status.ToString() });
+        }
     }
 }

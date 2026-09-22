@@ -12,6 +12,7 @@ namespace RentWise_Backend.Services.Interfaces
         Task<IEnumerable<Property>> GetPropertiesByOwnerIdAsync(Guid ownerId);
         Task<Property> CreatePropertyAsync(Property property);
         Task UpdatePropertyAsync(Property property);
+        Task<bool> UpdatePropertyStatusAsync(Guid id, PropertyStatus newStatus);
         Task DeletePropertyAsync(Guid id);
     }
 }
