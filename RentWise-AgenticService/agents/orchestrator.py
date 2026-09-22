@@ -54,3 +54,11 @@ def build_maintenance_graph():
     graph.add_edge(START, "maintenance_triage")
     graph.add_edge("maintenance_triage", END)
     return graph.compile()
+
+def build_matching_graph():
+    graph = StateGraph(AgentWorkflowState)
+    from .MatchingLocation.matching_location import run_matching_location_agent
+    graph.add_node("matching_location", run_matching_location_agent)
+    graph.add_edge(START, "matching_location")
+    graph.add_edge("matching_location", END)
+    return graph.compile()
