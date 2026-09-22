@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using RentWise.API.Modules.PropertyManagement.Entities;
 using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise.API.Common.Interfaces;
 
 namespace RentWise.API.Modules.PropertyManagement.Controllers
 {
@@ -14,10 +16,12 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
     public class PropertyDocumentsController : ControllerBase
     {
         private readonly IPropertyDocumentService _documentService;
+        private readonly ISupabaseStorageService _storageService;
 
-        public PropertyDocumentsController(IPropertyDocumentService documentService)
+        public PropertyDocumentsController(IPropertyDocumentService documentService, ISupabaseStorageService storageService)
         {
             _documentService = documentService;
+            _storageService = storageService;
         }
 
         [HttpGet]
@@ -37,9 +41,27 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
-        public async Task<IActionResult> CreateDocument(Guid propertyId, [FromBody] PropertyDocument document)
+        public async Task<IActionResult> CreateDocument(Guid propertyId, IFormFile file, [FromForm] string documentType)
         {
-            document.PropertyId = propertyId;
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            if (string.IsNullOrEmpty(documentType))
+                return BadRequest("Document type is required (e.g. Deed, UtilityBill).");
+
+            var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+            var bucketName = "Properties";
+            var filePath = $"property-documents/{propertyId}/{fileName}";
+            
+            var documentUrl = await _storageService.UploadFileAsync(file, bucketName, filePath);
+
+            var document = new PropertyDocument
+            {
+                PropertyId = propertyId,
+                DocumentType = documentType,
+                DocumentUrl = documentUrl
+            };
+
             var createdDocument = await _documentService.CreateDocumentAsync(document);
             return CreatedAtAction(nameof(GetDocument), new { propertyId = propertyId, id = createdDocument.Id }, createdDocument);
         }

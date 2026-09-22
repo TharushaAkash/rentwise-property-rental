@@ -277,6 +277,24 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             await _propertyService.DeletePropertyAsync(id);
             return NoContent();
         }
+
+        [HttpPut("{id}/status")]
+        [Authorize(Roles = "Admin,Administrator,SystemAdmin")]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdatePropertyStatusDto dto)
+        {
+            var result = await _propertyService.UpdatePropertyStatusAsync(id, dto.Status);
+            if (!result) return NotFound();
+
+            return Ok(new { message = "Status updated successfully", newStatus = dto.Status.ToString() });
+        }
+
+        [HttpGet("market-rent")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetMarketRent([FromQuery] string location = "", [FromQuery] string propertyType = "", [FromQuery] int bedrooms = 0)
+        {
+            var result = await _propertyService.GetMarketRentAsync(location, propertyType, bedrooms);
+            return Ok(result);
+        }
     }
 
     public class OwnershipProofDto

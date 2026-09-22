@@ -13,7 +13,7 @@ using RentWise.API.Data;
 namespace RentWise.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260916125512_InitialCreate")]
+    [Migration("20260922142854_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -597,6 +597,9 @@ namespace RentWise.API.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()

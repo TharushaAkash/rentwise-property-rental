@@ -104,7 +104,7 @@ var supabaseKey = Environment.GetEnvironmentVariable("SUPABASE_SECRET_KEY") ?? b
 var supabaseOptions = new SupabaseOptions { AutoConnectRealtime = true };
 var supabaseClient = new Supabase.Client(supabaseUrl, supabaseKey, supabaseOptions);
 builder.Services.AddSingleton(supabaseClient);
-builder.Services.AddScoped<ISupabaseStorageService, RentWise.API.Common.Services.SupabaseStorageService>();
+builder.Services.AddHttpClient<ISupabaseStorageService, RentWise.API.Common.Services.SupabaseStorageService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -167,224 +167,8 @@ using (var scope = app.Services.CreateScope())
 
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // 1. Ensure __EFMigrationsHistory table exists and record applied migrations
-        await dbContext.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
-                ""MigrationId"" character varying(150) NOT NULL,
-                ""ProductVersion"" character varying(32) NOT NULL,
-                CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
-            );
-
-            INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
-            VALUES 
-                ('20260913050517_InitialCreate', '9.0.0'),
-                ('20260913061658_UpdateUserSchema', '9.0.0')
-            ON CONFLICT (""MigrationId"") DO NOTHING;
-        ");
-
-        // 2. If lowercase 'users' table exists, rename to ""Users""
-        await dbContext.Database.ExecuteSqlRawAsync(@"
-            DO $$
-            BEGIN
-              IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
-                ALTER TABLE users RENAME TO ""Users"";
-              END IF;
-            END $$;
-        ");
-
-        // 3. Ensure ""Users"" table exists with all required columns
-        await dbContext.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS ""Users"" (
-                ""Id"" uuid NOT NULL,
-                ""Name"" character varying(150) NOT NULL DEFAULT '',
-                ""Email"" character varying(200) NOT NULL,
-                ""PasswordHash"" character varying(300) NOT NULL,
-                ""Role"" character varying(20) NOT NULL DEFAULT 'Tenant',
-                ""PhoneNumber"" character varying(20),
-                ""NicNumber"" character varying(20),
-                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                ""UpdatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT ""PK_Users"" PRIMARY KEY (""Id"")
-            );
-        ");
-
-        // 4. Ensure all columns in ""Users"" exist and match expected types
-        await dbContext.Database.ExecuteSqlRawAsync(@"
-            DO $$
-            BEGIN
-              -- Name / FullName check
-              IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Users' AND column_name='Name') THEN
-                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Users' AND column_name='FullName') THEN
-                  ALTER TABLE ""Users"" RENAME COLUMN ""FullName"" TO ""Name"";
-                ELSE
-                  ALTER TABLE ""Users"" ADD COLUMN ""Name"" character varying(150) NOT NULL DEFAULT '';
-                END IF;
-              END IF;
-
-              -- PhoneNumber check
-              IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Users' AND column_name='PhoneNumber') THEN
-                ALTER TABLE ""Users"" ADD COLUMN ""PhoneNumber"" character varying(20);
-              END IF;
-
-              -- NicNumber check
-              IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Users' AND column_name='NicNumber') THEN
-                ALTER TABLE ""Users"" ADD COLUMN ""NicNumber"" character varying(20);
-              END IF;
-
-              -- Role varchar check
-              IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Users' AND column_name='Role' AND data_type != 'character varying') THEN
-                ALTER TABLE ""Users"" ALTER COLUMN ""Role"" TYPE character varying(20) USING ""Role""::text;
-              END IF;
-
-              -- IsBlocked check
-              IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Users' AND column_name='IsBlocked') THEN
-                ALTER TABLE ""Users"" ADD COLUMN ""IsBlocked"" boolean NOT NULL DEFAULT false;
-              END IF;
-            END $$;
-        ");
-
-        // 4b. Ensure Properties table and all columns exist
-        try
-        {
-            await dbContext.Database.ExecuteSqlRawAsync(@"
-                CREATE TABLE IF NOT EXISTS ""Properties"" (
-                    ""Id"" uuid NOT NULL,
-                    ""OwnerId"" uuid NOT NULL,
-                    ""Title"" text NOT NULL DEFAULT '',
-                    ""Description"" text NOT NULL DEFAULT '',
-                    ""Address"" text NOT NULL DEFAULT '',
-                    ""MonthlyRent"" numeric NOT NULL DEFAULT 0,
-                    ""Bedrooms"" integer NOT NULL DEFAULT 0,
-                    ""Bathrooms"" integer NOT NULL DEFAULT 0,
-                    ""Facilities"" text NOT NULL DEFAULT '',
-                    ""Sqft"" integer NOT NULL DEFAULT 0,
-                    ""PropertyType"" text NOT NULL DEFAULT 'House',
-                    ""FeatureTags"" text[] NOT NULL DEFAULT '{}',
-                    ""PhotoCount"" integer NOT NULL DEFAULT 0,
-                    ""Status"" integer NOT NULL DEFAULT 0,
-                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    ""UpdatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT ""PK_Properties"" PRIMARY KEY (""Id"")
-                );
-
-                -- Foreign key to Users
-                DO $$
-                BEGIN
-                  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Users' AND table_schema = 'public') THEN
-                    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_Properties_Users_OwnerId') THEN
-                      ALTER TABLE ""Properties"" ADD CONSTRAINT ""FK_Properties_Users_OwnerId"" 
-                      FOREIGN KEY (""OwnerId"") REFERENCES ""Users"" (""Id"") ON DELETE RESTRICT;
-                    END IF;
-                  END IF;
-                END $$;
-
-                ALTER TABLE IF EXISTS ""Properties"" ADD COLUMN IF NOT EXISTS ""Sqft"" integer NOT NULL DEFAULT 0;
-                ALTER TABLE IF EXISTS ""Properties"" ADD COLUMN IF NOT EXISTS ""PropertyType"" text NOT NULL DEFAULT 'House';
-                ALTER TABLE IF EXISTS ""Properties"" ADD COLUMN IF NOT EXISTS ""FeatureTags"" text[] NOT NULL DEFAULT '{}';
-                ALTER TABLE IF EXISTS ""Properties"" ADD COLUMN IF NOT EXISTS ""PhotoCount"" integer NOT NULL DEFAULT 0;
-
-                CREATE TABLE IF NOT EXISTS ""PropertyPhotos"" (
-                    ""Id"" uuid NOT NULL,
-                    ""PropertyId"" uuid NOT NULL,
-                    ""PhotoUrl"" text NOT NULL DEFAULT '',
-                    ""IsPrimary"" boolean NOT NULL DEFAULT false,
-                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    ""UpdatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT ""PK_PropertyPhotos"" PRIMARY KEY (""Id"")
-                );
-
-                DO $$
-                BEGIN
-                  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_PropertyPhotos_Properties_PropertyId') THEN
-                    ALTER TABLE ""PropertyPhotos"" ADD CONSTRAINT ""FK_PropertyPhotos_Properties_PropertyId"" 
-                    FOREIGN KEY (""PropertyId"") REFERENCES ""Properties"" (""Id"") ON DELETE CASCADE;
-                  END IF;
-                END $$;
-
-                CREATE TABLE IF NOT EXISTS ""PropertyDocuments"" (
-                    ""Id"" uuid NOT NULL,
-                    ""PropertyId"" uuid NOT NULL,
-                    ""DocumentType"" text NOT NULL DEFAULT '',
-                    ""DocumentUrl"" text NOT NULL DEFAULT '',
-                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    ""UpdatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT ""PK_PropertyDocuments"" PRIMARY KEY (""Id"")
-                );
-
-                DO $$
-                BEGIN
-                  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_PropertyDocuments_Properties_PropertyId') THEN
-                    ALTER TABLE ""PropertyDocuments"" ADD CONSTRAINT ""FK_PropertyDocuments_Properties_PropertyId"" 
-                    FOREIGN KEY (""PropertyId"") REFERENCES ""Properties"" (""Id"") ON DELETE CASCADE;
-                  END IF;
-                END $$;
-
-                CREATE TABLE IF NOT EXISTS ""VerificationRecords"" (
-                    ""Id"" uuid NOT NULL,
-                    ""PropertyId"" uuid NOT NULL,
-                    ""AdminId"" uuid,
-                    ""IsApproved"" boolean NOT NULL DEFAULT false,
-                    ""Comments"" text NOT NULL DEFAULT '',
-                    ""AgentReport"" text NOT NULL DEFAULT '',
-                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    ""UpdatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT ""PK_VerificationRecords"" PRIMARY KEY (""Id"")
-                );
-
-                DO $$
-                BEGIN
-                  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_VerificationRecords_Properties_PropertyId') THEN
-                    ALTER TABLE ""VerificationRecords"" ADD CONSTRAINT ""FK_VerificationRecords_Properties_PropertyId"" 
-                    FOREIGN KEY (""PropertyId"") REFERENCES ""Properties"" (""Id"") ON DELETE CASCADE;
-                  END IF;
-                END $$;
-            ");
-            Console.WriteLine("[Database] Successfully ensured Properties, PropertyPhotos, and related tables exist.");
-        }
-        catch (Exception propEx)
-        {
-            Console.WriteLine($"[Database Warning] Properties columns sync: {propEx.Message}");
-        }
-
-        // 5. Automatically create any missing tables (Properties, RentalAgreements, MaintenanceRequests, etc.)
-        var databaseCreator = dbContext.Database.GetService<IDatabaseCreator>() as IRelationalDatabaseCreator;
-        if (databaseCreator != null)
-        {
-            var rawScript = databaseCreator.GenerateCreateScript();
-
-            // Transform CREATE TABLE -> CREATE TABLE IF NOT EXISTS
-            var safeScript = Regex.Replace(
-                rawScript,
-                @"\bCREATE\s+TABLE\b",
-                "CREATE TABLE IF NOT EXISTS",
-                RegexOptions.IgnoreCase
-            );
-
-            // Transform CREATE INDEX -> CREATE INDEX IF NOT EXISTS
-            safeScript = Regex.Replace(
-                safeScript,
-                @"\bCREATE\s+(UNIQUE\s+)?INDEX\b",
-                "CREATE $1INDEX IF NOT EXISTS",
-                RegexOptions.IgnoreCase
-            );
-
-            // Split and execute statements safely
-            var statements = safeScript.Split(new[] { ";\r\n", ";\n", ";\r" }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var stmt in statements)
-            {
-                var trimmed = stmt.Trim();
-                if (string.IsNullOrWhiteSpace(trimmed)) continue;
-
-                try
-                {
-                    await dbContext.Database.ExecuteSqlRawAsync(trimmed + ";");
-                }
-                catch
-                {
-                    // Ignore already existing constraints or indexes
-                }
-            }
-        }
+        // 5. Automatically apply EF Core Migrations
+        await dbContext.Database.MigrateAsync();
 
         Console.WriteLine("[Database] Auto-migration and all database tables (Users, Properties, etc.) verified/created successfully.");
 
@@ -493,7 +277,14 @@ using (var scope = app.Services.CreateScope())
 
     // Initialize Supabase Client
     var client = scope.ServiceProvider.GetRequiredService<Supabase.Client>();
-    await client.InitializeAsync();
+    try
+    {
+        await client.InitializeAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Supabase Warning] Initialization failed: {ex.Message}");
+    }
 }
 
 // Configure the HTTP request pipeline.

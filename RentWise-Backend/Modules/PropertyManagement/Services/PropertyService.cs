@@ -225,5 +225,58 @@ namespace RentWise.API.Modules.PropertyManagement.Services
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<bool> UpdatePropertyStatusAsync(Guid id, PropertyStatus status)
+        {
+            var property = await _context.Properties.FindAsync(id);
+            if (property == null) return false;
+
+            property.Status = status;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<RentWise.API.Modules.PropertyManagement.DTOs.MarketRentDto> GetMarketRentAsync(string location, string propertyType, int bedrooms)
+        {
+            await EnsureColumnsExistAsync();
+
+            var query = _context.Properties.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(location))
+                query = query.Where(p => p.Address.ToLower().Contains(location.ToLower()));
+
+            if (!string.IsNullOrWhiteSpace(propertyType))
+                query = query.Where(p => p.PropertyType.ToLower() == propertyType.ToLower());
+
+            if (bedrooms > 0)
+                query = query.Where(p => p.Bedrooms == bedrooms);
+
+            var list = await query.ToListAsync();
+
+            if (!list.Any())
+            {
+                return new RentWise.API.Modules.PropertyManagement.DTOs.MarketRentDto
+                {
+                    Location = location,
+                    PropertyType = propertyType,
+                    Bedrooms = bedrooms,
+                    AverageRent = 0,
+                    MinRent = 0,
+                    MaxRent = 0,
+                    SampleCount = 0
+                };
+            }
+
+            return new RentWise.API.Modules.PropertyManagement.DTOs.MarketRentDto
+            {
+                Location = location,
+                PropertyType = propertyType,
+                Bedrooms = bedrooms,
+                AverageRent = Math.Round(list.Average(p => p.MonthlyRent), 2),
+                MinRent = list.Min(p => p.MonthlyRent),
+                MaxRent = list.Max(p => p.MonthlyRent),
+                SampleCount = list.Count
+            };
+        }
     }
 }

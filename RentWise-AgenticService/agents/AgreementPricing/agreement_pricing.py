@@ -14,7 +14,7 @@ def get_market_rent(location: str, property_type: str, bedrooms: int) -> dict:
     """
     try:
         response = requests.get(
-            f"http://localhost:5002/api/properties/market-rent",
+            f"http://localhost:5174/api/properties/market-rent",
             params={
                 "location": location,
                 "propertyType": property_type,

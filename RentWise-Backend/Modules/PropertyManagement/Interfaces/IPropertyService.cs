@@ -13,5 +13,7 @@ namespace RentWise.API.Modules.PropertyManagement.Interfaces
         Task<Property> CreatePropertyAsync(Property property);
         Task UpdatePropertyAsync(Property property);
         Task DeletePropertyAsync(Guid id);
+        Task<bool> UpdatePropertyStatusAsync(Guid id, PropertyStatus status);
+        Task<RentWise.API.Modules.PropertyManagement.DTOs.MarketRentDto> GetMarketRentAsync(string location, string propertyType, int bedrooms);
     }
 }
