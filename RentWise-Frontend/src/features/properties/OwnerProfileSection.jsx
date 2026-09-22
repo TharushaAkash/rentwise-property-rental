@@ -5,22 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  ShieldCheck, 
-  Calendar, 
-  CheckCircle2, 
-  AlertCircle, 
-  Eye, 
-  EyeOff, 
-  KeyRound,
-  Building,
-  Sparkles,
-  Phone,
-  CreditCard
-} from 'lucide-react';
+import { User, Mail, Lock, ShieldCheck, Calendar, CheckCircle2, AlertCircle, Eye, EyeOff, KeyRound, Building, Sparkles, Phone, CreditCard } from 'lucide-react';
 
 export const OwnerProfileSection = () => {
   const { user, updateUser } = useAuth();
