@@ -47,18 +47,29 @@ def build_verification_graph():
     
     return graph.compile()
 
-def build_maintenance_graph():
-    graph = StateGraph(AgentWorkflowState)
-    from .MaintenanceTriage.maintenance_triage_agent import run_maintenance_triage_agent
-    graph.add_node("maintenance_triage", run_maintenance_triage_agent)
-    graph.add_edge(START, "maintenance_triage")
-    graph.add_edge("maintenance_triage", END)
-    return graph.compile()
+from .MaintenanceTriage.maintenance_triage_agent import run_maintenance_triage_agent
+from .MatchingLocation.matching_location import run_matching_location_agent
+from .AgreementPricing.agreement_pricing import run_agreement_pricing_agent
+
+def route_agent(state: AgentWorkflowState):
+    agent_name = state.get("current_agent")
+    if agent_name == "MaintenanceTriage":
+        return "MaintenanceTriage"
+    elif agent_name == "MatchingLocation":
+        return "MatchingLocation"
+    elif agent_name == "AgreementPricing":
+        return "AgreementPricing"
+    return END
 
 def build_matching_graph():
     graph = StateGraph(AgentWorkflowState)
-    from .MatchingLocation.matching_location import run_matching_location_agent
-    graph.add_node("matching_location", run_matching_location_agent)
-    graph.add_edge(START, "matching_location")
-    graph.add_edge("matching_location", END)
+    graph.add_node("MatchingLocation", run_matching_location_agent)
+    graph.add_node("MaintenanceTriage", run_maintenance_triage_agent)
+    graph.add_node("AgreementPricing", run_agreement_pricing_agent)
+    
+    graph.add_conditional_edges(START, route_agent, ["MatchingLocation", "MaintenanceTriage", "AgreementPricing", END])
+    graph.add_edge("MatchingLocation", END)
+    graph.add_edge("MaintenanceTriage", END)
+    graph.add_edge("AgreementPricing", END)
+    
     return graph.compile()
