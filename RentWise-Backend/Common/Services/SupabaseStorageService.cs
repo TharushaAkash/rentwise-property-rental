@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using RentWise_Backend.Common.Interfaces;
+using RentWise.API.Common.Interfaces;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 using Supabase;
 
-namespace RentWise_Backend.Common.Services
+namespace RentWise.API.Common.Services
 {
     public class SupabaseStorageService : ISupabaseStorageService
     {

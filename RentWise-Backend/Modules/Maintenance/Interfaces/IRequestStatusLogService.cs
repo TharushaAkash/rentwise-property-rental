@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using RentWise_Backend.Modules.Maintenance.Entities;
+using RentWise.API.Modules.Maintenance.Entities;
 
-namespace RentWise_Backend.Modules.Maintenance.Interfaces
+namespace RentWise.API.Modules.Maintenance.Interfaces
 {
     public interface IRequestStatusLogService
     {

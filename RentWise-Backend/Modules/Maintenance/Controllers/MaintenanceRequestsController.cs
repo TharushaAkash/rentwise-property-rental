@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RentWise_Backend.Data;
-using RentWise_Backend.Modules.Maintenance.Entities;
-using RentWise_Backend.Modules.Maintenance.Interfaces;
+using RentWise.API.Data;
+using RentWise.API.Modules.Maintenance.Entities;
+using RentWise.API.Modules.Maintenance.Interfaces;
 
-namespace RentWise_Backend.Modules.Maintenance.Controllers
+namespace RentWise.API.Modules.Maintenance.Controllers
 {
     [Route("api/maintenance-requests")]
     [ApiController]

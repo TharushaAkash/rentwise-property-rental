@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using RentWise_Backend.Models.PropertyManagement;
-using RentWise_Backend.Services.Interfaces;
-using RentWise_Backend.Data;
+using RentWise.API.Data;
+using RentWise.API.Modules.PropertyManagement.Entities;
+using RentWise.API.Modules.PropertyManagement.Interfaces;
 
-namespace RentWise_Backend.Services
+namespace RentWise.API.Modules.PropertyManagement.Services
 {
     public class PropertyDocumentService : IPropertyDocumentService
     {
@@ -27,20 +27,19 @@ namespace RentWise_Backend.Services
 
         public async Task<PropertyDocument?> GetDocumentByIdAsync(Guid id)
         {
-            return await _context.PropertyDocuments
-                .FirstOrDefaultAsync(d => d.Id == id);
+            return await _context.PropertyDocuments.FindAsync(id);
         }
 
         public async Task<PropertyDocument> CreateDocumentAsync(PropertyDocument document)
         {
-            await _context.PropertyDocuments.AddAsync(document);
+            _context.PropertyDocuments.Add(document);
             await _context.SaveChangesAsync();
             return document;
         }
 
         public async Task UpdateDocumentAsync(PropertyDocument document)
         {
-            _context.PropertyDocuments.Update(document);
+            _context.Entry(document).State = EntityState.Modified;
             await _context.SaveChangesAsync();
         }
 
@@ -55,3 +54,4 @@ namespace RentWise_Backend.Services
         }
     }
 }
+

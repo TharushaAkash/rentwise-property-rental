@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RentWise_Backend.Modules.Maintenance.Entities;
-using RentWise_Backend.Modules.Maintenance.Interfaces;
+using RentWise.API.Modules.Maintenance.Entities;
+using RentWise.API.Modules.Maintenance.Interfaces;
 
-namespace RentWise_Backend.Modules.Maintenance.Controllers
+namespace RentWise.API.Modules.Maintenance.Controllers
 {
     [ApiController]
     [Route("api/maintenance-requests/{requestId}/logs")]

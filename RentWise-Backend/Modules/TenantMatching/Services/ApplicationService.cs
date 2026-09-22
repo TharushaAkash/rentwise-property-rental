@@ -1,37 +1,44 @@
 using Microsoft.EntityFrameworkCore;
-using RentWise_Backend.Data;
-using RentWise_Backend.DTOs.Application;
-using RentWise_Backend.Models;
-using RentWise_Backend.Services.Interfaces;
-namespace RentWise_Backend.Services
+using RentWise.API.Data;
+using RentWise.API.Modules.TenantMatching.DTOs;
+using RentWise.API.Modules.TenantMatching.Entities;
+using RentWise.API.Modules.TenantMatching.Interfaces;
+
+namespace RentWise.API.Modules.TenantMatching.Services
 {
     public class ApplicationService : IApplicationService
     {
         private readonly ApplicationDbContext _context;
+
         public ApplicationService(ApplicationDbContext context)
         {
             _context = context;
         }
+
         public async Task<Application> CreateApplicationAsync(
             CreateApplicationDto dto)
         {
             var tenantExists = await _context.TenantProfiles
                 .AnyAsync(t => t.Id == dto.TenantProfileId);
+
             if (!tenantExists)
             {
                 throw new ArgumentException(
                     "Tenant profile does not exist.");
             }
+
             var existingApplication = await _context.Applications
                 .AnyAsync(a =>
                     a.TenantProfileId == dto.TenantProfileId &&
                     a.PropertyId == dto.PropertyId &&
                     a.Status != "Rejected");
+
             if (existingApplication)
             {
                 throw new InvalidOperationException(
                     "You have already applied for this property.");
             }
+
             var application = new Application
             {
                 TenantProfileId = dto.TenantProfileId,
@@ -40,19 +47,24 @@ namespace RentWise_Backend.Services
                 AppliedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+
             _context.Applications.Add(application);
+
             await _context.SaveChangesAsync();
+
             return application;
         }
+
         public async Task<Application?> GetApplicationByIdAsync(
-            Guid applicationId)
+            int applicationId)
         {
             return await _context.Applications
                 .FirstOrDefaultAsync(
                     a => a.Id == applicationId);
         }
+
         public async Task<List<Application>>
-            GetTenantApplicationsAsync(Guid tenantProfileId)
+            GetTenantApplicationsAsync(int tenantProfileId)
         {
             return await _context.Applications
                 .Where(a =>
@@ -60,17 +72,20 @@ namespace RentWise_Backend.Services
                 .OrderByDescending(a => a.AppliedAt)
                 .ToListAsync();
         }
+
         public async Task<Application?> UpdateStatusAsync(
-            Guid applicationId,
+            int applicationId,
             UpdateApplicationStatusDto dto)
         {
             var application = await _context.Applications
                 .FirstOrDefaultAsync(
                     a => a.Id == applicationId);
+
             if (application == null)
             {
                 return null;
             }
+
             var allowedStatuses = new[]
             {
                 "Submitted",
@@ -78,39 +93,27 @@ namespace RentWise_Backend.Services
                 "Accepted",
                 "Rejected"
             };
+
             var requestedStatus = dto.Status.Trim();
+
             var validStatus = allowedStatuses
                 .FirstOrDefault(s =>
                     s.Equals(
                         requestedStatus,
                         StringComparison.OrdinalIgnoreCase));
+
             if (validStatus == null)
             {
                 throw new ArgumentException(
                     "Invalid application status.");
             }
+
             application.Status = validStatus;
             application.UpdatedAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
+
             return application;
-        }
-        public async Task<List<Application>> GetAllApplicationsAsync()
-        {
-            return await _context.Applications
-                .OrderByDescending(a => a.AppliedAt)
-                .ToListAsync();
-        }
-        public async Task<bool> DeleteApplicationAsync(Guid applicationId)
-        {
-            var application = await _context.Applications
-                .FirstOrDefaultAsync(a => a.Id == applicationId);
-            if (application == null)
-            {
-                return false;
-            }
-            _context.Applications.Remove(application);
-            await _context.SaveChangesAsync();
-            return true;
         }
     }
 }

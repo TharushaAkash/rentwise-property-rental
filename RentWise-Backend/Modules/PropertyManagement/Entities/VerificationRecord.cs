@@ -1,7 +1,8 @@
 using System;
-using RentWise_Backend.Models;
+using RentWise.API.Common;
+using RentWise.API.Modules.Users;
 
-namespace RentWise_Backend.Models.PropertyManagement
+namespace RentWise.API.Modules.PropertyManagement.Entities
 {
     public class VerificationRecord : BaseEntity
     {

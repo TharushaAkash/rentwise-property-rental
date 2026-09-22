@@ -1,9 +1,10 @@
-using RentWise_Backend.DTOs.Search;
-namespace RentWise_Backend.Services.Interfaces
+using RentWise.API.Modules.TenantMatching.DTOs;
+
+namespace RentWise.API.Modules.TenantMatching.Interfaces
 {
     public interface ITenantPreferenceService
     {
         Task<PropertySearchDto?> GetSearchPreferencesAsync(
-            Guid tenantProfileId);
+            int tenantProfileId);
     }
 }

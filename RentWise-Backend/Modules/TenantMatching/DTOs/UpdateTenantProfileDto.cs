@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace RentWise_Backend.DTOs.Tenant
+namespace RentWise.API.Modules.TenantMatching.DTOs
 {
     public class UpdateTenantProfileDto
     {

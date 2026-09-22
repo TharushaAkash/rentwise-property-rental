@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
-using RentWise_Backend.Models;
-using RentWise_Backend.Models.PropertyManagement;
+using RentWise.API.Common;
+using RentWise.API.Modules.Users;
+using RentWise.API.Modules.PropertyManagement.Entities;
 
-namespace RentWise_Backend.Modules.Maintenance.Entities
+namespace RentWise.API.Modules.Maintenance.Entities
 {
     public class MaintenanceRequest : BaseEntity
     {

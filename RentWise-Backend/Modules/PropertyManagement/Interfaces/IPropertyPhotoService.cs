@@ -1,9 +1,9 @@
-using RentWise_Backend.Models.PropertyManagement;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using RentWise.API.Modules.PropertyManagement.Entities;
 
-namespace RentWise_Backend.Services.Interfaces
+namespace RentWise.API.Modules.PropertyManagement.Interfaces
 {
     public interface IPropertyPhotoService
     {

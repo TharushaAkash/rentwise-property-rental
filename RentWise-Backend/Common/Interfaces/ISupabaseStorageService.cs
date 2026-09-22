@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 
-namespace RentWise_Backend.Common.Interfaces
+namespace RentWise.API.Common.Interfaces
 {
     public interface ISupabaseStorageService
     {

@@ -1,11 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RentWise_Backend.Models.PropertyManagement;
-using RentWise_Backend.Services.Interfaces;
-using RentWise_Backend.Common.Interfaces;
 using Microsoft.AspNetCore.Http;
+using RentWise.API.Modules.PropertyManagement.Entities;
+using RentWise.API.Modules.PropertyManagement.Interfaces;
+using RentWise.API.Common.Interfaces;
 
-namespace RentWise_Backend.Controllers
+namespace RentWise.API.Modules.PropertyManagement.Controllers
 {
     [ApiController]
     [Route("api/properties/{propertyId}/photos")]
@@ -21,6 +24,7 @@ namespace RentWise_Backend.Controllers
             _storageService = storageService;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> GetPhotos(Guid propertyId)
         {
@@ -28,6 +32,7 @@ namespace RentWise_Backend.Controllers
             return Ok(photos);
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPhoto(Guid propertyId, Guid id)
         {
@@ -37,7 +42,7 @@ namespace RentWise_Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> CreatePhoto(Guid propertyId, IFormFile file, [FromForm] bool isPrimary = false)
         {
             if (file == null || file.Length == 0)
@@ -62,7 +67,7 @@ namespace RentWise_Backend.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> UpdatePhoto(Guid propertyId, Guid id, [FromBody] PropertyPhoto photo)
         {
             if (id != photo.Id || propertyId != photo.PropertyId) return BadRequest();
@@ -71,7 +76,7 @@ namespace RentWise_Backend.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> DeletePhoto(Guid propertyId, Guid id)
         {
             await _photoService.DeletePhotoAsync(id);

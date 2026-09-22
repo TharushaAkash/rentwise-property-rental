@@ -1,4 +1,4 @@
-namespace RentWise_Backend.Models.PropertyManagement
+namespace RentWise.API.Modules.PropertyManagement.Entities
 {
     public enum PropertyStatus
     {

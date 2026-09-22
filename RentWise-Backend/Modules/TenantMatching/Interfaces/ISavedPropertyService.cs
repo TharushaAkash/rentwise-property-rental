@@ -1,15 +1,18 @@
-using RentWise_Backend.Models;
-namespace RentWise_Backend.Services.Interfaces
+using RentWise.API.Modules.TenantMatching.Entities;
+
+namespace RentWise.API.Modules.TenantMatching.Interfaces
 {
     public interface ISavedPropertyService
     {
         Task<List<SavedProperty>> GetSavedPropertiesAsync(
-            Guid tenantProfileId);
+            int tenantProfileId);
+
         Task<SavedProperty> SavePropertyAsync(
-            Guid tenantProfileId,
-            Guid propertyId);
+            int tenantProfileId,
+            int propertyId);
+
         Task<bool> RemoveSavedPropertyAsync(
-            Guid tenantProfileId,
-            Guid propertyId);
+            int tenantProfileId,
+            int propertyId);
     }
 }

@@ -1,15 +1,17 @@
-using RentWise_Backend.DTOs.Tenant;
-using RentWise_Backend.Models;
-namespace RentWise_Backend.Services.Interfaces
+using RentWise.API.Modules.TenantMatching.DTOs;
+using RentWise.API.Modules.TenantMatching.Entities;
+
+namespace RentWise.API.Modules.TenantMatching.Interfaces
 {
     public interface ITenantProfileService
     {
-        Task<TenantProfile?> GetByUserIdAsync(Guid userId);
+        Task<TenantProfile?> GetByUserIdAsync(int userId);
+
         Task<TenantProfile> CreateAsync(
             CreateTenantProfileDto dto);
+
         Task<TenantProfile?> UpdateAsync(
-            Guid userId,
+            int userId,
             UpdateTenantProfileDto dto);
-        Task<bool> DeleteAsync(Guid userId);
     }
 }

@@ -1,19 +1,17 @@
 using System;
-using System.ComponentModel.DataAnnotations.Schema;
+using RentWise.API.Common;
 
-namespace RentWise_Backend.Models
+namespace RentWise.API.Modules.Agreements.Entities
 {
-    [Table("Payments")]
     public class Payment : BaseEntity
     {
         public Guid RentalAgreementId { get; set; }
-        
-        [ForeignKey("RentalAgreementId")]
         public RentalAgreement RentalAgreement { get; set; } = null!;
-        
+
         public decimal Amount { get; set; }
         public DateTime PaymentDate { get; set; }
-        public string Status { get; set; } = "Pending";
-        public string PaymentMethod { get; set; } = string.Empty;
+        
+        public string PaymentReference { get; set; } = string.Empty;
+        public bool IsSuccessful { get; set; }
     }
 }

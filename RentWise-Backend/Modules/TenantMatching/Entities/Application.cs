@@ -1,18 +1,24 @@
 using System.ComponentModel.DataAnnotations;
-namespace RentWise_Backend.Models
+
+namespace RentWise.API.Modules.TenantMatching.Entities
 {
     public class Application
     {
         [Key]
-        public Guid Id { get; set; }
+        public int Id { get; set; }
+
         [Required]
-        public Guid TenantProfileId { get; set; }
+        public int TenantProfileId { get; set; }
+
         [Required]
-        public Guid PropertyId { get; set; }
+        public int PropertyId { get; set; }
+
         [Required]
         [MaxLength(30)]
         public string Status { get; set; } = "Submitted";
+
         public DateTime AppliedAt { get; set; } = DateTime.UtcNow;
+
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

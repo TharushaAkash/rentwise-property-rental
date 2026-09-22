@@ -1,18 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
-using RentWise_Backend.DTOs.Application;
-using RentWise_Backend.Services.Interfaces;
-namespace RentWise_Backend.Controllers
+using RentWise.API.Modules.TenantMatching.DTOs;
+using RentWise.API.Modules.TenantMatching.Interfaces;
+
+namespace RentWise.API.Modules.TenantMatching.Controllers
 {
     [ApiController]
     [Route("api/applications")]
     public class ApplicationController : ControllerBase
     {
         private readonly IApplicationService _applicationService;
+
         public ApplicationController(
             IApplicationService applicationService)
         {
             _applicationService = applicationService;
         }
+
         // POST: api/applications
         [HttpPost]
         public async Task<IActionResult> CreateApplication(
@@ -23,6 +26,7 @@ namespace RentWise_Backend.Controllers
                 var application =
                     await _applicationService
                         .CreateApplicationAsync(dto);
+
                 return Ok(application);
             }
             catch (ArgumentException ex)
@@ -40,13 +44,15 @@ namespace RentWise_Backend.Controllers
                 });
             }
         }
+
         // GET: api/applications/1
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetApplication(Guid id)
+        public async Task<IActionResult> GetApplication(int id)
         {
             var application =
                 await _applicationService
                     .GetApplicationByIdAsync(id);
+
             if (application == null)
             {
                 return NotFound(new
@@ -54,23 +60,27 @@ namespace RentWise_Backend.Controllers
                     message = "Application not found."
                 });
             }
+
             return Ok(application);
         }
+
         // GET: api/applications/tenant/1
         [HttpGet("tenant/{tenantProfileId}")]
         public async Task<IActionResult> GetTenantApplications(
-            Guid tenantProfileId)
+            int tenantProfileId)
         {
             var applications =
                 await _applicationService
                     .GetTenantApplicationsAsync(
                         tenantProfileId);
+
             return Ok(applications);
         }
+
         // PUT: api/applications/1/status
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(
-            Guid id,
+            int id,
             UpdateApplicationStatusDto dto)
         {
             try
@@ -78,6 +88,7 @@ namespace RentWise_Backend.Controllers
                 var application =
                     await _applicationService
                         .UpdateStatusAsync(id, dto);
+
                 if (application == null)
                 {
                     return NotFound(new
@@ -85,6 +96,7 @@ namespace RentWise_Backend.Controllers
                         message = "Application not found."
                     });
                 }
+
                 return Ok(application);
             }
             catch (ArgumentException ex)
@@ -94,24 +106,6 @@ namespace RentWise_Backend.Controllers
                     message = ex.Message
                 });
             }
-        }
-        // GET: api/applications
-        [HttpGet]
-        public async Task<IActionResult> GetAllApplications()
-        {
-            var applications = await _applicationService.GetAllApplicationsAsync();
-            return Ok(applications);
-        }
-        // DELETE: api/applications/1
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteApplication(Guid id)
-        {
-            var result = await _applicationService.DeleteApplicationAsync(id);
-            if (!result)
-            {
-                return NotFound(new { message = "Application not found." });
-            }
-            return NoContent();
         }
     }
 }
