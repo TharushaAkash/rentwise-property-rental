@@ -57,6 +57,39 @@ namespace RentWise_Backend.Controllers
             return Ok(new { exists = false });
         }
 
+        [HttpGet("search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SearchProperties([FromQuery] decimal? maxBudget, [FromQuery] string? location, [FromQuery] int? minBedrooms)
+        {
+            var properties = await _propertyService.GetAllPropertiesAsync();
+            var query = properties.AsQueryable();
+
+            if (maxBudget.HasValue)
+            {
+                query = query.Where(p => p.MonthlyRent <= maxBudget.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(location))
+            {
+                // Simple substring match for the search
+                query = query.Where(p => p.Address.Contains(location, StringComparison.OrdinalIgnoreCase) || 
+                                         (p.Title != null && p.Title.Contains(location, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            if (minBedrooms.HasValue)
+            {
+                query = query.Where(p => p.Bedrooms >= minBedrooms.Value);
+            }
+
+            // Include Active and PendingVerification properties for testing purposes
+            var results = query.Where(p => 
+                p.Status == RentWise_Backend.Models.PropertyManagement.PropertyStatus.Active || 
+                p.Status == RentWise_Backend.Models.PropertyManagement.PropertyStatus.PendingVerification
+            ).ToList();
+            
+            return Ok(results);
+        }
+
         [HttpPost]
         [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> CreateProperty([FromBody] RentWise_Backend.Modules.PropertyManagement.DTOs.CreatePropertyDto dto)

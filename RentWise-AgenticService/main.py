@@ -17,10 +17,27 @@ class WorkflowRequest(BaseModel):
 def health_check():
     return {"status": "ok", "service": "RentWise Agentic Service"}
 
-@app.post("/workflow/search-and-recommend")
-def run_search_workflow(req: WorkflowRequest):
-    # TODO: Initialize state and invoke the orchestrator (LangGraph)
-    return {"status": "running", "objective": req.objective}
+@app.post("/workflow/match-location")
+def run_matching_workflow(req: WorkflowRequest):
+    if not req.objective:
+        return {"error": "objective is required"}
+        
+    from agents.orchestrator import build_matching_graph
+    graph = build_matching_graph()
+    
+    initial_state = {
+        "objective": req.objective,
+        "tenant_profile": req.tenant_profile or {},
+        "current_agent": "MatchingLocation",
+        "matching_results": []
+    }
+    
+    result = graph.invoke(initial_state)
+    
+    return {
+        "status": "completed",
+        "matching_results": result.get("matching_results", [])
+    }
 
 @app.post("/workflow/verify-property")
 def run_verification_workflow(req: WorkflowRequest):
