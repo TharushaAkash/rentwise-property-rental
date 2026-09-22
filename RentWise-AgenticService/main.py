@@ -84,3 +84,24 @@ def run_maintenance_workflow(req: WorkflowRequest):
         "status": "completed", 
         "ticket": result.get("maintenance_ticket", {})
     }
+
+@app.post("/workflow/draft-agreement")
+def run_draft_agreement_workflow(req: WorkflowRequest):
+    if not req.objective or not req.property_id:
+        return {"error": "objective and property_id are required"}
+    
+    from agents.orchestrator import build_matching_graph
+    graph = build_matching_graph()
+    
+    initial_state = {
+        "objective": req.objective,
+        "property_id": req.property_id,
+        "current_agent": "AgreementPricing"
+    }
+    
+    result = graph.invoke(initial_state)
+    
+    return {
+        "status": "completed", 
+        "draft": result.get("agreement_draft", {})
+    }
