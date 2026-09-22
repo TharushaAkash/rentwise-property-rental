@@ -64,5 +64,18 @@ namespace RentWise_Backend.Services
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<bool> UpdatePropertyStatusAsync(Guid id, PropertyStatus newStatus)
+        {
+            var property = await _context.Properties.FindAsync(id);
+            if (property == null) return false;
+
+            property.Status = newStatus;
+            property.UpdatedAt = DateTime.UtcNow;
+            
+            _context.Properties.Update(property);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
