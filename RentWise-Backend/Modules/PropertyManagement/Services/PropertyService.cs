@@ -42,6 +42,45 @@ namespace RentWise_Backend.Services
                 .ToListAsync();
         }
 
+        public async Task<RentWise_Backend.Modules.PropertyManagement.DTOs.MarketRentDto> GetMarketRentAsync(string location, string propertyType, int bedrooms)
+        {
+            var query = _context.Properties
+                .Where(p => p.Status == PropertyStatus.Active);
+
+            if (!string.IsNullOrEmpty(location))
+                query = query.Where(p => p.Address.ToLower().Contains(location.ToLower()));
+                
+            if (!string.IsNullOrEmpty(propertyType))
+                query = query.Where(p => p.PropertyType.ToLower() == propertyType.ToLower());
+                
+            if (bedrooms > 0)
+                query = query.Where(p => p.Bedrooms == bedrooms);
+
+            var count = await query.CountAsync();
+            if (count == 0)
+            {
+                return new RentWise_Backend.Modules.PropertyManagement.DTOs.MarketRentDto
+                {
+                    AverageRent = 0,
+                    MinRent = 0,
+                    MaxRent = 0,
+                    PropertyCount = 0
+                };
+            }
+
+            var avg = await query.AverageAsync(p => p.MonthlyRent);
+            var min = await query.MinAsync(p => p.MonthlyRent);
+            var max = await query.MaxAsync(p => p.MonthlyRent);
+
+            return new RentWise_Backend.Modules.PropertyManagement.DTOs.MarketRentDto
+            {
+                AverageRent = avg,
+                MinRent = min,
+                MaxRent = max,
+                PropertyCount = count
+            };
+        }
+
         public async Task<Property> CreatePropertyAsync(Property property)
         {
             await _context.Properties.AddAsync(property);

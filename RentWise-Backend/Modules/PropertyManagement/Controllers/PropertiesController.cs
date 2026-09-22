@@ -33,6 +33,7 @@ namespace RentWise_Backend.Controllers
         }
 
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetProperty(Guid id)
         {
             var property = await _propertyService.GetPropertyByIdAsync(id);
@@ -167,6 +168,14 @@ namespace RentWise_Backend.Controllers
             if (!result) return NotFound();
 
             return Ok(new { message = "Status updated successfully", newStatus = dto.Status.ToString() });
+        }
+
+        [HttpGet("market-rent")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetMarketRent([FromQuery] string location = "", [FromQuery] string propertyType = "", [FromQuery] int bedrooms = 0)
+        {
+            var result = await _propertyService.GetMarketRentAsync(location, propertyType, bedrooms);
+            return Ok(result);
         }
     }
 }
