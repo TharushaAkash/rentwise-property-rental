@@ -10,8 +10,8 @@ class AgentWorkflowState(TypedDict):
     
     # Matching & Location Agent State
     candidate_properties: List[dict]
-    
-    # Agreement & Pricing Agent State
+    matching_results: List[dict]
+    tenant_profile: dict
     recommended_property: dict
     agreement_draft: dict
     

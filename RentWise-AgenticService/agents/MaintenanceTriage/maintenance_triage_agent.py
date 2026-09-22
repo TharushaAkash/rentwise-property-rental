@@ -110,10 +110,10 @@ Your workflow:
 
 ```json
 {
-  "category": "...",
-  "priority": "...",
-  "assigned_provider": "...",
-  "description": "..."
+  "category": "",
+  "priority": "",
+  "assigned_provider": "",
+  "description": ""
 }
 ```
 If you cannot find a suitable provider (e.g. tool returns "No provider found..."), set "assigned_provider" to "Unassigned".
