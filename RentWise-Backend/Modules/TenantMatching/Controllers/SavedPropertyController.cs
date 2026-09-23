@@ -1,28 +1,33 @@
 using Microsoft.AspNetCore.Mvc;
-using RentWise_Backend.DTOs.SavedProperty;
-using RentWise_Backend.Services.Interfaces;
-namespace RentWise_Backend.Controllers
+using RentWise.API.Modules.TenantMatching.DTOs;
+using RentWise.API.Modules.TenantMatching.Interfaces;
+
+namespace RentWise.API.Modules.TenantMatching.Controllers
 {
     [ApiController]
     [Route("api/saved-properties")]
     public class SavedPropertyController : ControllerBase
     {
         private readonly ISavedPropertyService _savedPropertyService;
+
         public SavedPropertyController(
             ISavedPropertyService savedPropertyService)
         {
             _savedPropertyService = savedPropertyService;
         }
+
         // GET: api/saved-properties/1
         [HttpGet("{tenantProfileId}")]
         public async Task<IActionResult> GetSavedProperties(
-            Guid tenantProfileId)
+            int tenantProfileId)
         {
             var properties =
                 await _savedPropertyService
                     .GetSavedPropertiesAsync(tenantProfileId);
+
             return Ok(properties);
         }
+
         // POST: api/saved-properties
         [HttpPost]
         public async Task<IActionResult> SaveProperty(
@@ -34,6 +39,7 @@ namespace RentWise_Backend.Controllers
                     await _savedPropertyService.SavePropertyAsync(
                         dto.TenantProfileId,
                         dto.PropertyId);
+
                 return Ok(result);
             }
             catch (ArgumentException ex)
@@ -51,17 +57,19 @@ namespace RentWise_Backend.Controllers
                 });
             }
         }
+
         // DELETE: api/saved-properties/1/5
         [HttpDelete("{tenantProfileId}/{propertyId}")]
         public async Task<IActionResult> RemoveSavedProperty(
-            Guid tenantProfileId,
-            Guid propertyId)
+            int tenantProfileId,
+            int propertyId)
         {
             var removed =
                 await _savedPropertyService
                     .RemoveSavedPropertyAsync(
                         tenantProfileId,
                         propertyId);
+
             if (!removed)
             {
                 return NotFound(new
@@ -69,6 +77,7 @@ namespace RentWise_Backend.Controllers
                     message = "Saved property not found."
                 });
             }
+
             return Ok(new
             {
                 message = "Property removed from saved properties."

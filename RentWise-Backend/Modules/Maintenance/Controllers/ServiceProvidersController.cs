@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RentWise_Backend.Modules.Maintenance.Entities;
-using RentWise_Backend.Modules.Maintenance.Interfaces;
-using ServiceProvider = RentWise_Backend.Modules.Maintenance.Entities.ServiceProvider;
+using RentWise.API.Modules.Maintenance.Entities;
+using RentWise.API.Modules.Maintenance.Interfaces;
+using ServiceProvider = RentWise.API.Modules.Maintenance.Entities.ServiceProvider;
 
-namespace RentWise_Backend.Modules.Maintenance.Controllers
+namespace RentWise.API.Modules.Maintenance.Controllers
 {
     [ApiController]
     [Route("api/service-providers")]
@@ -19,9 +19,9 @@ namespace RentWise_Backend.Modules.Maintenance.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetProviders([FromQuery] Guid? ownerId)
+        public async Task<IActionResult> GetProviders()
         {
-            var result = await _service.GetAllProvidersAsync(ownerId);
+            var result = await _service.GetAllProvidersAsync();
             return Ok(result);
         }
 

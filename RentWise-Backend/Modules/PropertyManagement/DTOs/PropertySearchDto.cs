@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace RentWise_Backend.DTOs.Search
+namespace RentWise.API.Modules.PropertyManagement.DTOs
 {
     public class PropertySearchDto
     {

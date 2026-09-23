@@ -1,14 +1,18 @@
 using System.ComponentModel.DataAnnotations;
-namespace RentWise_Backend.Models
+
+namespace RentWise.API.Modules.TenantMatching.Entities
 {
     public class SavedProperty
     {
         [Key]
-        public Guid Id { get; set; }
+        public int Id { get; set; }
+
         [Required]
-        public Guid TenantProfileId { get; set; }
+        public int TenantProfileId { get; set; }
+
         [Required]
-        public Guid PropertyId { get; set; }
+        public int PropertyId { get; set; }
+
         public DateTime SavedAt { get; set; } = DateTime.UtcNow;
     }
 }

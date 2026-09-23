@@ -1,7 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using RentWise.API.Common;
 
-namespace RentWise_Backend.Models
+namespace RentWise.API.Modules.Users
 {
     [Table("Users")]
     public class User : BaseEntity
@@ -19,11 +20,17 @@ namespace RentWise_Backend.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public string PasswordHash { get; set; } = string.Empty;
 
+
         [Required]
         [MaxLength(20)]
         public string Role { get; set; } = "Tenant"; // 'Tenant' | 'Owner' | 'Admin'
 
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
+
+        [MaxLength(20)]
+        public string? NicNumber { get; set; }
+
+        public bool IsBlocked { get; set; } = false;
     }
 }

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using RentWise_Backend.Models.PropertyManagement;
+using RentWise.API.Modules.PropertyManagement.Entities;
 
-namespace RentWise_Backend.Modules.PropertyManagement.DTOs
+namespace RentWise.API.Modules.PropertyManagement.DTOs
 {
     public class UpdatePropertyDto
     {

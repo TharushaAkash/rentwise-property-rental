@@ -1,7 +1,7 @@
 using System;
-using RentWise_Backend.Models;
+using RentWise.API.Common;
 
-namespace RentWise_Backend.Modules.Maintenance.Entities
+namespace RentWise.API.Modules.Maintenance.Entities
 {
     public class RequestStatusLog : BaseEntity
     {

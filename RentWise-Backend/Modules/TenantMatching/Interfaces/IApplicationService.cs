@@ -1,19 +1,21 @@
-using RentWise_Backend.DTOs.Application;
-using RentWise_Backend.Models;
-namespace RentWise_Backend.Services.Interfaces
+using RentWise.API.Modules.TenantMatching.DTOs;
+using RentWise.API.Modules.TenantMatching.Entities;
+
+namespace RentWise.API.Modules.TenantMatching.Interfaces
 {
     public interface IApplicationService
     {
         Task<Application> CreateApplicationAsync(
             CreateApplicationDto dto);
+
         Task<Application?> GetApplicationByIdAsync(
-            Guid applicationId);
+            int applicationId);
+
         Task<List<Application>> GetTenantApplicationsAsync(
-            Guid tenantProfileId);
+            int tenantProfileId);
+
         Task<Application?> UpdateStatusAsync(
-            Guid applicationId,
+            int applicationId,
             UpdateApplicationStatusDto dto);
-        Task<List<Application>> GetAllApplicationsAsync();
-        Task<bool> DeleteApplicationAsync(Guid applicationId);
     }
 }

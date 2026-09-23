@@ -1,8 +1,8 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using RentWise_Backend.Models;
+using RentWise.API.Common;
 
-namespace RentWise_Backend.Models.PropertyManagement
+namespace RentWise.API.Modules.PropertyManagement.Entities
 {
     public class PropertyPhoto : BaseEntity
     {

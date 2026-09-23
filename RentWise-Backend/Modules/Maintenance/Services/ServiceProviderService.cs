@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using RentWise_Backend.Common.Interfaces;
-using RentWise_Backend.Modules.Maintenance.Entities;
-using RentWise_Backend.Modules.Maintenance.Interfaces;
-using ServiceProvider = RentWise_Backend.Modules.Maintenance.Entities.ServiceProvider;
+using RentWise.API.Common.Interfaces;
+using RentWise.API.Modules.Maintenance.Entities;
+using RentWise.API.Modules.Maintenance.Interfaces;
+using ServiceProvider = RentWise.API.Modules.Maintenance.Entities.ServiceProvider;
 
-namespace RentWise_Backend.Modules.Maintenance.Services
+namespace RentWise.API.Modules.Maintenance.Services
 {
     public class ServiceProviderService : IServiceProviderService
     {
@@ -17,14 +17,9 @@ namespace RentWise_Backend.Modules.Maintenance.Services
             _repository = repository;
         }
 
-        public async Task<IEnumerable<ServiceProvider>> GetAllProvidersAsync(Guid? ownerId = null)
+        public async Task<IEnumerable<ServiceProvider>> GetAllProvidersAsync()
         {
-            var providers = await _repository.GetAllAsync();
-            if (ownerId.HasValue)
-            {
-                providers = providers.Where(p => p.OwnerId == ownerId.Value);
-            }
-            return providers;
+            return await _repository.GetAllAsync();
         }
 
         public async Task<ServiceProvider?> GetProviderByIdAsync(Guid id)
@@ -34,8 +29,7 @@ namespace RentWise_Backend.Modules.Maintenance.Services
 
         public async Task<ServiceProvider> CreateProviderAsync(ServiceProvider provider)
         {
-            var created = await _repository.AddAsync(provider);
-            return created;
+            return await _repository.AddAsync(provider);
         }
 
         public async Task UpdateProviderAsync(ServiceProvider provider)

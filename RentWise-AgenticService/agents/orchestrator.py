@@ -48,7 +48,7 @@ def build_verification_graph():
     return graph.compile()
 
 from .MaintenanceTriage.maintenance_triage_agent import run_maintenance_triage_agent
-from .MatchingLocation.matching_location import run_matching_location_agent
+from .MatchingLocation.matching_location_agent import run_matching_location_agent
 from .AgreementPricing.agreement_pricing import run_agreement_pricing_agent
 
 def route_agent(state: AgentWorkflowState):

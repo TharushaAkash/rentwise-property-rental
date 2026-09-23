@@ -1,83 +1,73 @@
 using Microsoft.EntityFrameworkCore;
-using RentWise_Backend.Models;
+using RentWise.API.Modules.Users;
+using RentWise.API.Modules.PropertyManagement.Entities;
+using RentWise.API.Modules.TenantMatching.Entities;
+using RentWise.API.Modules.Agreements.Entities;
+using RentWise.API.Modules.Maintenance.Entities;
+using RentWise.API.Modules.AgenticAI.Entities;
 
-namespace RentWise_Backend.Data
+namespace RentWise.API.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(
-            DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
-        }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public DbSet<User> Users { get; set; }
+        
+        public DbSet<Property> Properties { get; set; }
+        public DbSet<PropertyPhoto> PropertyPhotos { get; set; }
+        public DbSet<PropertyDocument> PropertyDocuments { get; set; }
+        public DbSet<VerificationRecord> VerificationRecords { get; set; }
 
         public DbSet<TenantProfile> TenantProfiles { get; set; }
-
         public DbSet<SavedProperty> SavedProperties { get; set; }
-
         public DbSet<Application> Applications { get; set; }
 
-        // Property Management Module
-        public DbSet<RentWise_Backend.Models.PropertyManagement.Property> Properties { get; set; }
-        public DbSet<RentWise_Backend.Models.PropertyManagement.PropertyPhoto> PropertyPhotos { get; set; }
-        public DbSet<RentWise_Backend.Models.PropertyManagement.PropertyDocument> PropertyDocuments { get; set; }
-        public DbSet<RentWise_Backend.Models.PropertyManagement.VerificationRecord> VerificationRecords { get; set; }
-
-        // Component C: Rental Agreement and Payment Management
         public DbSet<RentalAgreement> RentalAgreements { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<RentReminder> RentReminders { get; set; }
 
-        // Maintenance Module
-        public DbSet<RentWise_Backend.Modules.Maintenance.Entities.MaintenanceRequest> MaintenanceRequests { get; set; }
-        public DbSet<RentWise_Backend.Modules.Maintenance.Entities.RequestStatusLog> RequestStatusLogs { get; set; }
-        public DbSet<RentWise_Backend.Modules.Maintenance.Entities.ServiceProvider> ServiceProviders { get; set; }
+        public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
+        public DbSet<RentWise.API.Modules.Maintenance.Entities.ServiceProvider> ServiceProviders { get; set; }
+        public DbSet<RequestStatusLog> RequestStatusLogs { get; set; }
+
+        public DbSet<AgentWorkflowRun> AgentWorkflowRuns { get; set; }
+        public DbSet<AgentWorkflowStep> AgentWorkflowSteps { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            
+            // Delete behaviors and relationships config
+            modelBuilder.Entity<Property>()
+                .HasOne(p => p.Owner)
+                .WithMany()
+                .HasForeignKey(p => p.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // One tenant profile per user
-            modelBuilder.Entity<TenantProfile>()
-                .HasIndex(t => t.UserId)
-                .IsUnique();
+            modelBuilder.Entity<RentalAgreement>()
+                .HasOne(ra => ra.Tenant)
+                .WithMany()
+                .HasForeignKey(ra => ra.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Prevent saving the same property twice
-            modelBuilder.Entity<SavedProperty>()
-                .HasIndex(s => new
-                {
-                    s.TenantProfileId,
-                    s.PropertyId
-                })
-                .IsUnique();
+            modelBuilder.Entity<RentalAgreement>()
+                .HasOne(ra => ra.Owner)
+                .WithMany()
+                .HasForeignKey(ra => ra.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Application>()
-                .Property(a => a.Status)
-                .HasDefaultValue("Submitted");
+                .HasOne<TenantProfile>()
+                .WithMany()
+                .HasForeignKey(a => a.TenantProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Rental Agreement configuration
-            var agreements = modelBuilder.Entity<RentalAgreement>();
-            agreements.Property(a => a.MonthlyRent).HasPrecision(12, 2);
-            agreements.Property(a => a.Status).HasMaxLength(30).IsConcurrencyToken();
-            agreements.HasIndex(a => a.ApplicationId);
-            agreements.HasIndex(a => new { a.OwnerId, a.Status });
-            agreements.HasIndex(a => new { a.TenantId, a.Status });
-            agreements.HasMany(a => a.Payments).WithOne(p => p.RentalAgreement)
-                .HasForeignKey(p => p.RentalAgreementId).OnDelete(DeleteBehavior.Restrict);
-            agreements.HasMany(a => a.RentReminders).WithOne(r => r.RentalAgreement)
-                .HasForeignKey(r => r.RentalAgreementId).OnDelete(DeleteBehavior.Restrict);
-
-            var payments = modelBuilder.Entity<Payment>();
-            payments.Property(p => p.Amount).HasPrecision(12, 2);
-            payments.Property(p => p.Status).HasMaxLength(30);
-            payments.Property(p => p.PaymentMethod).HasMaxLength(50);
-            payments.HasIndex(p => new { p.RentalAgreementId, p.PaymentDate });
-
-            var reminders = modelBuilder.Entity<RentReminder>();
-            reminders.Property(r => r.Status).HasMaxLength(30).IsConcurrencyToken();
-            reminders.HasIndex(r => new { r.RentalAgreementId, r.DueDate }).IsUnique();
+            modelBuilder.Entity<MaintenanceRequest>()
+                .HasOne(mr => mr.Tenant)
+                .WithMany()
+                .HasForeignKey(mr => mr.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

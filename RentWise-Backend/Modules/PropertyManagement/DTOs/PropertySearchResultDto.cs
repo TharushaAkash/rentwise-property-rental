@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
 
-namespace RentWise_Backend.DTOs.Search
+namespace RentWise.API.Modules.PropertyManagement.DTOs
 {
     public class PropertySearchResultDto
     {
-        public int PropertyId { get; set; }
+        public Guid PropertyId { get; set; }
 
         public string? Title { get; set; }
 
