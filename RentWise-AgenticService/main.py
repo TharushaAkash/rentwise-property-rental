@@ -112,28 +112,44 @@ class NicVerificationRequest(BaseModel):
 
 @app.post("/workflow/verify-nic")
 def verify_nic(req: NicVerificationRequest):
-    import google.generativeai as genai
     import os
-    import requests
-    
-    # Use google-genai direct call for simple OCR verification
-    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY", ""))
+    import re
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage
     
     try:
-        # Download the image
-        response = requests.get(req.image_url)
-        if response.status_code != 200:
-            return {"isVerified": False, "error": "Failed to download NIC image"}
+        vision_llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite")
+        
+        message = HumanMessage(
+            content=[
+                {
+                    "type": "text",
+                    "text": f"Does the NIC (National Identity Card) number in this image match '{req.nic_number}'? Check carefully. Reply ONLY with YES if it matches, or NO if it does not."
+                },
+                {
+                    "type": "image_url",
+                    "image_url": req.image_url
+                }
+            ]
+        )
+        
+        response = vision_llm.invoke([message])
+        
+        # Handle case where response.content is a list of blocks
+        content = response.content
+        if isinstance(content, list):
+            extracted_text = next((block["text"] for block in content if isinstance(block, dict) and "text" in block), str(content))
+        else:
+            extracted_text = str(content)
             
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        extracted_text = extracted_text.upper().strip()
         
-        result = model.generate_content([
-            f"Extract the NIC (National Identity Card) number from this image. Then compare it with this expected NIC: {req.nic_number}. Does it match? Just say 'MATCH' or 'MISMATCH' followed by the extracted number.",
-            {"mime_type": "image/jpeg", "data": response.content}
-        ])
+        # Check if the AI responded with YES
+        is_verified = "YES" in extracted_text
         
-        text = result.text.upper()
-        is_verified = "MATCH" in text and "MISMATCH" not in text
-        return {"isVerified": is_verified, "extractedNic": text}
+        print(f"Gemini output for matching NIC {req.nic_number}: {extracted_text}")
+        print(f"Verified: {is_verified}")
+        return {"isVerified": is_verified, "extractedNic": extracted_text}
     except Exception as e:
+        print(f"Exception: {e}")
         return {"isVerified": False, "error": str(e)}

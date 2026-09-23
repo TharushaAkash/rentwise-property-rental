@@ -38,7 +38,7 @@ export const PropertiesDashboard = () => {
   const [localPropsVersion, setLocalPropsVersion] = useState(0);
 
   // Properties data
-  const { data: properties, isLoading: isPropsLoading, error: propsError, refetch: refetchProps } = useFetch('/properties');
+  const { data: properties, isLoading: isPropsLoading, error: propsError, refetch: refetchProps } = useFetch(user?.id ? `/properties/owner/${user.id}` : null);
   const { mutateAsync: createProperty, isLoading: isCreating } = useMutation('/properties', 'POST');
 
   // Listen to property updates (from admin approval, creation, etc.)
