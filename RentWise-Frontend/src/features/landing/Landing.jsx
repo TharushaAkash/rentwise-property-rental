@@ -124,7 +124,9 @@ export const Landing = () => {
 
   // Map ONLY real added properties from the system
   const realProperties = useMemo(() => {
-    return properties.map((p) => {
+    return properties
+      .filter((p) => p.status === 1 || p.status === 'Active')
+      .map((p) => {
       const primaryPhoto = p.photos && Array.isArray(p.photos) && p.photos.length > 0 
         ? (p.photos.find((ph) => ph.isPrimary || ph.IsPrimary)?.photoUrl || 
            p.photos.find((ph) => ph.isPrimary || ph.IsPrimary)?.PhotoUrl || 

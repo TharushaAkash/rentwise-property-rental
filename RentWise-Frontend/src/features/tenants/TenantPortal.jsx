@@ -12,7 +12,6 @@ import { PaymentModal } from './PaymentModal';
 import { RequestForm } from '../maintenance/RequestForm';
 import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
 import { getActiveBookingForProperty, BOOKINGS_UPDATED_EVENT } from '../../utils/bookingStatus';
-import { LANKA_PROPERTIES } from '../../data/lankaProperties';
 
 const FALLBACK_RENTAL_PHOTOS = [
   'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80',
@@ -112,27 +111,7 @@ export const TenantPropertyPortal = () => {
       ])
         .then(([propsRes, appsRes]) => {
           const apiProps = Array.isArray(propsRes.data) ? propsRes.data : [];
-          let clientProps = [];
-          try {
-            clientProps = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-          } catch {}
-
-          const mergedMap = new Map();
-          apiProps.forEach(p => { if (p && (p.id || p.Id)) mergedMap.set(String(p.id || p.Id), p); });
-          clientProps.forEach(cp => {
-            if (cp && (cp.id || cp.Id)) {
-              mergedMap.set(String(cp.id || cp.Id), {
-                ...(mergedMap.get(String(cp.id || cp.Id)) || {}),
-                ...cp
-              });
-            }
-          });
-
-          if (mergedMap.size === 0) {
-            LANKA_PROPERTIES.forEach(lp => mergedMap.set(String(lp.id), lp));
-          }
-
-          setDbProperties(Array.from(mergedMap.values()));
+          setDbProperties(apiProps);
           setApplications(appsRes.data || []);
         })
         .catch(() => setMessage('Unable to load server property listings.'))
@@ -151,12 +130,10 @@ export const TenantPropertyPortal = () => {
 
     window.addEventListener(BOOKINGS_UPDATED_EVENT, handleUpdate);
     window.addEventListener('storage', handleUpdate);
-    window.addEventListener('rentwise_client_properties_updated', handleUpdate);
 
     return () => {
       window.removeEventListener(BOOKINGS_UPDATED_EVENT, handleUpdate);
       window.removeEventListener('storage', handleUpdate);
-      window.removeEventListener('rentwise_client_properties_updated', handleUpdate);
     };
   }, []);
 
@@ -1312,14 +1289,7 @@ export const TenantProfilePortal = () => {
       let rawMaintenance = Array.isArray(maintenanceRes?.data) ? maintenanceRes.data : [];
       const propertiesData = Array.isArray(propertiesRes?.data) ? propertiesRes.data : [];
 
-      // Build property lookup dictionary (combining server properties + LANKA_PROPERTIES catalog)
       const propLookup = new Map();
-      (LANKA_PROPERTIES || []).forEach((p) => {
-        if (p && p.id != null) {
-          propLookup.set(p.id, p);
-          propLookup.set(String(p.id), p);
-        }
-      });
       propertiesData.forEach((p) => {
         if (p && p.id != null) {
           propLookup.set(p.id, p);
@@ -1355,8 +1325,7 @@ export const TenantProfilePortal = () => {
         const matchedProp = propLookup.get(ag.propertyId) || 
                             propLookup.get(String(ag.propertyId)) || 
                             ag.property || 
-                            propertiesData.find(p => p.title && ag.propertyTitle && p.title.toLowerCase() === ag.propertyTitle.toLowerCase()) ||
-                            (LANKA_PROPERTIES || []).find(p => p.title && ag.propertyTitle && p.title.toLowerCase() === ag.propertyTitle.toLowerCase());
+                            propertiesData.find(p => p.title && ag.propertyTitle && p.title.toLowerCase() === ag.propertyTitle.toLowerCase());
         const photo = extractPropertyPhoto(ag, idx) || extractPropertyPhoto(matchedProp, idx);
 
         return {
@@ -1378,8 +1347,7 @@ export const TenantProfilePortal = () => {
         const matchedProp = propLookup.get(b.propertyId) || 
                             propLookup.get(String(b.propertyId)) || 
                             b.property || 
-                            propertiesData.find(p => p.title && b.propertyTitle && p.title.toLowerCase() === b.propertyTitle.toLowerCase()) ||
-                            (LANKA_PROPERTIES || []).find(p => p.title && b.propertyTitle && p.title.toLowerCase() === b.propertyTitle.toLowerCase());
+                            propertiesData.find(p => p.title && b.propertyTitle && p.title.toLowerCase() === b.propertyTitle.toLowerCase());
         const photo = extractPropertyPhoto(b, idx) || extractPropertyPhoto(matchedProp, idx);
 
         return {
@@ -1415,8 +1383,7 @@ export const TenantProfilePortal = () => {
             const matchedProp = propLookup.get(m.propertyId) || 
                                 propLookup.get(String(m.propertyId)) || 
                                 m.property ||
-                                propertiesData.find(p => p.title && m.propertyTitle && p.title.toLowerCase() === m.propertyTitle.toLowerCase()) ||
-                                (LANKA_PROPERTIES || []).find(p => p.title && m.propertyTitle && p.title.toLowerCase() === m.propertyTitle.toLowerCase());
+                                propertiesData.find(p => p.title && m.propertyTitle && p.title.toLowerCase() === m.propertyTitle.toLowerCase());
             const propPhoto = extractPropertyPhoto(matchedProp);
             const photo = resolveMaintenancePhoto(m, matchedProp);
             mMap.set(m.id, {
@@ -1435,8 +1402,7 @@ export const TenantProfilePortal = () => {
             const matchedProp = propLookup.get(lm.propertyId) || 
                                 propLookup.get(String(lm.propertyId)) || 
                                 lm.property ||
-                                propertiesData.find(p => p.title && lm.propertyTitle && p.title.toLowerCase() === lm.propertyTitle.toLowerCase()) ||
-                                (LANKA_PROPERTIES || []).find(p => p.title && lm.propertyTitle && p.title.toLowerCase() === lm.propertyTitle.toLowerCase());
+                                propertiesData.find(p => p.title && lm.propertyTitle && p.title.toLowerCase() === lm.propertyTitle.toLowerCase());
             const propPhoto = extractPropertyPhoto(matchedProp);
             const photo = resolveMaintenancePhoto(lm, matchedProp);
             if (!mMap.has(lm.id)) {

@@ -70,6 +70,8 @@ namespace RentWise.API.Modules.Users.DTOs
         public string Role { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string? NicNumber { get; set; }
+        public bool IsNicVerified { get; set; }
+        public string? NicImageUrl { get; set; }
         public bool IsBlocked { get; set; } = false;
         public DateTime CreatedAt { get; set; }
     }

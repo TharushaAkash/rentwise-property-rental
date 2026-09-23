@@ -18,6 +18,8 @@ export const OwnerProfileSection = () => {
     fullName: '',
     phoneNumber: '',
     nicNumber: '',
+    isNicVerified: false,
+    nicImageUrl: '',
     role: '',
     createdAt: ''
   });
@@ -39,6 +41,52 @@ export const OwnerProfileSection = () => {
   const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
   const [passwordErrorMsg, setPasswordErrorMsg] = useState('');
 
+  // NIC Upload State
+  const [nicFile, setNicFile] = useState(null);
+  const [isUploadingNic, setIsUploadingNic] = useState(false);
+  const [nicUploadSuccessMsg, setNicUploadSuccessMsg] = useState('');
+  const [nicUploadErrorMsg, setNicUploadErrorMsg] = useState('');
+
+  const handleNicUpload = async () => {
+    if (!nicFile) {
+      setNicUploadErrorMsg('Please select a file to upload.');
+      return;
+    }
+    
+    if (!profileData.nicNumber) {
+      setNicUploadErrorMsg('Please save your NIC Number in personal details first.');
+      return;
+    }
+
+    try {
+      setIsUploadingNic(true);
+      setNicUploadErrorMsg('');
+      setNicUploadSuccessMsg('');
+
+      const formData = new FormData();
+      formData.append('file', nicFile);
+
+      const res = await api.post(`/auth/${user.id}/verify-nic`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (res.data?.isNicVerified) {
+        setNicUploadSuccessMsg('NIC successfully verified!');
+        setProfileData(prev => ({ ...prev, isNicVerified: true, nicImageUrl: res.data.nicImageUrl }));
+      } else {
+        setNicUploadErrorMsg('NIC verification failed. The uploaded image does not match the saved NIC number or could not be read.');
+        setProfileData(prev => ({ ...prev, isNicVerified: false, nicImageUrl: res.data?.nicImageUrl || prev.nicImageUrl }));
+      }
+      
+      setNicFile(null);
+    } catch (err) {
+      console.error('NIC Upload Failed:', err);
+      setNicUploadErrorMsg(err.response?.data?.message || 'An error occurred during NIC upload.');
+    } finally {
+      setIsUploadingNic(false);
+    }
+  };
+
   // Fetch live profile details
   useEffect(() => {
     const fetchProfile = async () => {
@@ -53,6 +101,8 @@ export const OwnerProfileSection = () => {
             fullName: res.data.fullName || res.data.name || `${res.data.firstName || ''} ${res.data.lastName || ''}`.trim(),
             phoneNumber: res.data.phoneNumber || '',
             nicNumber: res.data.nicNumber || '',
+            isNicVerified: res.data.isNicVerified || false,
+            nicImageUrl: res.data.nicImageUrl || '',
             role: res.data.role || user?.role || 'PropertyOwner',
             createdAt: res.data.createdAt || ''
           });
@@ -224,10 +274,12 @@ export const OwnerProfileSection = () => {
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                   {profileData.fullName || profileData.email || 'Property Owner'}
                 </h1>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-                  Verified Landlord
-                </span>
+                {profileData.isNicVerified && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <ShieldCheck className="w-3.5 h-3.5 mr-1" />
+                    Verified Landlord
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-4 text-sm text-slate-300 mt-2 flex-wrap">
                 <span className="flex items-center gap-1.5">
@@ -414,6 +466,74 @@ export const OwnerProfileSection = () => {
                   </Button>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+          
+          {/* NIC Verification Card */}
+          <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl overflow-hidden mt-6">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 pb-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                    NIC Verification
+                  </CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Upload your National Identity Card to get the "Verified Landlord" badge.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {nicUploadSuccessMsg && (
+                <div className="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 text-sm animate-in fade-in">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>{nicUploadSuccessMsg}</span>
+                </div>
+              )}
+              {nicUploadErrorMsg && (
+                <div className="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-3 text-sm animate-in fade-in">
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                  <span>{nicUploadErrorMsg}</span>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                {profileData.isNicVerified ? (
+                  <div className="flex flex-col items-center justify-center p-6 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                      <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                    </div>
+                    <h3 className="font-semibold text-emerald-800 text-lg">Verified Landlord</h3>
+                    <p className="text-sm text-emerald-600/80 mt-1 text-center">Your identity has been successfully verified via Agentic AI.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-full space-y-2">
+                      <label className="text-sm font-medium text-gray-700 block">
+                        Upload NIC Image (JPEG/PNG)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/jpeg, image/png, image/jpg"
+                        onChange={(e) => setNicFile(e.target.files[0])}
+                        className="flex w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
+                      />
+                      <p className="text-xs text-gray-400">
+                        Ensure the NIC image is clear and the number matches your saved personal details.
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={handleNicUpload}
+                      disabled={!nicFile || isUploadingNic}
+                      isLoading={isUploadingNic}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                    >
+                      Verify NIC via Agentic AI
+                    </Button>
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

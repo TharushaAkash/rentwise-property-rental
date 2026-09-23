@@ -10,7 +10,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { ArrowLeft, Clock, Home, MapPin, Wrench, CheckCircle2, AlertCircle, Image as ImageIcon, User, Sliders, Trash2, Phone, Mail, Check, Copy, ExternalLink, ShieldCheck, Sparkles, Building2, Calendar, ChevronRight, Printer, Eye, Zap, AlertTriangle, ShieldAlert, Plus, Send, Bed, Bath, Maximize2, CheckSquare, RefreshCw, FileText, Upload, Camera, X } from 'lucide-react';
 import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
-import { LANKA_PROPERTIES, formatLankaPrice } from '../../data/lankaProperties';
+import { formatLankaPrice } from '../../data/lankaProperties';
 
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
@@ -165,20 +165,9 @@ export const RequestDetails = () => {
       const allProps = Array.isArray(propsRes.data) ? propsRes.data : [];
       let matchedProp = allProps.find((p) => p && String(p.id) === String(ticketData.propertyId)) || ticketData.property;
 
-      // Fallback matching against LANKA_PROPERTIES
-      const titleToMatch = (ticketData.propertyTitle || matchedProp?.title || '').toLowerCase();
-      const addrToMatch = (ticketData.propertyAddress || matchedProp?.address || '').toLowerCase();
-      const matchedLanka = LANKA_PROPERTIES.find((lp) => 
-        (ticketData.propertyId && String(lp.id) === String(ticketData.propertyId)) ||
-        (titleToMatch && lp.title.toLowerCase().includes(titleToMatch)) ||
-        (addrToMatch && lp.address.toLowerCase().includes(addrToMatch)) ||
-        (titleToMatch && titleToMatch.includes(lp.title.toLowerCase()))
-      );
-
       const resolvedPhoto = 
         ticketData.photoUrl || 
         extractPropertyPhoto(matchedProp) || 
-        matchedLanka?.photoUrl || 
         PROPERTY_PLACEHOLDER_IMAGE;
 
       // Enrich Tenant

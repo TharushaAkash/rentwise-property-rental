@@ -145,7 +145,41 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             _context.PropertyDocuments.Add(doc);
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Ownership proof submitted successfully for admin verification.", document = doc });
+            // Trigger Agentic Service
+            try
+            {
+                using var httpClient = new System.Net.Http.HttpClient();
+                var aiUrl = "http://localhost:8000/workflow/verify-property";
+                var payload = new { property_id = id.ToString() };
+                var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                
+                var response = await httpClient.PostAsync(aiUrl, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var resultString = await response.Content.ReadAsStringAsync();
+                    var result = System.Text.Json.JsonDocument.Parse(resultString);
+                    if (result.RootElement.TryGetProperty("report", out var reportElement) && 
+                        reportElement.TryGetProperty("recommendation", out var recElement))
+                    {
+                        var recommendation = recElement.GetString();
+                        if (recommendation == "Approve-ready")
+                        {
+                            property.Status = RentWise.API.Modules.PropertyManagement.Entities.PropertyStatus.Active;
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Agentic OCR Verification returned status code: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Agentic OCR Verification failed: {ex.Message}");
+            }
+
+            return Ok(new { success = true, message = "Ownership proof submitted successfully for agentic AI verification.", document = doc });
         }
 
         [HttpPost("{id}/listing-fee")]

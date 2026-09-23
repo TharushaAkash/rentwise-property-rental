@@ -31,6 +31,11 @@ namespace RentWise.API.Modules.Users
         [MaxLength(20)]
         public string? NicNumber { get; set; }
 
+        public bool IsNicVerified { get; set; } = false;
+
+        [MaxLength(500)]
+        public string? NicImageUrl { get; set; }
+
         public bool IsBlocked { get; set; } = false;
     }
 }

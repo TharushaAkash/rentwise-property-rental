@@ -10,7 +10,6 @@ import { Modal } from '../../components/ui/Modal';
 import { RequestForm } from './RequestForm';
 import { Plus, Wrench, Home, MapPin, Clock, CheckCircle2, AlertCircle, DollarSign, Sparkles, ArrowRight, Filter, Trash2, Image as ImageIcon, LayoutGrid, List, Search, Building2, Calendar, CalendarDays, User, Mail, Phone, ShieldAlert, Check, RotateCcw, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
-import { LANKA_PROPERTIES } from '../../data/lankaProperties';
 
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
@@ -200,12 +199,7 @@ export const MaintenanceDashboard = () => {
         ]);
 
         const allPropsMap = new Map();
-        (LANKA_PROPERTIES || []).forEach((p) => {
-          if (p && p.id) {
-            allPropsMap.set(String(p.id), p);
-            allPropsMap.set(p.id, p);
-          }
-        });
+
         (allPropsRes.data || []).forEach((p) => {
           if (p && p.id) {
             allPropsMap.set(String(p.id), p);
@@ -278,7 +272,6 @@ export const MaintenanceDashboard = () => {
         reqList = reqList.map((r) => {
           const foundProp = propMap.get(String(r.propertyId)) || 
                             allPropsMap.get(String(r.propertyId)) ||
-                            (LANKA_PROPERTIES || []).find(p => p.title && r.propertyTitle && p.title.toLowerCase() === r.propertyTitle.toLowerCase()) ||
                             r.property;
           const photoUrl = r.photoUrl || extractPropertyPhoto(r.property) || extractPropertyPhoto(foundProp) || PROPERTY_PLACEHOLDER_IMAGE;
           return {

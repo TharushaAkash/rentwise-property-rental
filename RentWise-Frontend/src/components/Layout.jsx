@@ -70,8 +70,6 @@ export const Layout = () => {
     } else if (role === 'PropertyOwner') {
       return [
         { name: 'My Properties', path: '/properties', icon: <Home className="w-5 h-5" /> },
-        { name: 'Find Rentals', path: '/find-rentals', icon: <Search className="w-5 h-5" /> },
-        { name: 'Saved Items', path: '/saved-items', icon: <Heart className="w-5 h-5" /> },
         { name: 'My Profile', path: '/profile', icon: <User className="w-5 h-5" /> },
         { name: 'My Tenants', path: '/tenants', icon: <Users className="w-5 h-5" /> },
         { name: 'Agreements', path: '/agreements', icon: <FileText className="w-5 h-5" /> },

@@ -432,20 +432,7 @@ export const FindRentals = () => {
         };
       });
 
-      // Also merge client-side cached properties
-      let clientProps = [];
-      try {
-        clientProps = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-      } catch {}
-      const mergedMap = new Map();
-      normalizedApi.forEach(p => mergedMap.set(String(p.id), p));
-      clientProps.forEach(cp => {
-        if (cp && cp.id && !mergedMap.has(String(cp.id))) {
-          mergedMap.set(String(cp.id), cp);
-        }
-      });
-
-      setProperties(Array.from(mergedMap.values()));
+      setProperties(normalizedApi);
     } catch (err) {
       console.error('Failed to load rentals:', err);
       setProperties([]);
@@ -472,19 +459,13 @@ export const FindRentals = () => {
       setBookingVersion((v) => v + 1);
     };
 
-    const handlePropsChange = () => {
-      fetchRentals();
-    };
-
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('rentwise_saved_updated', handleStorageChange);
     window.addEventListener(BOOKINGS_UPDATED_EVENT, handleBookingChange);
-    window.addEventListener('rentwise_client_properties_updated', handlePropsChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('rentwise_saved_updated', handleStorageChange);
       window.removeEventListener(BOOKINGS_UPDATED_EVENT, handleBookingChange);
-      window.removeEventListener('rentwise_client_properties_updated', handlePropsChange);
     };
   }, []);
 

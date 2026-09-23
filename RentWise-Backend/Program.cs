@@ -215,6 +215,25 @@ using (var scope = app.Services.CreateScope())
                 Console.WriteLine("[Database] Verified default Administrator account: admin@rentwise.com");
             }
 
+            // 6.5. Ensure Supabase NICs Bucket Exists
+            try
+            {
+                var supaClient = scope.ServiceProvider.GetRequiredService<Supabase.Client>();
+                await supaClient.InitializeAsync();
+                
+                // We attempt to get the bucket. If it fails or returns null, we create it.
+                var buckets = await supaClient.Storage.ListBuckets();
+                if (buckets == null || !buckets.Any(b => b.Name == "NICs"))
+                {
+                    await supaClient.Storage.CreateBucket("NICs", new Supabase.Storage.BucketUpsertOptions { Public = true });
+                    Console.WriteLine("[Supabase] Created 'NICs' storage bucket.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Supabase Note] Ensure NICs bucket exists failed: {ex.Message}");
+            }
+
             // 7. Ensure default verified property exists (26270925-f600-48af-8b7d-43d01545c40f)
             try
             {
