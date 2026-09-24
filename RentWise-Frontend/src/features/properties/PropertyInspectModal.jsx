@@ -19,7 +19,7 @@ import {
   CheckCheck,
   Zap
 } from 'lucide-react';
-import { handleImageError } from '../../utils/imagePlaceholder';
+import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
 import { getActiveBookingForProperty } from '../../utils/bookingStatus';
 import { evaluatePropertyVerification } from '../../utils/addressVerification';
 
@@ -79,6 +79,8 @@ export function PropertyInspectModal({
     photos = property.photos.map(ph => typeof ph === 'string' ? ph : (ph?.photoUrl || ph?.PhotoUrl || ph?.url)).filter(Boolean);
   } else if (property.photoUrl || property.PhotoUrl) {
     photos = [property.photoUrl || property.PhotoUrl];
+  } else {
+    photos = [PROPERTY_PLACEHOLDER_IMAGE];
   }
 
   // Utility Bill Document & Verification
