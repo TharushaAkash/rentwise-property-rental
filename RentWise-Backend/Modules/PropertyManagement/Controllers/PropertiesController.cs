@@ -149,7 +149,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
-                var aiUrl = "http://localhost:8000/workflow/verify-property";
+                var aiUrl = "https://rentwise-ai-service.onrender.com/workflow/verify-property";
                 var payload = new { property_id = id.ToString() };
                 var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
                 
