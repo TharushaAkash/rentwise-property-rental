@@ -228,7 +228,12 @@ export const Login = () => {
 
             {/* Quick Admin Login (For Development/Testing) */}
             <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50">
-              <p className="text-[11px] text-center text-gray-500 mb-2 font-medium">Test Credentials:</p>
+              <div className="text-center mb-3 space-y-1">
+                <p className="text-[11px] text-gray-500 font-medium">Demo Admin Credentials:</p>
+                <div className="text-[10px] text-gray-400 bg-gray-50/50 dark:bg-slate-800/50 py-1.5 px-2 rounded-lg border border-gray-100 dark:border-slate-700/50 inline-block font-mono">
+                  admin@rentwise.com / AdminPassword123!
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => {
