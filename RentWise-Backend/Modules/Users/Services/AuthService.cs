@@ -210,6 +210,8 @@ namespace RentWise.API.Modules.Users.Services
                 Role = user.Role,
                 PhoneNumber = user.PhoneNumber,
                 NicNumber = user.NicNumber,
+                IsNicVerified = user.IsNicVerified,
+                NicImageUrl = user.NicImageUrl,
                 IsBlocked = user.IsBlocked,
                 CreatedAt = user.CreatedAt
             };

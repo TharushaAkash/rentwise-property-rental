@@ -44,102 +44,12 @@ KNOWN_COORDINATES: Dict[str, tuple] = {
     "uom": (6.7969, 79.9018),
     "university of moratuwa": (6.7969, 79.9018),
     "rajagiriya": (6.9090, 79.8930),
-    "kotte": (6.8910, 79.9050)
+    "kotte": (6.8910, 79.9050),
+    "maharagama": (6.8480, 79.9265)
 }
 
 # Rich default verified candidate properties if backend is offline or needs enrichment
-CURATED_PROPERTIES: List[Dict[str, Any]] = [
-    {
-        "id": "sample-rental-1",
-        "title": "Modern Sunset Glass Villa",
-        "description": "Stunning architectural villa with floor-to-ceiling glass, private garden and minimalist luxury aesthetics.",
-        "address": "142 Lake Drive, Malabe",
-        "city": "Malabe",
-        "monthlyRent": 65000,
-        "bedrooms": 3,
-        "bathrooms": 2,
-        "sqft": 2200,
-        "propertyType": "Apartment",
-        "photoUrl": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80",
-        "facilities": "Air Conditioning, Swimming Pool, Garden, Parking Space, 24/7 Security",
-        "status": "Active"
-    },
-    {
-        "id": "sample-rental-2",
-        "title": "Minimalist Two-Story White Residence",
-        "description": "Clean geometric contemporary home featuring open-plan living, private plunge pool, and rooftop deck.",
-        "address": "28 Orchard Way, Malabe",
-        "city": "Malabe",
-        "monthlyRent": 55000,
-        "bedrooms": 4,
-        "bathrooms": 3,
-        "sqft": 2600,
-        "propertyType": "House",
-        "photoUrl": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
-        "facilities": "Swimming Pool, Solar Power, 2-Car Garage, Gym Access",
-        "status": "Active"
-    },
-    {
-        "id": "sample-rental-3",
-        "title": "Artisan Loft in Central Colombo",
-        "description": "High-ceiling urban apartment filled with natural daylight, wooden floors and curated interior styling.",
-        "address": "45 Ward Place, Colombo 07",
-        "city": "Colombo",
-        "monthlyRent": 85000,
-        "bedrooms": 2,
-        "bathrooms": 2,
-        "sqft": 1450,
-        "propertyType": "Apartment",
-        "photoUrl": "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80",
-        "facilities": "Furnished, Air Conditioned, Balcony, Elevator, 24/7 Security, Parking Space",
-        "status": "Active"
-    },
-    {
-        "id": "sample-rental-4",
-        "title": "Contemporary Garden Bungalow",
-        "description": "Peaceful sanctuary surrounded by lush tropical greenery with modern fitted pantry and teak finishes.",
-        "address": "88 Kandy Road, Pelawatte",
-        "city": "Pelawatte",
-        "monthlyRent": 70000,
-        "bedrooms": 3,
-        "bathrooms": 2,
-        "sqft": 1850,
-        "propertyType": "House",
-        "photoUrl": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
-        "facilities": "Garden, Pet Friendly, Covered Parking, Hot Water, Solar Electricity",
-        "status": "Active"
-    },
-    {
-        "id": "sample-rental-5",
-        "title": "Modern Studio Suite in Dehiwala",
-        "description": "Cozy fully-furnished studio apartment 300m from Marine Drive with fast fiber internet and elevator access.",
-        "address": "12 Station Road, Dehiwala",
-        "city": "Dehiwala",
-        "monthlyRent": 48000,
-        "bedrooms": 1,
-        "bathrooms": 1,
-        "sqft": 650,
-        "propertyType": "Apartment",
-        "photoUrl": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80",
-        "facilities": "Air Conditioning, Furnished, Fiber Internet, Elevator, 24/7 Security",
-        "status": "Active"
-    },
-    {
-        "id": "26270925-f600-48af-8b7d-43d01545c40f",
-        "title": "Brand New Luxury House in Battaramulla",
-        "description": "Brand new architect-designed modern 5-bedroom luxury residence located in Thalangama, Battaramulla with solar hot water and 3-phase power.",
-        "address": "Thalangama North, Battaramulla, Colombo",
-        "city": "Battaramulla",
-        "monthlyRent": 275000,
-        "bedrooms": 5,
-        "bathrooms": 4,
-        "sqft": 5000,
-        "propertyType": "House",
-        "photoUrl": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
-        "facilities": "Air Conditioning, Hot Water, Swimming Pool, Parking / Garage, Security System, CCTV, Garden, Rooftop Terrace",
-        "status": "Active"
-    }
-]
+CURATED_PROPERTIES: List[Dict[str, Any]] = []
 
 def _resolve_coordinates(place_str: str) -> Optional[tuple]:
     """Finds coordinates for a given location or landmark."""
@@ -173,7 +83,7 @@ def _haversine_distance_km(coord1: tuple, coord2: tuple) -> float:
 # ==============================================================================
 
 @tool
-def search_properties(filters: str) -> str:
+def search_properties(filters: Optional[str] = "{}") -> str:
     """
     Searches active rental properties matching structured criteria.
     `filters` can be a JSON string or key:value format specifying:
@@ -265,14 +175,35 @@ def search_properties(filters: str) -> str:
             if target_type not in p_type and p_type not in target_type:
                 continue
 
+        # Location check
+        if target_loc and target_loc not in ["any", "all", "sri lanka", "colombo"]:
+            p_addr = str(prop.get("address", "")).lower()
+            p_city = str(prop.get("city", "")).lower()
+            
+            # Split target_loc to handle "battaramulla or pelawatte" cases
+            loc_parts = [p.strip() for p in target_loc.replace(' or ', ',').replace(' and ', ',').split(',') if p.strip()]
+            
+            # A property matches if ANY of the location parts are in its address or city
+            matched = False
+            for loc_part in loc_parts:
+                if loc_part in p_addr or loc_part in p_city:
+                    matched = True
+                    break
+            
+            if not matched:
+                continue
+
         filtered.append(prop)
 
-    # If too restrictive, return top candidates from pool
-    final_candidates = filtered if filtered else properties_pool[:4]
+    print(f"[DEBUG] Parsed Filters: {parsed_filters}")
+    print(f"[DEBUG] Target Loc: {target_loc}")
+    print(f"[DEBUG] Returning {len(filtered)} properties.")
+    
+    final_candidates = filtered
     return json.dumps(final_candidates)
 
 @tool
-def get_distance(origin: str, destination: str) -> str:
+def get_distance(origin: Optional[str] = "", destination: Optional[str] = "") -> str:
     """
     Computes real distance (km) and estimated commute travel time (minutes)
     between an origin property address and the tenant's destination landmark.
@@ -379,7 +310,7 @@ Your responsibility is to:
 """
 
 # Gemini Model setup
-gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 llm = ChatGoogleGenerativeAI(model=gemini_model, temperature=0.1)
 tools = [search_properties, get_distance]
 llm_with_tools = llm.bind_tools(tools)
@@ -446,84 +377,20 @@ def run_matching_location_agent(state: AgentWorkflowState) -> AgentWorkflowState
         print(f"[MatchingAgent Error / Fallback Activated]: {e}")
 
     # 2. Resilient Deterministic Fallback if LLM did not parse or hit rate limit
-    if not output_data or not output_data.get("ranked_properties"):
-        # Deterministic extraction from objective text
-        obj_lower = objective.lower()
-        
-        # Detect destination landmark
-        destination = "Central Town"
-        if "sliit" in obj_lower:
-            destination = "SLIIT Malabe"
-        elif "orion" in obj_lower:
-            destination = "Orion City IT Park"
-        elif "fort" in obj_lower:
-            destination = "Colombo Fort"
-        elif "colombo" in obj_lower:
-            destination = "Central Colombo"
-        elif "malabe" in obj_lower:
-            destination = "Malabe Junction"
-
-        # Search candidates
-        candidates_raw = search_properties.invoke({})
-        candidates = json.loads(candidates_raw)
-
-        ranked = []
-        for prop in candidates:
-            dist_info = json.loads(get_distance.invoke({"origin": prop.get("address", ""), "destination": destination}))
-            d_km = dist_info.get("distance_km", 3.0)
-            t_min = dist_info.get("travel_time_mins", 10)
-            
-            # Compute score
-            score = 90
-            if d_km < 3.0:
-                score += 8
-            elif d_km > 10.0:
-                score -= 15
-                
-            rent = prop.get("monthlyRent", 60000)
-            if rent <= 75000:
-                score += 5
-            elif rent > 150000:
-                score -= 10
-            
-            score = min(98, max(65, score))
-
-            ranked.append({
-                "property_id": str(prop.get("id")),
-                "title": prop.get("title"),
-                "address": prop.get("address"),
-                "city": prop.get("city"),
-                "monthly_rent": prop.get("monthlyRent"),
-                "bedrooms": prop.get("bedrooms"),
-                "bathrooms": prop.get("bathrooms"),
-                "photo_url": prop.get("photoUrl"),
-                "match_score": score,
-                "distance_km": d_km,
-                "travel_time_mins": t_min,
-                "match_reasons": [
-                    f"Convenient commute of {d_km} km (~{t_min} mins) to {destination}",
-                    f"Monthly rent of LKR {int(rent):,} aligns with market expectations",
-                    f"Features {prop.get('facilities', 'modern amenities')}"
-                ],
-                "trade_offs": []
-            })
-
-        ranked.sort(key=lambda x: x["match_score"], reverse=True)
+    if not output_data or "ranked_properties" not in output_data:
         output_data = {
-            "extracted_filters": {
-                "destination": destination,
-                "objective": objective
-            },
-            "destination_landmark": destination,
-            "ranked_properties": ranked,
-            "summary_recommendation": f"Found {len(ranked)} matching properties ranked by proximity to {destination} and budget fit."
+            "extracted_filters": {},
+            "destination_landmark": "",
+            "ranked_properties": [],
+            "summary_recommendation": "No matching properties could be found at this time."
         }
 
     # Store in LangGraph state
     state["current_agent"] = "MatchingLocation"
     state["candidate_properties"] = output_data.get("ranked_properties", [])
-    state["ranked_properties"] = output_data.get("ranked_properties", [])
-    state["extracted_filters"] = output_data.get("extracted_filters", {})
+    state["matching_results"] = output_data.get("ranked_properties", [])
+    # We remove state["extracted_filters"] assignment if it's not in AgentWorkflowState, or just leave it. 
+    # TypedDict only restricts what you can do if it's used strictly. Wait, I will just add the matching_results assignment.
     if output_data.get("ranked_properties"):
         state["recommended_property"] = output_data["ranked_properties"][0]
         

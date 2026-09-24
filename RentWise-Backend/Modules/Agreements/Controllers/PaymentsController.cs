@@ -17,12 +17,7 @@ namespace RentWise.API.Modules.Agreements.Controllers
             _service = service;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetPayments(Guid agreementId)
-        {
-            var result = await _service.GetAllPaymentsAsync(agreementId);
-            return Ok(result);
-        }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPayment(Guid agreementId, Guid id)

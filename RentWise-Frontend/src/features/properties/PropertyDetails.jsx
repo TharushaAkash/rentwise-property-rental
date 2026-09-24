@@ -4,8 +4,8 @@ import api from '../../services/api';
 import { useFetch } from '../../hooks/useFetch';
 import { useMutation } from '../../hooks/useMutation';
 import { useAuth } from '../../hooks/useAuth';
-import { formatLankaPrice, LANKA_PROPERTIES } from '../../data/lankaProperties';
-import { ArrowLeft, MapPin, Star, Camera, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Calendar, Building2, Phone, Mail, CheckCircle2, Maximize2, Share2, ShieldCheck, Pencil, Trash2, Clock, Lock, AlertCircle, Users, ExternalLink, FileText, Check, Eye, Zap, CheckCheck } from 'lucide-react';
+import { formatLankaPrice } from '../../data/lankaProperties';
+import { ArrowLeft, ArrowRight, MapPin, Star, Camera, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Calendar, Building2, Phone, Mail, CheckCircle2, Maximize2, Share2, ShieldCheck, Pencil, Trash2, Clock, Lock, AlertCircle, Users, ExternalLink, FileText, Check, Eye, Zap, CheckCheck } from 'lucide-react';
 import { BookingModal } from '../tenants/BookingModal';
 import { Modal } from '../../components/ui/Modal';
 import { PropertyForm } from './PropertyForm';
@@ -62,20 +62,12 @@ export const PropertyDetails = () => {
   const { data: photosData } = useFetch(`/properties/${id}/photos`);
   const { mutateAsync: deleteProperty } = useMutation(`/properties/${id}`, 'DELETE');
 
-  // Active property object (prefer server data, then router state, then localStorage cache, then LANKA_PROPERTIES)
+  // Active property object (prefer server data, then router state)
   const currentProperty = useMemo(() => {
     if (property) return property;
     if (passedProperty) return passedProperty;
-    const cleanId = String(id || '').trim().toLowerCase();
-    try {
-      const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-      const found = cached.find((p) => String(p.id || '').trim().toLowerCase() === cleanId);
-      if (found) return found;
-    } catch {}
-    const sample = LANKA_PROPERTIES.find((p) => String(p.id || '').trim().toLowerCase() === cleanId);
-    if (sample) return sample;
     return null;
-  }, [property, passedProperty, id]);
+  }, [property, passedProperty]);
 
   // Load applications tied to this property
   useEffect(() => {
@@ -213,7 +205,7 @@ export const PropertyDetails = () => {
     }
   };
 
-  const handleUpdatePropertyDetails = async (formData, files) => {
+  const handleUpdatePropertyDetails = async (formData, files, utilityBillFile) => {
     try {
       setIsUpdating(true);
       const propId = currentProperty?.id || currentProperty?.Id || id;
@@ -253,6 +245,29 @@ export const PropertyDetails = () => {
         }));
       }
 
+      if (utilityBillFile) {
+        try {
+          let billUrl = '';
+          const billForm = new FormData();
+          billForm.append('file', utilityBillFile);
+          billForm.append('isPrimary', false);
+          const photoRes = await api.post(`/properties/${propId}/photos`, billForm, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          if (photoRes.data?.photoUrl) {
+            billUrl = photoRes.data.photoUrl;
+          }
+          if (billUrl) {
+            await api.post(`/properties/${propId}/proof`, {
+              documentType: 'UtilityBill',
+              documentUrl: billUrl
+            });
+          }
+        } catch (billErr) {
+          console.warn('Utility bill photo upload failed:', billErr);
+        }
+      }
+
       setIsEditModalOpen(false);
       setFeedbackMsg('Property details updated successfully!');
       setTimeout(() => {
@@ -265,7 +280,6 @@ export const PropertyDetails = () => {
       setIsUpdating(false);
     }
   };
-
   const handleDeletePropertyDetails = async () => {
     try {
       setIsDeleting(true);
@@ -288,11 +302,7 @@ export const PropertyDetails = () => {
       await api.put(`/properties/${propId}/approve`);
       setAdminStatus('Active');
       setFeedbackMsg('Property listing approved and activated successfully!');
-      try {
-        const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updated = cached.map((p) => (String(p.id) === String(propId) ? { ...p, status: 'Active', Status: 'Active' } : p));
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updated));
-      } catch {}
+
     } catch (err) {
       console.error('Admin approve failed:', err);
       setAdminStatus('Active');
@@ -309,11 +319,7 @@ export const PropertyDetails = () => {
       await api.put(`/properties/${propId}/reject`);
       setAdminStatus('Suspended');
       setFeedbackMsg('Property listing suspended.');
-      try {
-        const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updated = cached.map((p) => (String(p.id) === String(propId) ? { ...p, status: 'Suspended', Status: 'Suspended' } : p));
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updated));
-      } catch {}
+
     } catch (err) {
       console.error('Admin suspend failed:', err);
       setAdminStatus('Suspended');
@@ -330,11 +336,7 @@ export const PropertyDetails = () => {
       await api.put(`/properties/${propId}`, { ...currentProperty, status: 0 });
       setAdminStatus('PendingVerification');
       setFeedbackMsg('Property status marked as Pending Verification.');
-      try {
-        const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updated = cached.map((p) => (String(p.id) === String(propId) ? { ...p, status: 'PendingVerification', Status: 'PendingVerification' } : p));
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updated));
-      } catch {}
+
     } catch (err) {
       console.error('Admin pending failed:', err);
       setAdminStatus('PendingVerification');
@@ -970,7 +972,7 @@ export const PropertyDetails = () => {
         <div className="flex items-center gap-3">
           {isOwnerOrAdmin ? (
             <button
-              onClick={handleDelete}
+              onClick={() => setIsDeleteModalOpen(true)}
               className="px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-300 rounded-lg cursor-pointer"
             >
               Delete Listing
@@ -1177,7 +1179,13 @@ export const PropertyDetails = () => {
           )}
 
           {/* Card: Electricity / Utility Bill Verification Section */}
-          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-3">
+          {(isAdmin || (isOwner && user?.id === currentProperty?.ownerId)) && (() => {
+            const docs = Array.isArray(currentProperty?.documents) ? currentProperty.documents : [];
+            const utilityDoc = docs.find(d => d?.documentType === 'UtilityBill' || d?.documentType === 'OwnershipProof') ||
+                              (currentProperty?.utilityBillUrl ? { documentType: 'UtilityBill', documentUrl: currentProperty.utilityBillUrl } : null);
+
+            return (
+              <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-3 mt-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
@@ -1190,20 +1198,30 @@ export const PropertyDetails = () => {
                   <span className="text-[11px] text-amber-800 font-medium">Scanned by Agentic AI OCR</span>
                 </div>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                <span>Address Verified</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-bold flex items-center gap-1 border ${
+                verificationInfo.isVerified 
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                  : utilityDoc?.documentUrl 
+                    ? 'bg-red-100 text-red-800 border-red-300' 
+                    : 'bg-amber-100 text-amber-800 border-amber-300'
+              }`}>
+                {verificationInfo.isVerified ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                ) : utilityDoc?.documentUrl ? (
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                ) : (
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                )}
+                <span>
+                  {utilityDoc?.documentUrl ? verificationInfo.statusLabel : 'Pending Proof'}
+                </span>
               </span>
             </div>
 
             {(() => {
-              const docs = Array.isArray(currentProperty?.documents) ? currentProperty.documents : [];
-              const utilityDoc = docs.find(d => d?.documentType === 'UtilityBill' || d?.documentType === 'OwnershipProof') ||
-                                (currentProperty?.utilityBillUrl ? { documentType: 'UtilityBill', documentUrl: currentProperty.utilityBillUrl } : null);
-
               if (utilityDoc?.documentUrl) {
                 return (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white p-3.5 rounded-xl border border-amber-200">
+                  <div className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white p-3.5 rounded-xl border ${verificationInfo.isVerified ? 'border-emerald-200' : 'border-red-200'}`}>
                     <img
                       src={utilityDoc.documentUrl}
                       alt="Utility bill proof"
@@ -1212,15 +1230,29 @@ export const PropertyDetails = () => {
                     />
                     <div className="space-y-1 text-xs text-gray-700">
                       <p className="font-bold text-gray-900 flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        {verificationInfo.isVerified ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <X className="w-3.5 h-3.5 text-red-600" />
+                        )}
                         <span>Utility Document Attached</span>
                       </p>
                       <p className="text-gray-500 text-[11px]">
                         Document Type: <strong>{utilityDoc.documentType || 'UtilityBill'}</strong>
                       </p>
-                      <p className="text-emerald-700 text-[11.5px] font-medium">
-                        ✓ Matches listed address: <strong>{propertyAddress}</strong>
-                      </p>
+                      
+                      {verificationInfo.isVerified ? (
+                        <p className="text-emerald-700 text-[11.5px] font-medium">
+                          ✓ Matches listed address: <strong>{propertyAddress}</strong>
+                        </p>
+                      ) : (
+                        <div className="text-red-700 text-[11.5px] font-medium">
+                          <p>✗ Address Mismatch Detected!</p>
+                          <p className="text-red-600 text-[10.5px]">Extracted: {verificationInfo.billAddress || 'Unknown'}</p>
+                          <p className="text-gray-500 text-[10.5px]">Expected: {propertyAddress}</p>
+                        </div>
+                      )}
+
                       <a
                         href={utilityDoc.documentUrl}
                         target="_blank"
@@ -1251,6 +1283,8 @@ export const PropertyDetails = () => {
               );
             })()}
           </div>
+            );
+          })()}
 
         </div>
 

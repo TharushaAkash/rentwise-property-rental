@@ -4,8 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { propertySchema } from './types';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { useAuth } from '../../hooks/useAuth';
 import { Tag, Plus, X, Sparkles, Building, Home, Check, FileText, ShieldCheck, Upload, Camera, AlertCircle, Zap, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
-import { evaluatePropertyVerification } from '../../utils/addressVerification';
+
 
 const PROPERTY_TYPES = [
   'House',
@@ -46,6 +47,9 @@ const SAMPLE_UTILITY_BILLS = [
 ];
 
 export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
+  const { user } = useAuth();
+  const isAdmin = ['Administrator', 'Admin', 'SystemAdmin'].includes(user?.role);
+  
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [urlPhotos, setUrlPhotos] = useState([]);
@@ -91,15 +95,6 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
   });
 
   const watchedAddress = watch('address');
-
-  // Live Auto AI OCR address comparison between property address and utility bill
-  const liveVerification = React.useMemo(() => {
-    if (!utilityBillPreview) return null;
-    return evaluatePropertyVerification({
-      address: watchedAddress || '',
-      utilityBillUrl: utilityBillPreview
-    });
-  }, [watchedAddress, utilityBillPreview]);
 
   useEffect(() => {
     if (initialData) {
@@ -204,10 +199,6 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
     const primaryUrl = allAddedUrls[0] || '';
 
     const billUrl = utilityBillPreview || data.utilityBillUrl || '';
-    const verification = evaluatePropertyVerification({
-      address: data.address,
-      utilityBillUrl: billUrl
-    });
 
     const payload = {
       ...data,
@@ -217,14 +208,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
       photoCount: totalPhotos > 0 ? totalPhotos : 1,
       photoUrl: primaryUrl,
       photos: allAddedUrls.map((url, idx) => ({ id: `p_${idx}`, photoUrl: url, isPrimary: idx === 0 })),
-      utilityBillUrl: billUrl,
-      isAddressVerified: verification.isVerified,
-      utilityBillAddress: verification.billAddress,
-      utilityBillAccountNo: verification.accountNo,
-      utilityProvider: verification.utilityProvider,
-      utilityBillMatchScore: verification.matchScore,
-      utilityBillMatchDetails: verification.matchDetails,
-      utilityBillStatus: verification.statusLabel
+      utilityBillUrl: billUrl
     };
 
     onSubmit(payload, selectedFiles, utilityBillFile);
@@ -586,42 +570,18 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
               </div>
             </div>
 
-            {/* Live Address OCR Auto-Check Status */}
-            {liveVerification && (
-              <div className={`p-3.5 rounded-xl border text-xs transition-all ${
-                liveVerification.isVerified 
-                  ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950' 
-                  : 'bg-rose-50/90 border-rose-300 text-rose-950'
-              }`}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 font-bold text-[12.5px]">
-                    {liveVerification.isVerified ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                    )}
-                    <span>
-                      {liveVerification.isVerified
-                        ? '✓ Auto-Verified: Property address matches utility bill address!'
-                        : '⚠️ Address Mismatch Detected by OCR'}
-                    </span>
-                  </div>
-                  <span className={`text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full border shrink-0 ${
-                    liveVerification.isVerified
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                      : 'bg-rose-100 text-rose-800 border-rose-300'
-                  }`}>
-                    {liveVerification.statusLabel} ({liveVerification.matchScore}% Match)
-                  </span>
-                </div>
-
-                <div className="mt-2 text-[11.5px] space-y-1 bg-white/70 p-2.5 rounded-lg border border-black/5">
-                  <p><span className="font-semibold text-gray-700">Listing Address:</span> <span className="text-gray-900">{watchedAddress || '(Type address above)'}</span></p>
-                  <p><span className="font-semibold text-gray-700">Detected Bill Address:</span> <span className="text-gray-900 font-medium">{liveVerification.billAddress || 'Matches property address'}</span></p>
-                  <p className="text-[10.5px] text-gray-500 pt-0.5 italic">{liveVerification.matchDetails}</p>
+            {/* Awaiting Backend Agent Verification Status */}
+            <div className="p-3.5 rounded-xl border transition-all bg-amber-50/90 border-amber-300 text-amber-950">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-amber-600" />
+                  <span className="text-xs font-bold">Document Attached</span>
                 </div>
               </div>
-            )}
+              <p className="text-[11px] mt-1 text-amber-800">
+                Awaiting Agentic AI backend verification upon submission.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -662,19 +622,21 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
         )}
       </div>
 
-      {/* Listing Status */}
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Listing Status</label>
-        <select 
-          {...register('status')} 
-          className="flex h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-        >
-          <option value="Active">Active (Available for Rent)</option>
-          <option value="PendingVerification">Pending Verification</option>
-          <option value="Suspended">Suspended / Paused</option>
-        </select>
-        {errors.status && <p className="text-sm text-rose-500">{errors.status.message}</p>}
-      </div>
+      {/* Listing Status (Admin Only) */}
+      {isAdmin && (
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700 mb-1 block">Listing Status</label>
+          <select 
+            {...register('status')} 
+            className="flex h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+          >
+            <option value="Active">Active (Available for Rent)</option>
+            <option value="PendingVerification">Pending Verification</option>
+            <option value="Suspended">Suspended / Paused</option>
+          </select>
+          {errors.status && <p className="text-sm text-rose-500">{errors.status.message}</p>}
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="pt-4 flex items-center justify-end gap-2 border-t border-gray-100">

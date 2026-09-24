@@ -38,7 +38,7 @@ export const PropertiesDashboard = () => {
   const [localPropsVersion, setLocalPropsVersion] = useState(0);
 
   // Properties data
-  const { data: properties, isLoading: isPropsLoading, error: propsError, refetch: refetchProps } = useFetch('/properties');
+  const { data: properties, isLoading: isPropsLoading, error: propsError, refetch: refetchProps } = useFetch(user?.id ? `/properties/owner/${user.id}` : null);
   const { mutateAsync: createProperty, isLoading: isCreating } = useMutation('/properties', 'POST');
 
   // Listen to property updates (from admin approval, creation, etc.)
@@ -130,7 +130,7 @@ export const PropertiesDashboard = () => {
       const targetApp = applications.find((a) => a.id === appId);
 
       try {
-        await api.post(`/property-applications/${appId}/approve`);
+        await api.post(`/property-applications/${appId}/confirm`);
       } catch (apiErr) {
         console.warn('Backend approve call note (syncing locally):', apiErr);
       }
@@ -295,16 +295,17 @@ export const PropertiesDashboard = () => {
         photoCount: Number(data.photoCount || 0)
       };
       const newProperty = await createProperty(payload);
+      const createdId = newProperty?.id || newProperty?.Id;
       
       // Upload regular property photos
-      if (files && files.length > 0 && newProperty?.id) {
+      if (files && files.length > 0 && createdId) {
         await Promise.all(files.map(async (file, index) => {
           const formData = new FormData();
           formData.append('file', file);
           formData.append('isPrimary', index === 0);
           
           try {
-            await api.post(`/properties/${newProperty.id}/photos`, formData, {
+            await api.post(`/properties/${createdId}/photos`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' }
             });
           } catch (uploadErr) {
@@ -314,14 +315,14 @@ export const PropertiesDashboard = () => {
       }
 
       // Upload or attach Utility Bill proof for Agentic AI OCR
-      if (newProperty?.id && (utilityBillFile || data.utilityBillUrl)) {
+      if (createdId && (utilityBillFile || data.utilityBillUrl)) {
         let billUrl = data.utilityBillUrl || '';
         if (utilityBillFile) {
           try {
             const billForm = new FormData();
             billForm.append('file', utilityBillFile);
             billForm.append('isPrimary', false);
-            const photoRes = await api.post(`/properties/${newProperty.id}/photos`, billForm, {
+            const photoRes = await api.post(`/properties/${createdId}/photos`, billForm, {
               headers: { 'Content-Type': 'multipart/form-data' }
             });
             if (photoRes.data?.photoUrl) {
@@ -334,13 +335,13 @@ export const PropertiesDashboard = () => {
 
         if (billUrl) {
           try {
-            await api.post(`/properties/${newProperty.id}/proof`, {
+            await api.post(`/properties/${createdId}/proof`, {
               documentType: 'UtilityBill',
               documentUrl: billUrl
             });
           } catch (proofErr) {
             try {
-              await api.post(`/properties/${newProperty.id}/documents`, {
+              await api.post(`/properties/${createdId}/documents`, {
                 documentType: 'UtilityBill',
                 documentUrl: billUrl
               });
@@ -351,28 +352,11 @@ export const PropertiesDashboard = () => {
         }
       }
 
-      setIsModalOpen(false);
-      
-      // Sync locally so property immediately appears in user dashboard under Not Active by Admin
-      try {
-        const storedProps = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const createdProp = {
-          id: newProperty?.id || `prop_${Date.now()}`,
-          ...payload,
-          status: 'PendingVerification',
-          photoUrl: files?.[0] ? URL.createObjectURL(files[0]) : (data.photoUrl || PROPERTY_PLACEHOLDER_IMAGE),
-          photos: files?.[0] ? [{ photoUrl: URL.createObjectURL(files[0]), isPrimary: true }] : (payload.photos || []),
-          createdAt: new Date().toISOString()
-        };
-        storedProps.unshift(createdProp);
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(storedProps));
-        window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-      } catch {}
-
       setFeedback({
         text: `Property "${data.title}" created successfully! Awaiting Admin Approval.`,
         type: 'success'
       });
+      setIsModalOpen(false);
       refetchProps();
     } catch (err) {
       console.error('Failed to create property', err);
@@ -464,13 +448,7 @@ export const PropertiesDashboard = () => {
         }
       }
 
-      // Update in localStorage
-      try {
-        const storedProps = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updatedProps = storedProps.map(p => String(p.id || p.Id) === String(editingProperty.id) ? { ...p, ...payload } : p);
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updatedProps));
-        window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-      } catch {}
+
 
       setIsModalOpen(false);
       setEditingProperty(null);
@@ -497,14 +475,6 @@ export const PropertiesDashboard = () => {
       setIsDeleting(true);
       await api.delete(`/properties/${prop.id}`);
       
-      // Remove from localStorage
-      try {
-        const storedProps = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updatedProps = storedProps.filter(p => String(p.id || p.Id) !== String(prop.id));
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updatedProps));
-        window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-      } catch {}
-
       setDeletingProperty(null);
       setFeedback({
         text: `Property "${prop.title}" has been deleted.`,
@@ -549,33 +519,10 @@ export const PropertiesDashboard = () => {
     }
   };
 
-  // Merged properties (API + LocalStorage client cache)
+  // Properties (API only)
   const allProperties = useMemo(() => {
-    const apiProps = Array.isArray(properties) ? [...properties] : [];
-    let clientProps = [];
-    try {
-      clientProps = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-    } catch {}
-
-    const map = new Map();
-    apiProps.forEach((p) => {
-      if (p && (p.id || p.Id)) {
-        map.set(String(p.id || p.Id), p);
-      }
-    });
-
-    if (Array.isArray(clientProps)) {
-      clientProps.forEach((cp) => {
-        if (cp && (cp.id || cp.Id)) {
-          const key = String(cp.id || cp.Id);
-          const existing = map.get(key);
-          map.set(key, { ...(existing || {}), ...cp });
-        }
-      });
-    }
-
-    return Array.from(map.values());
-  }, [properties, localPropsVersion]);
+    return Array.isArray(properties) ? [...properties] : [];
+  }, [properties]);
 
   // Property counts
   const totalPropertiesCount = allProperties.length;

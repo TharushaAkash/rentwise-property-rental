@@ -15,7 +15,7 @@ export function useFetch(url) {
   const [error, setError] = useState(null);
 
   const fetchData = useCallback(async () => {
-    if (!url) {
+    if (!url || url.includes('/agr_')) {
       setIsLoading(false);
       return;
     }

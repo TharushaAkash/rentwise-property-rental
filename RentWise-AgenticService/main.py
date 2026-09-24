@@ -105,3 +105,51 @@ def run_draft_agreement_workflow(req: WorkflowRequest):
         "status": "completed", 
         "draft": result.get("agreement_draft", {})
     }
+
+class NicVerificationRequest(BaseModel):
+    nic_number: str
+    image_url: str
+
+@app.post("/workflow/verify-nic")
+def verify_nic(req: NicVerificationRequest):
+    import os
+    import re
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage
+    
+    try:
+        vision_llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite")
+        
+        message = HumanMessage(
+            content=[
+                {
+                    "type": "text",
+                    "text": f"Does the NIC (National Identity Card) number in this image match '{req.nic_number}'? Check carefully. Reply ONLY with YES if it matches, or NO if it does not."
+                },
+                {
+                    "type": "image_url",
+                    "image_url": req.image_url
+                }
+            ]
+        )
+        
+        response = vision_llm.invoke([message])
+        
+        # Handle case where response.content is a list of blocks
+        content = response.content
+        if isinstance(content, list):
+            extracted_text = next((block["text"] for block in content if isinstance(block, dict) and "text" in block), str(content))
+        else:
+            extracted_text = str(content)
+            
+        extracted_text = extracted_text.upper().strip()
+        
+        # Check if the AI responded with YES
+        is_verified = "YES" in extracted_text
+        
+        print(f"Gemini output for matching NIC {req.nic_number}: {extracted_text}")
+        print(f"Verified: {is_verified}")
+        return {"isVerified": is_verified, "extractedNic": extracted_text}
+    except Exception as e:
+        print(f"Exception: {e}")
+        return {"isVerified": False, "error": str(e)}

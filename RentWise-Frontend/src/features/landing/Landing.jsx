@@ -27,6 +27,7 @@ import { formatLankaPrice } from '../../data/lankaProperties';
 import { LankaPropertyCard } from '../../components/LankaPropertyCard';
 import { PROPERTY_PLACEHOLDER_IMAGE } from '../../utils/imagePlaceholder';
 import { matchPropertiesWithAi, AI_SUGGESTED_PROMPTS } from '../../utils/aiPropertyMatcher';
+import { getActiveBookingForProperty } from '../../utils/bookingStatus';
 
 
 const InstagramIcon = (props) => (
@@ -124,7 +125,13 @@ export const Landing = () => {
 
   // Map ONLY real added properties from the system
   const realProperties = useMemo(() => {
-    return properties.map((p) => {
+    return properties
+      .filter((p) => {
+        if (p.status !== 1 && p.status !== 'Active') return false;
+        if (getActiveBookingForProperty(p.id).isBooked) return false;
+        return true;
+      })
+      .map((p) => {
       const primaryPhoto = p.photos && Array.isArray(p.photos) && p.photos.length > 0 
         ? (p.photos.find((ph) => ph.isPrimary || ph.IsPrimary)?.photoUrl || 
            p.photos.find((ph) => ph.isPrimary || ph.IsPrimary)?.PhotoUrl || 

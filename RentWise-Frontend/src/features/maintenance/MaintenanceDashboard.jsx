@@ -10,7 +10,6 @@ import { Modal } from '../../components/ui/Modal';
 import { RequestForm } from './RequestForm';
 import { Plus, Wrench, Home, MapPin, Clock, CheckCircle2, AlertCircle, DollarSign, Sparkles, ArrowRight, Filter, Trash2, Image as ImageIcon, LayoutGrid, List, Search, Building2, Calendar, CalendarDays, User, Mail, Phone, ShieldAlert, Check, RotateCcw, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
-import { LANKA_PROPERTIES } from '../../data/lankaProperties';
 
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
@@ -200,12 +199,7 @@ export const MaintenanceDashboard = () => {
         ]);
 
         const allPropsMap = new Map();
-        (LANKA_PROPERTIES || []).forEach((p) => {
-          if (p && p.id) {
-            allPropsMap.set(String(p.id), p);
-            allPropsMap.set(p.id, p);
-          }
-        });
+
         (allPropsRes.data || []).forEach((p) => {
           if (p && p.id) {
             allPropsMap.set(String(p.id), p);
@@ -215,6 +209,28 @@ export const MaintenanceDashboard = () => {
 
         // 1. Process Tenant Booked Properties
         const propMap = new Map();
+
+        try {
+          const localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+          localAgreements.forEach(ag => {
+            if (ag && (!ag.tenantId || !user?.id || ag.tenantId === user?.id)) {
+              if (ag.status !== 'Rejected' && ag.status !== 'Terminated') {
+                if (!agreementsRes.data) agreementsRes.data = [];
+                agreementsRes.data.push(ag);
+              }
+            }
+          });
+
+          const localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+          localBookings.forEach(app => {
+            if (app && (!app.tenantId || !user?.id || app.tenantId === user?.id)) {
+              if (!appsRes.data) appsRes.data = [];
+              appsRes.data.push(app);
+            }
+          });
+        } catch (e) {
+          console.warn('Could not load local agreements/bookings for maintenance', e);
+        }
 
         (agreementsRes.data || []).forEach((ag) => {
           const propId = ag.propertyId;
@@ -278,7 +294,6 @@ export const MaintenanceDashboard = () => {
         reqList = reqList.map((r) => {
           const foundProp = propMap.get(String(r.propertyId)) || 
                             allPropsMap.get(String(r.propertyId)) ||
-                            (LANKA_PROPERTIES || []).find(p => p.title && r.propertyTitle && p.title.toLowerCase() === r.propertyTitle.toLowerCase()) ||
                             r.property;
           const photoUrl = r.photoUrl || extractPropertyPhoto(r.property) || extractPropertyPhoto(foundProp) || PROPERTY_PLACEHOLDER_IMAGE;
           return {

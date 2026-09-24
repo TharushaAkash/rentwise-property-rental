@@ -190,7 +190,7 @@ export const FindRentals = () => {
       // 2. Try Calling Backend Agentic Service (with fallback if 404 or offline)
       let backendRanked = null;
       try {
-        const res = await api.post('/agentic/workflow/search-and-recommend', {
+        const res = await api.post('/agentic/workflow/match-location', {
           objective: query,
           tenant_profile: {
             name: user?.name || 'Prospective Tenant',
@@ -198,8 +198,10 @@ export const FindRentals = () => {
             preferredBudgetMax: targetMaxBudget || (maxBudget ? Number(maxBudget) : null)
           }
         });
-        if (res.data?.ranked_properties && res.data.ranked_properties.length > 0) {
-          backendRanked = res.data;
+        
+        const returnedProperties = res.data?.ranked_properties || res.data?.matching_results;
+        if (returnedProperties !== undefined) {
+          backendRanked = { ...res.data, ranked_properties: returnedProperties };
         }
       } catch (apiErr) {
         console.warn('Agentic AI backend note, executing client-side Student 2 Matching & Location agent:', apiErr);
@@ -219,7 +221,7 @@ export const FindRentals = () => {
             sqft: p.sqft || matchExisting?.sqft || 1200,
             status: 'Active'
           };
-        });
+        }).filter(p => !getActiveBookingForProperty(p.id).isBooked);
 
         setAiSearchResult({
           ...backendRanked,
@@ -231,7 +233,12 @@ export const FindRentals = () => {
       // 3. Resilient Client-Side Student 2 Agent Engine
       const allActive = properties.filter((p) => {
         const s = p.status ?? p.Status ?? 'Active';
-        return s === 'Active' || s === 1;
+        if (s !== 'Active' && s !== 1) return false;
+        
+        const bookingInfo = getActiveBookingForProperty(p.id);
+        if (bookingInfo.isBooked) return false;
+
+        return true;
       });
 
       const scoredList = allActive.map((p) => {
@@ -245,6 +252,13 @@ export const FindRentals = () => {
         let distanceKm = 3.5;
         let travelMins = 10;
         const targetTown = destKey;
+
+        // Strict location filtering for client-side engine
+        if (targetTown && targetTown !== 'any' && targetTown !== 'colombo') {
+          if (!pAddress.includes(targetTown) && !pCity.includes(targetTown)) {
+            return null; // Exclude properties not in the target town
+          }
+        }
 
         if (pAddress.includes(targetTown) || pCity.includes(targetTown)) {
           distanceKm = 1.6;
@@ -337,7 +351,7 @@ export const FindRentals = () => {
           travel_time_mins: travelMins,
           match_reasons: reasons
         };
-      });
+      }).filter(Boolean); // Remove excluded properties
 
       // Sort candidates descending by match score
       scoredList.sort((a, b) => b.match_score - a.match_score);
@@ -432,20 +446,7 @@ export const FindRentals = () => {
         };
       });
 
-      // Also merge client-side cached properties
-      let clientProps = [];
-      try {
-        clientProps = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-      } catch {}
-      const mergedMap = new Map();
-      normalizedApi.forEach(p => mergedMap.set(String(p.id), p));
-      clientProps.forEach(cp => {
-        if (cp && cp.id && !mergedMap.has(String(cp.id))) {
-          mergedMap.set(String(cp.id), cp);
-        }
-      });
-
-      setProperties(Array.from(mergedMap.values()));
+      setProperties(normalizedApi);
     } catch (err) {
       console.error('Failed to load rentals:', err);
       setProperties([]);
@@ -472,19 +473,13 @@ export const FindRentals = () => {
       setBookingVersion((v) => v + 1);
     };
 
-    const handlePropsChange = () => {
-      fetchRentals();
-    };
-
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('rentwise_saved_updated', handleStorageChange);
     window.addEventListener(BOOKINGS_UPDATED_EVENT, handleBookingChange);
-    window.addEventListener('rentwise_client_properties_updated', handlePropsChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('rentwise_saved_updated', handleStorageChange);
       window.removeEventListener(BOOKINGS_UPDATED_EVENT, handleBookingChange);
-      window.removeEventListener('rentwise_client_properties_updated', handlePropsChange);
     };
   }, []);
 
@@ -495,6 +490,10 @@ export const FindRentals = () => {
       const raw = p.status ?? p.Status;
       const s = typeof raw === 'number' ? ['PendingVerification', 'Active', 'Suspended'][raw] : (raw || 'Active');
       if (s !== 'Active') return false;
+
+      // Must not be leased/booked
+      const bookingInfo = getActiveBookingForProperty(p.id);
+      if (bookingInfo.isBooked) return false;
 
       // Location
       if (locationInput.trim()) {
@@ -527,7 +526,7 @@ export const FindRentals = () => {
 
       return true;
     });
-  }, [properties, locationInput, minBudget, maxBudget, bedroomsFilter]);
+  }, [properties, locationInput, minBudget, maxBudget, bedroomsFilter, bookingVersion]);
 
   // Clear all filters
   const handleClearFilters = () => {

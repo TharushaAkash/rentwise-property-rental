@@ -7,7 +7,6 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PropertyForm } from '../properties/PropertyForm';
-import { LANKA_PROPERTIES } from '../../data/lankaProperties';
 import { handleImageError } from '../../utils/imagePlaceholder';
 import { Building2, Users, FileText, UserCheck, ShieldCheck, Search, Plus, Pencil, Trash2, Eye, Check, X, Clock, Calendar, Mail, Phone, CreditCard, CheckCircle2, AlertCircle, SlidersHorizontal, ArrowRight, RefreshCw, Lock, Unlock, UserCog, ShieldAlert, Ban, Zap, CheckCheck, FileCheck2 } from 'lucide-react';
 import { evaluatePropertyVerification } from '../../utils/addressVerification';
@@ -42,13 +41,7 @@ export const AdminDashboard = () => {
   // ========================================================
   // 1. DATA STATES
   // ========================================================
-  const [properties, setProperties] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-    } catch {
-      return [];
-    }
-  });
+  const [properties, setProperties] = useState([]);
   const [isLoadingProps, setIsLoadingProps] = useState(true);
   const [inspectingProperty, setInspectingProperty] = useState(null);
 
@@ -67,23 +60,10 @@ export const AdminDashboard = () => {
       setIsLoadingProps(true);
       const res = await api.get('/properties');
       let list = Array.isArray(res.data) ? res.data : [];
-      if (list.length === 0) {
-        list = [...LANKA_PROPERTIES];
-      } else {
-        const targetId = '26270925-f600-48af-8b7d-43d01545c40f';
-        if (!list.some(p => String(p.id).toLowerCase() === targetId)) {
-          const defaultP = LANKA_PROPERTIES.find(p => p.id === targetId);
-          if (defaultP) list.unshift(defaultP);
-        }
-      }
       setProperties(list);
-      try {
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(list));
-      } catch {}
     } catch (err) {
       console.error('Failed to fetch properties:', err);
-      const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-      setProperties(cached.length > 0 ? cached : LANKA_PROPERTIES);
+      setProperties([]);
     } finally {
       setIsLoadingProps(false);
     }
@@ -179,27 +159,7 @@ export const AdminDashboard = () => {
     e?.stopPropagation();
     const cleanId = String(propertyId || '').trim();
 
-    const updateCachedProperty = () => {
-      try {
-        const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updated = cached.map(p => {
-          if (String(p.id || p.Id).toLowerCase() === cleanId.toLowerCase()) {
-            return {
-              ...p,
-              status: 'Active',
-              adminManuallyVerified: true,
-              isAddressVerified: true,
-              manualVerificationNote: 'Manually verified and activated by Administrator'
-            };
-          }
-          return p;
-        });
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-      } catch (err) {
-        console.warn('Storage sync error:', err);
-      }
-    };
+    const updateCachedProperty = () => {};
 
     try {
       await api.put(`/properties/${cleanId}/approve`);
@@ -245,19 +205,7 @@ export const AdminDashboard = () => {
     e?.stopPropagation();
     const cleanId = String(propertyId || '').trim();
 
-    const updateSuspendCached = () => {
-      try {
-        const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updated = cached.map(p => {
-          if (String(p.id || p.Id).toLowerCase() === cleanId.toLowerCase()) {
-            return { ...p, status: 'Suspended' };
-          }
-          return p;
-        });
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-      } catch (err) {}
-    };
+    const updateSuspendCached = () => {};
 
     try {
       await api.put(`/properties/${cleanId}/reject`);
@@ -278,19 +226,7 @@ export const AdminDashboard = () => {
     e?.stopPropagation();
     const cleanId = String(propertyId || '').trim();
 
-    const updatePendingCached = () => {
-      try {
-        const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-        const updated = cached.map(p => {
-          if (String(p.id || p.Id).toLowerCase() === cleanId.toLowerCase()) {
-            return { ...p, status: 'PendingVerification' };
-          }
-          return p;
-        });
-        localStorage.setItem('rentwise_client_properties', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-      } catch (err) {}
-    };
+    const updatePendingCached = () => {};
 
     try {
       await api.put(`/properties/${cleanId}`, { status: 0 });
@@ -397,27 +333,11 @@ export const AdminDashboard = () => {
           } catch {}
         }
 
-        const updatedRecord = {
-          ...editingProperty,
-          ...payload,
-          photoUrl: primaryPhotoUrl,
-          photos: photoList,
-          utilityBillUrl: utilityBillUrl || editingProperty.utilityBillUrl,
-          documents: [
-            ...(editingProperty.documents || []),
-            ...(utilityBillUrl ? [{ documentType: 'UtilityBill', documentUrl: utilityBillUrl }] : [])
-          ]
-        };
-
+        const res = await api.put(`/properties/${editId}`, payload);
+        const updatedRecord = res.data || { ...editingProperty, ...payload };
         setProperties(prev => prev.map(p => (String(p.id || p.Id) === String(editId) ? updatedRecord : p)));
-        try {
-          const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-          const updatedCache = cached.map(p => (String(p.id || p.Id) === String(editId) ? updatedRecord : p));
-          localStorage.setItem('rentwise_client_properties', JSON.stringify(updatedCache));
-          window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-        } catch {}
-
         setFeedback({ text: `Property "${data.title}" updated successfully!`, type: 'success' });
+        fetchAllProperties();
       } else {
         // Create new property
         const newTempId = `prop_${Date.now()}`;
@@ -432,14 +352,8 @@ export const AdminDashboard = () => {
         };
 
         let createdId = newTempId;
-        try {
-          const newProp = await api.post('/properties', payload);
-          if (newProp.data?.id) {
-            createdId = newProp.data.id;
-          }
-        } catch (apiErr) {
-          console.warn('Backend create note, persisting locally:', apiErr);
-        }
+        const newProp = await api.post('/properties', payload);
+        createdId = newProp.data?.id || createdId;
 
         if (files && files.length > 0 && createdId) {
           await Promise.all(files.map(async (file, index) => {
@@ -463,25 +377,8 @@ export const AdminDashboard = () => {
           } catch {}
         }
 
-        const newRecord = {
-          id: createdId,
-          ...payload,
-          status: data.status || 'Active',
-          photoUrl: primaryPhotoUrl,
-          photos: photoList,
-          utilityBillUrl: utilityBillUrl,
-          documents: utilityBillUrl ? [{ documentType: 'UtilityBill', documentUrl: utilityBillUrl }] : [],
-          createdAt: new Date().toISOString()
-        };
-
-        setProperties(prev => [newRecord, ...prev]);
-        try {
-          const cached = JSON.parse(localStorage.getItem('rentwise_client_properties') || '[]');
-          localStorage.setItem('rentwise_client_properties', JSON.stringify([newRecord, ...cached]));
-          window.dispatchEvent(new CustomEvent('rentwise_client_properties_updated'));
-        } catch {}
-
         setFeedback({ text: `New property listing "${data.title}" created successfully!`, type: 'success' });
+        fetchAllProperties();
       }
 
       setIsPropModalOpen(false);
@@ -615,11 +512,7 @@ export const AdminDashboard = () => {
   const handleDeleteUser = async (u) => {
     if (!u?.id) return;
     try {
-      try {
-        await api.delete(`/auth/users/${u.id}`);
-      } catch (apiErr) {
-        console.warn('API delete user note:', apiErr);
-      }
+      await api.delete(`/auth/users/${u.id}`);
 
       setUsersList(prev => prev.filter(item => item.id !== u.id));
       try {
@@ -631,7 +524,9 @@ export const AdminDashboard = () => {
       setDeletingUser(null);
     } catch (err) {
       console.error('Failed to delete user:', err);
-      setFeedback({ text: 'Failed to delete user.', type: 'error' });
+      const errorMsg = err.response?.data?.message || 'Failed to delete user. They might have related data.';
+      setFeedback({ text: errorMsg, type: 'error' });
+      setDeletingUser(null);
     }
   };
 

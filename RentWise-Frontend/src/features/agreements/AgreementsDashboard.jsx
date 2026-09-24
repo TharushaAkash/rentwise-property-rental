@@ -59,7 +59,9 @@ export const AgreementsDashboard = () => {
 
       let apiSuccess = false;
       try {
-        const res = await api.post('/agentic/workflow/agreement-pricing', {
+        const res = await api.post('/agentic/workflow/draft-agreement', {
+          objective: "Review pricing",
+          property_id: String(prop.id || agreement.propertyId || agreement.id),
           agreement_id: String(agreement.id),
           rent: rentVal,
           location: loc,
@@ -67,8 +69,9 @@ export const AgreementsDashboard = () => {
           bedrooms: beds,
           document: agreement.termsAndConditions || agreement.terms || ''
         });
-        if (res.data?.analysis) {
-          setAiAuditResult(res.data.analysis);
+        const returnedAnalysis = res.data?.analysis || res.data?.draft;
+        if (returnedAnalysis) {
+          setAiAuditResult(returnedAnalysis);
           apiSuccess = true;
         }
       } catch (err) {
@@ -338,20 +341,22 @@ export const AgreementsDashboard = () => {
           </span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('owner-approvals')}
-          className={`pb-3 pt-1 border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
-            activeTab === 'owner-approvals'
-              ? 'border-[#008037] text-[#008037]'
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Admin & Owner Listing Approvals</span>
-          <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 font-semibold">
-            {properties.length}
-          </span>
-        </button>
+        {(isAdmin || isOwner) && (
+          <button
+            onClick={() => setActiveTab('owner-approvals')}
+            className={`pb-3 pt-1 border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+              activeTab === 'owner-approvals'
+                ? 'border-[#008037] text-[#008037]'
+                : 'border-transparent text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Admin & Owner Listing Approvals</span>
+            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 font-semibold">
+              {properties.length}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -513,24 +518,24 @@ export const AgreementsDashboard = () => {
                       {/* Action Buttons based on Role & State */}
                       <div className="pt-2 border-t border-gray-100 flex items-center gap-1.5">
                         {/* Step 1: Review & Agree */}
-                        {statusInfo.canAgree && (
+                        {statusInfo.canAgree && isTenant && (
                           <button
                             onClick={() => setReviewingAgreement(agreement)}
                             className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] font-extrabold py-2 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <FileCheck className="w-3.5 h-3.5 text-slate-950" />
-                            <span>{isTenant ? 'Have to Agree' : 'Have to Agree as Tenant (Demo)'}</span>
+                            <span>Have to Agree</span>
                           </button>
                         )}
 
                         {/* Step 2: Make Payment */}
-                        {statusInfo.canPay && (
+                        {statusInfo.canPay && isTenant && (
                           <button
                             onClick={() => setPayingAgreement(agreement)}
                             className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold py-2 rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 animate-pulse cursor-pointer"
                           >
                             <CreditCard className="w-3.5 h-3.5" />
-                            <span>{isTenant ? `Make Payment (${formatLKR(deposit || rent)})` : `Make Payment as Tenant (Demo)`}</span>
+                            <span>Make Payment ({formatLKR(deposit || rent)})</span>
                           </button>
                         )}
 
@@ -1241,7 +1246,9 @@ const TenantAgreeModal = ({ isOpen, onClose, agreement, onAgreed }) => {
     setIsSubmitting(true);
     try {
       const payload = { signatureName };
-      await api.put(`/agreements/${agreement.id}/agree`, payload).catch(() => {});
+      if (!String(agreement.id).startsWith('agr_')) {
+        await api.put(`/agreements/${agreement.id}/agree`, payload).catch(() => {});
+      }
 
       const updated = {
         ...agreement,
@@ -1427,10 +1434,12 @@ const TenantPaymentModal = ({ isOpen, onClose, agreement, onPaymentSuccess }) =>
         paymentReference: `PAY-${Date.now().toString().slice(-6)}`
       };
 
-      const res = await api.post(`/agreements/${agreement.id}/pay`, payload).catch(() => ({
-        data: { success: true, agreement: { ...agreement, status: 'Active' } }
-      }));
-
+      let res = { data: { success: true, agreement: { ...agreement, status: 'Active' } } };
+      if (!String(agreement.id).startsWith('agr_')) {
+        res = await api.post(`/agreements/${agreement.id}/pay`, payload).catch(() => ({
+          data: { success: true, agreement: { ...agreement, status: 'Active' } }
+        }));
+      }
       const updated = {
         ...agreement,
         status: 'Active',

@@ -93,6 +93,10 @@ export const AgreementDetails = () => {
   const fetchPayments = async () => {
     try {
       setIsLoadingPayments(true);
+      if (String(id).startsWith('agr_')) {
+        setPayments([]);
+        return;
+      }
       const res = await api.get(`/agreements/${id}/payments`);
       setPayments(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
@@ -179,18 +183,22 @@ export const AgreementDetails = () => {
 
       // 1. Try sending agree to backend (graceful fallback if local or offline)
       try {
-        await api.put(`/agreements/${agreement.id}/agree`, { signatureName });
+        if (!String(agreement.id).startsWith('agr_')) {
+          await api.put(`/agreements/${agreement.id}/agree`, { signatureName });
+        }
       } catch (agreeErr) {
         console.warn('Backend agree note (syncing locally):', agreeErr);
       }
 
       // 2. Try sending payment to backend (graceful fallback if local or offline)
       try {
-        await api.post(`/agreements/${agreement.id}/pay`, {
-          amount: payAmount,
-          paymentReference: ref,
-          paymentMethod: paymentMethodName
-        });
+        if (!String(agreement.id).startsWith('agr_')) {
+          await api.post(`/agreements/${agreement.id}/pay`, {
+            amount: payAmount,
+            paymentReference: ref,
+            paymentMethod: paymentMethodName
+          });
+        }
       } catch (payErr) {
         console.warn('Backend pay note (syncing locally):', payErr);
       }
@@ -270,11 +278,13 @@ export const AgreementDetails = () => {
         ? `${brand.name} Card (•••• ${cardNumber.slice(-4) || '4242'})`
         : 'Bank Transfer (Escrow Account)';
 
-      await api.post(`/agreements/${agreement.id}/pay`, {
-        amount: payAmount,
-        paymentReference: ref,
-        paymentMethod: paymentMethodName
-      });
+      if (!String(agreement.id).startsWith('agr_')) {
+        await api.post(`/agreements/${agreement.id}/pay`, {
+          amount: payAmount,
+          paymentReference: ref,
+          paymentMethod: paymentMethodName
+        });
+      }
 
       const updated = {
         ...agreement,
@@ -393,7 +403,7 @@ export const AgreementDetails = () => {
         </div>
 
         {/* Action Banners */}
-        {!hasAgreed && (
+        {!hasAgreed && isTenant && (
           <div className="mt-3 p-4 bg-blue-50 rounded-xl border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-xs text-blue-900">
               <strong>Step 1:</strong> Please review and agree to the 6-month tenancy terms to proceed.
@@ -402,12 +412,12 @@ export const AgreementDetails = () => {
               onClick={() => setIsAgreeModalOpen(true)}
               className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-lg shadow-xs cursor-pointer"
             >
-              {isTenant ? 'Have to Agree' : 'Have to Agree as Tenant (Demo)'}
+              Have to Agree
             </button>
           </div>
         )}
 
-        {hasAgreed && !hasPaid && (
+        {hasAgreed && !hasPaid && isTenant && (
           <div className="mt-3 p-4 bg-amber-50 rounded-xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse">
             <div className="text-xs text-amber-950">
               <strong>Step 2:</strong> Tenant has agreed to the terms! Complete the security deposit payment to activate your lease.
@@ -416,7 +426,7 @@ export const AgreementDetails = () => {
               onClick={() => setIsPayModalOpen(true)}
               className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-md cursor-pointer"
             >
-              {isTenant ? `Make Payment (${formatLKR(deposit || rent)})` : `Make Payment as Tenant (Demo)`}
+              Make Payment ({formatLKR(deposit || rent)})
             </button>
           </div>
         )}
