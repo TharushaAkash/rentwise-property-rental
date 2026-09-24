@@ -30,6 +30,20 @@ export const Login = () => {
     try {
       setServerError('');
       const response = await api.post('/auth/login', data);
+      
+      const userRole = response.data.user?.role;
+      
+      // Enforce Role Selection matching the actual account role
+      if (activeRole === 'Tenant' && userRole !== 'Tenant') {
+        setServerError('Account role mismatch. Please switch to the "Owner / Admin" tab to login.');
+        return;
+      }
+      
+      if (activeRole === 'PropertyOwner' && userRole === 'Tenant') {
+        setServerError('Account role mismatch. Please switch to the "User / Tenant" tab to login.');
+        return;
+      }
+
       login(response.data.token);
       navigate('/dashboard', { replace: true });
     } catch (error) {
