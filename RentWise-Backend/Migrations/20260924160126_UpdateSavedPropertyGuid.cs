@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,21 +11,29 @@ namespace RentWise.API.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<Guid>(
+            migrationBuilder.Sql("TRUNCATE TABLE \"SavedProperties\" CASCADE;");
+
+            migrationBuilder.DropColumn(
+                name: "TenantProfileId",
+                table: "SavedProperties");
+
+            migrationBuilder.DropColumn(
+                name: "PropertyId",
+                table: "SavedProperties");
+
+            migrationBuilder.AddColumn<Guid>(
                 name: "TenantProfileId",
                 table: "SavedProperties",
                 type: "uuid",
                 nullable: false,
-                oldClrType: typeof(int),
-                oldType: "integer");
+                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
 
-            migrationBuilder.AlterColumn<Guid>(
+            migrationBuilder.AddColumn<Guid>(
                 name: "PropertyId",
                 table: "SavedProperties",
                 type: "uuid",
                 nullable: false,
-                oldClrType: typeof(int),
-                oldType: "integer");
+                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
         }
 
         /// <inheritdoc />
