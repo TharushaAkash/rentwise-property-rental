@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RentWise.API.Modules.TenantMatching.DTOs;
 using RentWise.API.Modules.TenantMatching.Interfaces;
@@ -19,7 +21,7 @@ namespace RentWise.API.Modules.TenantMatching.Controllers
         // GET: api/saved-properties/1
         [HttpGet("{tenantProfileId}")]
         public async Task<IActionResult> GetSavedProperties(
-            int tenantProfileId)
+            Guid tenantProfileId)
         {
             var properties =
                 await _savedPropertyService
@@ -61,8 +63,8 @@ namespace RentWise.API.Modules.TenantMatching.Controllers
         // DELETE: api/saved-properties/1/5
         [HttpDelete("{tenantProfileId}/{propertyId}")]
         public async Task<IActionResult> RemoveSavedProperty(
-            int tenantProfileId,
-            int propertyId)
+            Guid tenantProfileId,
+            Guid propertyId)
         {
             var removed =
                 await _savedPropertyService

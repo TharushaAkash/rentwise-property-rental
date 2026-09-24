@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using RentWise.API.Data;
 using RentWise.API.Modules.TenantMatching.Entities;
@@ -15,7 +19,7 @@ namespace RentWise.API.Modules.TenantMatching.Services
         }
 
         public async Task<List<SavedProperty>> GetSavedPropertiesAsync(
-            int tenantProfileId)
+            Guid tenantProfileId)
         {
             return await _context.SavedProperties
                 .Where(s => s.TenantProfileId == tenantProfileId)
@@ -24,16 +28,16 @@ namespace RentWise.API.Modules.TenantMatching.Services
         }
 
         public async Task<SavedProperty> SavePropertyAsync(
-            int tenantProfileId,
-            int propertyId)
+            Guid tenantProfileId,
+            Guid propertyId)
         {
-            var tenantExists = await _context.TenantProfiles
+            var userExists = await _context.Users
                 .AnyAsync(t => t.Id == tenantProfileId);
 
-            if (!tenantExists)
+            if (!userExists)
             {
                 throw new ArgumentException(
-                    "Tenant profile does not exist.");
+                    "User does not exist.");
             }
 
             var alreadySaved = await _context.SavedProperties
@@ -62,8 +66,8 @@ namespace RentWise.API.Modules.TenantMatching.Services
         }
 
         public async Task<bool> RemoveSavedPropertyAsync(
-            int tenantProfileId,
-            int propertyId)
+            Guid tenantProfileId,
+            Guid propertyId)
         {
             var savedProperty = await _context.SavedProperties
                 .FirstOrDefaultAsync(s =>
