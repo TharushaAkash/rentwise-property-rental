@@ -200,6 +200,38 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
           </div>
         )}
 
+        {/* Billing Month Selector */}
+        <div className="p-4 rounded-2xl bg-white border border-gray-200 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-blue-600" />
+              PAYING RENT FOR MONTH
+            </label>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
+              {billingMonth}
+            </span>
+          </div>
+          <select 
+            value={billingMonth}
+            onChange={(e) => setBillingMonth(e.target.value)}
+            className="w-full p-2.5 rounded-xl border border-gray-300 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          >
+            {Array.from({ length: 6 }).map((_, i) => {
+              const d = new Date();
+              d.setMonth(d.getMonth() + i);
+              const mStr = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+              return (
+                <option key={mStr} value={mStr}>
+                  Rent for {mStr}
+                </option>
+              );
+            })}
+          </select>
+          <p className="text-[10px] text-gray-400 font-medium mt-1">
+            Select which calendar month this payment applies to.
+          </p>
+        </div>
+
         {/* Payment Method Selector */}
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-wider text-gray-600 block">
