@@ -196,6 +196,10 @@ export const TenantPropertyPortal = () => {
       // Must be active by admin
       if (property.status !== 'Active') return false;
 
+      // Must not be leased/booked
+      const bookingInfo = getActiveBookingForProperty(property.id);
+      if (bookingInfo.isBooked) return false;
+
       const text = `${property.title} ${property.address} ${property.city || ''} ${property.facilities || ''}`.toLowerCase();
       const matchesQuery = !query || text.includes(query.toLowerCase());
       const matchesType = !selectedType || (property.propertyType && property.propertyType.toLowerCase() === selectedType.toLowerCase()) || text.includes(selectedType.toLowerCase());
@@ -205,7 +209,7 @@ export const TenantPropertyPortal = () => {
 
       return matchesQuery && matchesType && matchesCity && matchesRent && matchesBeds;
     });
-  }, [realProperties, aiMatches, query, selectedType, selectedCity, maxRent, bedrooms]);
+  }, [realProperties, aiMatches, query, selectedType, selectedCity, maxRent, bedrooms, bookingsVersion]);
 
   const resetAllFilters = () => {
     setQuery('');
@@ -1050,7 +1054,9 @@ export const TenantProfilePortal = () => {
 
     let apiSuccess = false;
     try {
-      const res = await api.post('/agentic/workflow/agreement-pricing', {
+      const res = await api.post('/agentic/workflow/draft-agreement', {
+        objective: "Review pricing",
+        property_id: String(agreement.propertyId || agreement.id),
         agreement_id: String(agreement.id),
         rent: rentVal,
         location: loc,
@@ -1058,8 +1064,9 @@ export const TenantProfilePortal = () => {
         bedrooms: beds,
         document: agreement.termsAndConditions || agreement.terms || ''
       });
-      if (res.data?.analysis) {
-        setAgreeAiSummary(res.data.analysis);
+      const returnedAnalysis = res.data?.analysis || res.data?.draft;
+      if (returnedAnalysis) {
+        setAgreeAiSummary(returnedAnalysis);
         apiSuccess = true;
       }
     } catch (err) {

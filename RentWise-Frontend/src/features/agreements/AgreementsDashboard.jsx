@@ -59,7 +59,9 @@ export const AgreementsDashboard = () => {
 
       let apiSuccess = false;
       try {
-        const res = await api.post('/agentic/workflow/agreement-pricing', {
+        const res = await api.post('/agentic/workflow/draft-agreement', {
+          objective: "Review pricing",
+          property_id: String(prop.id || agreement.propertyId || agreement.id),
           agreement_id: String(agreement.id),
           rent: rentVal,
           location: loc,
@@ -67,8 +69,9 @@ export const AgreementsDashboard = () => {
           bedrooms: beds,
           document: agreement.termsAndConditions || agreement.terms || ''
         });
-        if (res.data?.analysis) {
-          setAiAuditResult(res.data.analysis);
+        const returnedAnalysis = res.data?.analysis || res.data?.draft;
+        if (returnedAnalysis) {
+          setAiAuditResult(returnedAnalysis);
           apiSuccess = true;
         }
       } catch (err) {
