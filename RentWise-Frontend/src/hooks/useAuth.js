@@ -63,7 +63,6 @@ export function useAuth() {
     localStorage.removeItem('token');
     
     // Clear mock temporary client data when logging out so next user doesn't see it
-    localStorage.removeItem('rentwise_saved_properties');
     localStorage.removeItem('rentwise_client_bookings');
     localStorage.removeItem('rentwise_client_agreements');
     localStorage.removeItem('rentwise_client_payments');

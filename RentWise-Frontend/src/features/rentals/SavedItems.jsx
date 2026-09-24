@@ -4,7 +4,6 @@ import { Heart, MapPin, Home, Trash2, ArrowRight, Search, Building2, Sparkles, B
 import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { BookingModal } from '../tenants/BookingModal';
-import { PropertyInspectModal } from '../properties/PropertyInspectModal';
 import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
 import { getActiveBookingForProperty, BOOKINGS_UPDATED_EVENT } from '../../utils/bookingStatus';
 
@@ -23,13 +22,34 @@ export const SavedItems = () => {
   const loadSaved = async () => {
     setIsLoading(true);
     try {
-      const stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
+      let stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
       let allProps = [];
       try {
         const res = await api.get('/properties');
         allProps = res.data || [];
       } catch (err) {
         console.warn('Could not fetch properties for enrichment', err);
+      }
+
+      // If logged in, fetch from backend and merge
+      if (user?.id) {
+        try {
+          const dbSavedRes = await api.get(`/saved-properties/${user.id}`);
+          if (dbSavedRes.data && Array.isArray(dbSavedRes.data)) {
+            const dbIds = dbSavedRes.data.map(sp => sp.propertyId);
+            
+            // Merge local and db IDs, unique them
+            const localIds = stored.map(p => typeof p === 'string' ? p : p.id).filter(id => id);
+            const combinedIds = [...new Set([...localIds, ...dbIds])];
+            
+            // Update stored array
+            stored = combinedIds;
+            localStorage.setItem('rentwise_saved_properties', JSON.stringify(stored));
+            window.dispatchEvent(new Event('rentwise_saved_updated'));
+          }
+        } catch (err) {
+          console.warn('Could not fetch saved properties from DB', err);
+        }
       }
 
       if (Array.isArray(stored)) {
@@ -193,7 +213,7 @@ export const SavedItems = () => {
             return (
               <div
                 key={propId}
-                onClick={() => setInspectingProperty(property)}
+                onClick={() => navigate(`/properties/${propId}`)}
                 className="group bg-white rounded-2xl overflow-hidden border border-gray-200/90 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer"
               >
                 {/* Image */}
@@ -321,10 +341,10 @@ export const SavedItems = () => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setInspectingProperty(property);
+                        navigate(`/properties/${propId}`);
                       }}
                       className="px-3.5 py-2.5 rounded-lg border border-indigo-200 text-xs font-bold text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                      title="Inspect Property Details"
+                      title="View Property Details"
                     >
                       <Eye className="w-3.5 h-3.5 text-indigo-600" />
                       <span>Details</span>
@@ -360,16 +380,6 @@ export const SavedItems = () => {
         />
       )}
 
-      {/* Property Inspection Modal */}
-      <PropertyInspectModal
-        isOpen={Boolean(inspectingProperty)}
-        onClose={() => setInspectingProperty(null)}
-        property={inspectingProperty}
-        user={user}
-        onApply={(prop) => {
-          setBookingProperty(prop);
-        }}
-      />
     </div>
   );
 };
