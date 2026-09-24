@@ -225,6 +225,23 @@ export const Login = () => {
                 Create for free
               </button>
             </div>
+
+            {/* Quick Admin Login (For Development/Testing) */}
+            <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50">
+              <p className="text-[11px] text-center text-gray-500 mb-2 font-medium">Test Credentials:</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setValue('email', 'admin@rentwise.com');
+                  setValue('password', 'AdminPassword123!');
+                  setActiveRole('PropertyOwner');
+                }}
+                className="w-full py-2 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Fill Admin Credentials
+              </button>
+            </div>
           </form>
         </div>
 
