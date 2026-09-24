@@ -1164,7 +1164,9 @@ export const TenantProfilePortal = () => {
 
       // 1. Try sending agree to server
       try {
-        await api.put(`/agreements/${agreementId}/agree`, { signatureName: signer });
+        if (!String(agreementId).startsWith('agr_')) {
+          await api.put(`/agreements/${agreementId}/agree`, { signatureName: signer });
+        }
       } catch (apiErr) {
         console.warn('Backend agree PUT note (syncing locally):', apiErr);
       }
@@ -1293,6 +1295,8 @@ export const TenantProfilePortal = () => {
 
       let agreementData = Array.isArray(agreementRes?.data) ? agreementRes.data : [];
       let bookingData = Array.isArray(bookingsRes?.data) ? bookingsRes.data : [];
+      bookingData = bookingData.filter(b => !b.tenantId || b.tenantId === user?.id || b.tenantId === 'demo_tenant_id');
+      
       let rawMaintenance = Array.isArray(maintenanceRes?.data) ? maintenanceRes.data : [];
       const propertiesData = Array.isArray(propertiesRes?.data) ? propertiesRes.data : [];
 
@@ -1306,7 +1310,8 @@ export const TenantProfilePortal = () => {
 
       // Synchronize with client-side confirmed agreements and bookings
       try {
-        const localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]')
+          .filter(ag => !ag.tenantId || ag.tenantId === user?.id || ag.tenantId === 'demo_tenant_id');
         if (localAgreements.length > 0) {
           const map = new Map();
           for (const a of [...localAgreements, ...agreementData]) {
@@ -1315,7 +1320,8 @@ export const TenantProfilePortal = () => {
           agreementData = Array.from(map.values());
         }
 
-        const localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]')
+          .filter(b => !b.tenantId || b.tenantId === user?.id || b.tenantId === 'demo_tenant_id');
         if (localBookings.length > 0) {
           const bMap = new Map();
           for (const b of [...localBookings, ...bookingData]) {
@@ -1326,6 +1332,36 @@ export const TenantProfilePortal = () => {
       } catch (e) {
         console.error('Tenant profile sync error:', e);
       }
+
+      // Auto-generate mocked agreements for any accepted applications that don't have an agreement yet
+      // This ensures that if the tenant logs out (wiping local storage) and logs back in,
+      // they still get their generated agreements based on the backend applications API.
+      bookingData.forEach((app) => {
+        if (app.status === 'Accepted' || app.status === 'Approved') {
+          const exists = agreementData.some(a => a.id === `agr_${app.id}` || a.propertyId === app.propertyId);
+          if (!exists) {
+            const matchedPropForOwner = propLookup.get(app.propertyId) || propLookup.get(String(app.propertyId));
+            const agreement = {
+              id: `agr_${app.id}`,
+              propertyId: app.propertyId,
+              ownerId: matchedPropForOwner?.ownerId,
+              propertyTitle: app.propertyTitle || 'Rental Property',
+              propertyAddress: app.propertyAddress || 'Address on file',
+              tenantId: app.tenantId || user?.id,
+              tenantName: app.tenantName || user?.fullName,
+              tenantEmail: app.tenantEmail || user?.email,
+              monthlyRent: app.monthlyRent,
+              agreedMonthlyRent: app.monthlyRent,
+              securityDeposit: (app.monthlyRent || 0) * 2,
+              startDate: app.startDate || new Date().toISOString().split('T')[0],
+              endDate: app.endDate || '',
+              status: 'Drafted',
+              termsAndConditions: `[6-Month Lease Sent to Tenant: ${app.tenantName || user?.fullName} on ${new Date().toLocaleDateString()}]\nPlease review house photos and terms, then click Review & Agree to proceed to payment.`
+            };
+            agreementData.unshift(agreement);
+          }
+        }
+      });
 
       // Enrich agreements with property photos, addresses, titles, and specs
       agreementData = agreementData.map((ag, idx) => {
@@ -1442,9 +1478,12 @@ export const TenantProfilePortal = () => {
 
       // Fetch payments for tenant's agreements
       const paymentResponses = await Promise.all(
-        agreementData.map((agreement) =>
-          api.get(`/agreements/${agreement.id}/payments`).catch(() => ({ data: [] }))
-        )
+        agreementData.map((agreement) => {
+          if (String(agreement.id).startsWith('agr_')) {
+            return Promise.resolve({ data: [] });
+          }
+          return api.get(`/agreements/${agreement.id}/payments`).catch(() => ({ data: [] }));
+        })
       );
       let allPayments = paymentResponses.flatMap((res) => res.data || []);
 
@@ -1728,156 +1767,158 @@ export const TenantProfilePortal = () => {
     <div className="space-y-12 font-sans pb-16">
       
       {/* 1. TOP PROFILE HERO CARD */}
-      <div className="relative overflow-hidden rounded-3xl bg-white text-gray-900 p-7 sm:p-10 shadow-sm border border-gray-200">
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-emerald-50/70 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/4 -mb-12 w-80 h-80 bg-blue-50/50 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-          {/* User Info */}
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-3xl shadow-md shadow-blue-500/20 border-2 border-white shrink-0">
-              {tenantName.charAt(0).toUpperCase()}
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{tenantName}</h1>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  Verified Tenant
-                </span>
+      {activeCategory === 'all' && (
+        <div className="relative overflow-hidden rounded-3xl bg-white text-gray-900 p-7 sm:p-10 shadow-sm border border-gray-200">
+          <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-emerald-50/70 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 -mb-12 w-80 h-80 bg-blue-50/50 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+            {/* User Info */}
+            <div className="flex items-center gap-5">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-3xl shadow-md shadow-blue-500/20 border-2 border-white shrink-0">
+                {tenantName.charAt(0).toUpperCase()}
               </div>
               
-              <div className="flex items-center gap-4 text-xs sm:text-sm text-gray-500 flex-wrap pt-0.5">
-                <span className="flex items-center gap-1.5">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-700 font-medium">{profile?.email || user?.email}</span>
-                </span>
-                {(profile?.phoneNumber || profile?.telephoneNumber || user?.phoneNumber) && (
-                  <span className="flex items-center gap-1.5">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700 font-medium">{profile?.phoneNumber || profile?.telephoneNumber || user?.phoneNumber}</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{tenantName}</h1>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    Verified Tenant
                   </span>
-                )}
-                {(profile?.nicNumber || user?.nicNumber) && (
+                </div>
+                
+                <div className="flex items-center gap-4 text-xs sm:text-sm text-gray-500 flex-wrap pt-0.5">
                   <span className="flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700 font-medium">NIC: {profile?.nicNumber || user?.nicNumber}</span>
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-700 font-medium">{profile?.email || user?.email}</span>
                   </span>
-                )}
+                  {(profile?.phoneNumber || profile?.telephoneNumber || user?.phoneNumber) && (
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-700 font-medium">{profile?.phoneNumber || profile?.telephoneNumber || user?.phoneNumber}</span>
+                    </span>
+                  )}
+                  {(profile?.nicNumber || user?.nicNumber) && (
+                    <span className="flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-700 font-medium">NIC: {profile?.nicNumber || user?.nicNumber}</span>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Quick Actions */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              type="button"
-              onClick={handleOpenEditProfile}
-              className="px-4 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold tracking-wide uppercase border border-gray-200 transition-all flex items-center gap-2 cursor-pointer shadow-2xs hover:shadow-xs"
-            >
-              <User className="w-4 h-4 text-gray-500" />
-              <span>Edit Profile</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/properties')}
-              className="px-5 py-2.5 rounded-xl bg-[#008037] hover:bg-emerald-700 text-white text-xs font-bold tracking-wide uppercase shadow-md shadow-emerald-700/20 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Search className="w-4 h-4" />
-              <span>Browse Properties</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/maintenance')}
-              className="px-4 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold tracking-wide uppercase border border-gray-200 transition-all flex items-center gap-2 cursor-pointer shadow-2xs hover:shadow-xs"
-            >
-              <Wrench className="w-4 h-4 text-gray-500" />
-              <span>Support</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleClearLocalCache}
-              title="Clear browser cached test records and refresh directly from database"
-              className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold tracking-wide uppercase border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-              <span>Reset Cache</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Stat Ribbon - Interactive Category Click */}
-        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={() => handleCategoryChange('rentals')}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeCategory === 'rentals'
-                ? 'bg-emerald-50/60 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs scale-[1.02]'
-                : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
-            }`}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center justify-between">
-              <span>Rental Leases</span>
-              {pendingLeases.length > 0 && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-200">
-                  {pendingLeases.length} Pending
-                </span>
-              )}
-            </p>
-            <div className="flex items-baseline gap-1.5 mt-1.5">
-              <span className="text-2xl font-black text-gray-900">{activeLeases.length}</span>
-              <span className="text-xs text-emerald-600 font-bold">Active</span>
-              {pendingLeases.length > 0 && (
-                <span className="text-xs text-amber-600 font-semibold">· {pendingLeases.length} Action</span>
-              )}
+            {/* Quick Actions */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={handleOpenEditProfile}
+                className="px-4 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold tracking-wide uppercase border border-gray-200 transition-all flex items-center gap-2 cursor-pointer shadow-2xs hover:shadow-xs"
+              >
+                <User className="w-4 h-4 text-gray-500" />
+                <span>Edit Profile</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/properties')}
+                className="px-5 py-2.5 rounded-xl bg-[#008037] hover:bg-emerald-700 text-white text-xs font-bold tracking-wide uppercase shadow-md shadow-emerald-700/20 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Search className="w-4 h-4" />
+                <span>Browse Properties</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/maintenance')}
+                className="px-4 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold tracking-wide uppercase border border-gray-200 transition-all flex items-center gap-2 cursor-pointer shadow-2xs hover:shadow-xs"
+              >
+                <Wrench className="w-4 h-4 text-gray-500" />
+                <span>Support</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleClearLocalCache}
+                title="Clear browser cached test records and refresh directly from database"
+                className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold tracking-wide uppercase border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                <span>Reset Cache</span>
+              </button>
             </div>
-          </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => handleCategoryChange('bookings')}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeCategory === 'bookings'
-                ? 'bg-blue-50/60 border-blue-500 ring-2 ring-blue-500/20 shadow-xs scale-[1.02]'
-                : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
-            }`}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Booking Inquiries</p>
-            <p className="text-2xl font-black text-blue-600 mt-1.5">{myBookings.length}</p>
-          </button>
+          {/* Stat Ribbon - Interactive Category Click */}
+          <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('rentals')}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeCategory === 'rentals'
+                  ? 'bg-emerald-50/60 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs scale-[1.02]'
+                  : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
+              }`}
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center justify-between">
+                <span>Rental Leases</span>
+                {pendingLeases.length > 0 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-200">
+                    {pendingLeases.length} Pending
+                  </span>
+                )}
+              </p>
+              <div className="flex items-baseline gap-1.5 mt-1.5">
+                <span className="text-2xl font-black text-gray-900">{activeLeases.length}</span>
+                <span className="text-xs text-emerald-600 font-bold">Active</span>
+                {pendingLeases.length > 0 && (
+                  <span className="text-xs text-amber-600 font-semibold">· {pendingLeases.length} Action</span>
+                )}
+              </div>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleCategoryChange('payments')}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeCategory === 'payments'
-                ? 'bg-emerald-50/60 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs scale-[1.02]'
-                : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
-            }`}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Total Payments</p>
-            <p className="text-2xl font-black text-emerald-600 mt-1.5">{money(totalPaid)}</p>
-          </button>
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('bookings')}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeCategory === 'bookings'
+                  ? 'bg-blue-50/60 border-blue-500 ring-2 ring-blue-500/20 shadow-xs scale-[1.02]'
+                  : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
+              }`}
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Booking Inquiries</p>
+              <p className="text-2xl font-black text-blue-600 mt-1.5">{myBookings.length}</p>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleCategoryChange('maintenance')}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeCategory === 'maintenance'
-                ? 'bg-amber-50/70 border-amber-500 ring-2 ring-amber-500/20 shadow-xs scale-[1.02]'
-                : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
-            }`}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center justify-between">
-              <span>Open Tickets</span>
-              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-200">Repairs</span>
-            </p>
-            <p className="text-2xl font-black text-amber-600 mt-1.5">{openMaintenanceCount}</p>
-          </button>
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('payments')}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeCategory === 'payments'
+                  ? 'bg-emerald-50/60 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs scale-[1.02]'
+                  : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
+              }`}
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Total Payments</p>
+              <p className="text-2xl font-black text-emerald-600 mt-1.5">{money(totalPaid)}</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('maintenance')}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                activeCategory === 'maintenance'
+                  ? 'bg-amber-50/70 border-amber-500 ring-2 ring-amber-500/20 shadow-xs scale-[1.02]'
+                  : 'bg-gray-50/80 border-gray-200 hover:bg-gray-100/70 hover:border-gray-300'
+              }`}
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center justify-between">
+                <span>Open Tickets</span>
+                <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-200">Repairs</span>
+              </p>
+              <p className="text-2xl font-black text-amber-600 mt-1.5">{openMaintenanceCount}</p>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="rounded-2xl bg-rose-50 p-4 text-sm font-medium text-rose-700 border border-rose-200">
@@ -1897,8 +1938,8 @@ export const TenantProfilePortal = () => {
                 : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
             }`}
           >
-            <span>📊</span>
-            <span>All Categories</span>
+            <span>👤</span>
+            <span>Profile Overview</span>
           </button>
 
           <button
@@ -1978,7 +2019,7 @@ export const TenantProfilePortal = () => {
       {/* ======================================================== */}
       {/* SECTION 1: MY BOOKINGS & INQUIRIES                       */}
       {/* ======================================================== */}
-      {(activeCategory === 'all' || activeCategory === 'bookings') && (
+      {activeCategory === 'bookings' && (
         <section id="bookings-section" className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -2215,7 +2256,7 @@ export const TenantProfilePortal = () => {
       {/* ======================================================== */}
       {/* SECTION 2: MY RENTAL HOUSES & LEASES (DIVIDED SECTIONS)  */}
       {/* ======================================================== */}
-      {(activeCategory === 'all' || activeCategory === 'rentals') && (
+      {activeCategory === 'rentals' && (
         <section id="rentals-section" className="space-y-6">
           {/* Main Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -2747,7 +2788,7 @@ export const TenantProfilePortal = () => {
       {/* ======================================================== */}
       {/* SECTION 3: MY PAYMENTS & MONTHLY RENT DUES               */}
       {/* ======================================================== */}
-      {(activeCategory === 'all' || activeCategory === 'payments') && (
+      {activeCategory === 'payments' && (
         <section id="payments-section" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -3006,7 +3047,7 @@ export const TenantProfilePortal = () => {
       {/* ======================================================== */}
       {/* SECTION 4: MAINTENANCE REQUESTS (CARD STYLE VIEW)       */}
       {/* ======================================================== */}
-      {(activeCategory === 'all' || activeCategory === 'maintenance') && (
+      {activeCategory === 'maintenance' && (
         <section id="maintenance-section" className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

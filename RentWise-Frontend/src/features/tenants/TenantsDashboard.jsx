@@ -152,7 +152,7 @@ export const TenantsDashboard = () => {
       const targetApp = applications.find((a) => a.id === id);
 
       try {
-        await api.post(`/property-applications/${id}/approve`);
+        await api.post(`/property-applications/${id}/confirm`);
       } catch (apiErr) {
         console.warn('Backend approve call note (syncing locally):', apiErr);
       }

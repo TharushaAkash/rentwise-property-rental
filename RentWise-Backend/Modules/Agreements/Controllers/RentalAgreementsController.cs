@@ -69,16 +69,6 @@ namespace RentWise.API.Modules.Agreements.Controllers
                 .OrderByDescending(ra => ra.CreatedAt)
                 .ToListAsync();
 
-            if (!agreements.Any())
-            {
-                agreements = await _context.RentalAgreements
-                    .Include(ra => ra.Property)
-                        .ThenInclude(p => p.Photos)
-                    .Include(ra => ra.Tenant)
-                    .Include(ra => ra.Owner)
-                    .OrderByDescending(ra => ra.CreatedAt)
-                    .ToListAsync();
-            }
 
             return Ok(agreements);
         }
@@ -112,7 +102,7 @@ namespace RentWise.API.Modules.Agreements.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Owner,PropertyOwner,Administrator,Admin,SystemAdmin")]
+        [Authorize(Roles = "Owner,PropertyOwner,Administrator,Admin,SystemAdmin,Tenant")]
         public async Task<IActionResult> CreateAgreement([FromBody] RentalAgreement agreement)
         {
             // Default lease duration to 6 months if not specified
@@ -125,15 +115,29 @@ namespace RentWise.API.Modules.Agreements.Controllers
                 agreement.EndDate = agreement.StartDate.AddMonths(6);
             }
 
-            // Extract owner from token if not explicitly provided
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                         ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                         ?? User.FindFirst("sub")?.Value;
+            var role = User.FindFirstValue(ClaimTypes.Role);
+
+            if (Guid.TryParse(userIdStr, out var currentUserId))
+            {
+                if (role == "Tenant" && agreement.TenantId == Guid.Empty)
+                {
+                    agreement.TenantId = currentUserId;
+                }
+                else if (agreement.OwnerId == Guid.Empty)
+                {
+                    agreement.OwnerId = currentUserId;
+                }
+            }
+
             if (agreement.OwnerId == Guid.Empty)
             {
-                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                             ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                             ?? User.FindFirst("sub")?.Value;
-                if (Guid.TryParse(userIdStr, out var ownerId))
+                var property = await _context.Properties.FindAsync(agreement.PropertyId);
+                if (property != null)
                 {
-                    agreement.OwnerId = ownerId;
+                    agreement.OwnerId = property.OwnerId;
                 }
             }
 

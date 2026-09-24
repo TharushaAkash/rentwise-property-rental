@@ -210,6 +210,28 @@ export const MaintenanceDashboard = () => {
         // 1. Process Tenant Booked Properties
         const propMap = new Map();
 
+        try {
+          const localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+          localAgreements.forEach(ag => {
+            if (ag && (!ag.tenantId || !user?.id || ag.tenantId === user?.id)) {
+              if (ag.status !== 'Rejected' && ag.status !== 'Terminated') {
+                if (!agreementsRes.data) agreementsRes.data = [];
+                agreementsRes.data.push(ag);
+              }
+            }
+          });
+
+          const localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+          localBookings.forEach(app => {
+            if (app && (!app.tenantId || !user?.id || app.tenantId === user?.id)) {
+              if (!appsRes.data) appsRes.data = [];
+              appsRes.data.push(app);
+            }
+          });
+        } catch (e) {
+          console.warn('Could not load local agreements/bookings for maintenance', e);
+        }
+
         (agreementsRes.data || []).forEach((ag) => {
           const propId = ag.propertyId;
           const fullProp = allPropsMap.get(String(propId)) || ag.property;

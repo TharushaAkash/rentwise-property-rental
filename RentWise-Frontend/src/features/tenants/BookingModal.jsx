@@ -103,13 +103,10 @@ export const BookingModal = ({ isOpen, onClose, property, onSuccess }) => {
       };
 
       try {
-        const res = await api.post('/property-applications', {
-          propertyId: property.id,
-          durationMonths: effectiveMonths,
-          startDate: new Date(startDate).toISOString(),
-          monthlyRent: monthlyRent,
-          message: formattedMsg
-        });
+        const payload = { ...clientBooking };
+        delete payload.id; // Let the backend generate the ID
+
+        const res = await api.post('/property-applications', payload);
         if (res.data?.id) {
           clientBooking.id = res.data.id;
         }

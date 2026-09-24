@@ -20,19 +20,34 @@ export const SavedItems = () => {
   const [bookingVersion, setBookingVersion] = useState(0);
 
   // Load saved properties from localStorage & backend
-  const loadSaved = () => {
+  const loadSaved = async () => {
+    setIsLoading(true);
     try {
       const stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
+      let allProps = [];
+      try {
+        const res = await api.get('/properties');
+        allProps = res.data || [];
+      } catch (err) {
+        console.warn('Could not fetch properties for enrichment', err);
+      }
+
       if (Array.isArray(stored)) {
-        setSavedProperties(stored);
-        // Filter out any mock sample properties
-        const realProperties = stored.filter((p) => {
+        // Enrich strings (IDs) with full property objects if possible
+        const enriched = stored.map(p => {
+          if (typeof p === 'string') {
+            const matched = allProps.find(ap => ap.id === p);
+            return matched || p;
+          }
+          return p;
+        });
+
+        // Filter out mock samples
+        const realProperties = enriched.filter((p) => {
           const id = typeof p === 'string' ? p : p?.id;
           return id && !id.toString().startsWith('sample-');
         });
-        if (realProperties.length !== stored.length) {
-          localStorage.setItem('rentwise_saved_properties', JSON.stringify(realProperties));
-        }
+
         setSavedProperties(realProperties);
       }
     } catch {

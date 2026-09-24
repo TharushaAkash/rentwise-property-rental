@@ -108,7 +108,24 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
 
       // 1. Try sending to backend
       try {
-        await api.post(`/agreements/${agreement.id}/payments`, {
+        let finalAgreementId = agreement.id;
+
+        // If it's a mock agreement from the UI, we must persist it to the database first!
+        if (String(finalAgreementId).startsWith('agr_')) {
+          const createRes = await api.post('/agreements', {
+             propertyId: agreement.propertyId,
+             ownerId: agreement.ownerId || "00000000-0000-0000-0000-000000000000",
+             agreedMonthlyRent: Number(rentAmount),
+             securityDeposit: agreement.securityDeposit || Number(rentAmount) * 2,
+             termsAndConditions: agreement.termsAndConditions || agreement.terms || '',
+             status: 'Active'
+          });
+          if (createRes.data && createRes.data.id) {
+             finalAgreementId = createRes.data.id;
+          }
+        }
+
+        await api.post(`/agreements/${finalAgreementId}/payments`, {
           amount: Number(rentAmount),
           paymentDate: now.toISOString(),
           paymentReference: txnRef,
