@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Home, Users, FileText, Wrench, LogOut, Building2, User, Star, HelpCircle, ChevronDown, Heart, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import api from '../services/api';
 
 export const Layout = () => {
   const { logout, user } = useAuth();
@@ -10,6 +11,32 @@ export const Layout = () => {
 
   // Live counter for saved wishlist items
   const [savedCount, setSavedCount] = useState(0);
+
+  useEffect(() => {
+    const fetchDbSavedItems = async () => {
+      if (user?.id) {
+        try {
+          const res = await api.get(`/saved-properties/${user.id}`);
+          if (res.data && Array.isArray(res.data)) {
+            const dbIds = res.data.map(sp => sp.propertyId);
+            
+            // Merge with local if any
+            const stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
+            const localIds = stored.map(p => typeof p === 'string' ? p : p.id).filter(id => id);
+            
+            const combinedIds = [...new Set([...localIds, ...dbIds])];
+            localStorage.setItem('rentwise_saved_properties', JSON.stringify(combinedIds));
+            window.dispatchEvent(new Event('rentwise_saved_updated'));
+          }
+        } catch (err) {
+          console.warn('Failed to fetch DB saved properties', err);
+        }
+      }
+    };
+    
+    // Only fetch once on mount/user change
+    fetchDbSavedItems();
+  }, [user?.id]);
 
   useEffect(() => {
     const updateSavedCount = () => {

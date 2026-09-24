@@ -2851,6 +2851,9 @@ export const TenantProfilePortal = () => {
                 });
                 const hasAgreed = isAgreementAgreed(agreement);
                 const photo = agreement.photoUrl || extractPropertyPhoto(agreement, idx);
+                const completedRentPayments = payments.filter((p) => {
+                  return (p.rentalAgreementId === agreement.id || p.propertyId === agreement.propertyId) && p.isSuccessful;
+                });
 
                 return (
                   <div
@@ -2913,6 +2916,40 @@ export const TenantProfilePortal = () => {
                             <span className="font-bold text-gray-800">1st of each month</span>
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Rent Months Paid Summary */}
+                    <div className="px-5 pb-4">
+                      <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-700 uppercase tracking-wider">
+                            <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
+                            <span>Rent Months Paid</span>
+                          </div>
+                          <span className="bg-emerald-200/50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            {completedRentPayments.length} Month{completedRentPayments.length !== 1 ? 's' : ''} Paid
+                          </span>
+                        </div>
+                        {completedRentPayments.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {completedRentPayments.slice(0, 3).map(p => {
+                              const pDate = new Date(p.paymentDate);
+                              const monthYear = pDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                              return (
+                                <span key={p.id} className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-white border border-emerald-200 px-2 py-0.5 rounded-full shadow-sm">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                                  {monthYear}
+                                </span>
+                              );
+                            })}
+                            {completedRentPayments.length > 3 && (
+                              <span className="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                +{completedRentPayments.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 

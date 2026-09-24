@@ -186,7 +186,7 @@ export function evaluatePropertyVerification(property) {
     } else {
       // For user-uploaded bill files in this demo, simulate OCR extracting a specific address
       // This allows demonstrating both match and mismatch states based on what the user types in the form.
-      extractedAddress = 'No 25 Temple Road, Piliyandala';
+      extractedAddress = 'No 12/3 Garden Lane, Piliyandala';
     }
   }
 

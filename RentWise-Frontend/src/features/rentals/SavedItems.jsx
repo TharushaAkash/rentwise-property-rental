@@ -23,13 +23,34 @@ export const SavedItems = () => {
   const loadSaved = async () => {
     setIsLoading(true);
     try {
-      const stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
+      let stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
       let allProps = [];
       try {
         const res = await api.get('/properties');
         allProps = res.data || [];
       } catch (err) {
         console.warn('Could not fetch properties for enrichment', err);
+      }
+
+      // If logged in, fetch from backend and merge
+      if (user?.id) {
+        try {
+          const dbSavedRes = await api.get(`/saved-properties/${user.id}`);
+          if (dbSavedRes.data && Array.isArray(dbSavedRes.data)) {
+            const dbIds = dbSavedRes.data.map(sp => sp.propertyId);
+            
+            // Merge local and db IDs, unique them
+            const localIds = stored.map(p => typeof p === 'string' ? p : p.id).filter(id => id);
+            const combinedIds = [...new Set([...localIds, ...dbIds])];
+            
+            // Update stored array
+            stored = combinedIds;
+            localStorage.setItem('rentwise_saved_properties', JSON.stringify(stored));
+            window.dispatchEvent(new Event('rentwise_saved_updated'));
+          }
+        } catch (err) {
+          console.warn('Could not fetch saved properties from DB', err);
+        }
       }
 
       if (Array.isArray(stored)) {

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using RentWise.API.Modules.TenantMatching.Entities;
 
 namespace RentWise.API.Modules.TenantMatching.Interfaces
@@ -5,14 +8,14 @@ namespace RentWise.API.Modules.TenantMatching.Interfaces
     public interface ISavedPropertyService
     {
         Task<List<SavedProperty>> GetSavedPropertiesAsync(
-            int tenantProfileId);
+            Guid tenantProfileId);
 
         Task<SavedProperty> SavePropertyAsync(
-            int tenantProfileId,
-            int propertyId);
+            Guid tenantProfileId,
+            Guid propertyId);
 
         Task<bool> RemoveSavedPropertyAsync(
-            int tenantProfileId,
-            int propertyId);
+            Guid tenantProfileId,
+            Guid propertyId);
     }
 }

@@ -30,6 +30,20 @@ export const Login = () => {
     try {
       setServerError('');
       const response = await api.post('/auth/login', data);
+      
+      const userRole = response.data.user?.role;
+      
+      // Enforce Role Selection matching the actual account role
+      if (activeRole === 'Tenant' && userRole !== 'Tenant') {
+        setServerError('Account role mismatch. Please switch to the "Owner / Admin" tab to login.');
+        return;
+      }
+      
+      if (activeRole === 'PropertyOwner' && userRole === 'Tenant') {
+        setServerError('Account role mismatch. Please switch to the "User / Tenant" tab to login.');
+        return;
+      }
+
       login(response.data.token);
       navigate('/dashboard', { replace: true });
     } catch (error) {
@@ -243,6 +257,28 @@ export const Login = () => {
                 className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-colors"
               >
                 Create for free
+              </button>
+            </div>
+
+            {/* Quick Admin Login (For Development/Testing) */}
+            <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-700/50">
+              <div className="text-center mb-3 space-y-1">
+                <p className="text-[11px] text-gray-500 font-medium">Demo Admin Credentials:</p>
+                <div className="text-[10px] text-gray-400 bg-gray-50/50 dark:bg-slate-800/50 py-1.5 px-2 rounded-lg border border-gray-100 dark:border-slate-700/50 inline-block font-mono">
+                  admin@rentwise.com / AdminPassword123!
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setValue('email', 'admin@rentwise.com');
+                  setValue('password', 'AdminPassword123!');
+                  setActiveRole('PropertyOwner');
+                }}
+                className="w-full py-2 bg-slate-100/80 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Fill Admin Credentials
               </button>
             </div>
           </form>

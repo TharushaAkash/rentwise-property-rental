@@ -17,17 +17,20 @@ namespace RentWise.API.Modules.Users.Controllers
         private readonly ApplicationDbContext _context;
         private readonly RentWise.API.Common.Interfaces.ISupabaseStorageService _storageService;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
 
         public AuthController(
             IAuthService authService, 
             ApplicationDbContext context, 
             RentWise.API.Common.Interfaces.ISupabaseStorageService storageService,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration)
         {
             _authService = authService;
             _context = context;
             _storageService = storageService;
             _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
         }
 
         [HttpPost("register")]
@@ -315,7 +318,8 @@ namespace RentWise.API.Modules.Users.Controllers
                         image_url = imageUrl
                     };
                     
-                    var agentRes = await httpClient.PostAsJsonAsync("https://rentwise-ai-service.onrender.com/workflow/verify-nic", requestPayload);
+                    var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
+                    var agentRes = await httpClient.PostAsJsonAsync($"{agentUrl}/workflow/verify-nic", requestPayload);
                     if (agentRes.IsSuccessStatusCode)
                     {
                         var result = await agentRes.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();

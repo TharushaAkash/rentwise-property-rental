@@ -531,14 +531,14 @@ namespace RentWise.API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("PropertyId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("SavedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("TenantProfileId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TenantProfileId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
