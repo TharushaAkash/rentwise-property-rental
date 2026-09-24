@@ -21,11 +21,13 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
     {
         private readonly IPropertyService _propertyService;
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public PropertiesController(IPropertyService propertyService, ApplicationDbContext context)
+        public PropertiesController(IPropertyService propertyService, ApplicationDbContext context, IConfiguration configuration)
         {
             _propertyService = propertyService;
             _context = context;
+            _configuration = configuration;
         }
 
         [AllowAnonymous]
@@ -149,7 +151,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
-                var aiUrl = "http://localhost:8000/workflow/verify-property";
+                var agentUrl = _configuration["AgenticServiceUrl"] ?? "http://127.0.0.1:8000";
+                var aiUrl = $"{agentUrl}/workflow/verify-property";
                 var payload = new { property_id = id.ToString() };
                 var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
                 
