@@ -2924,7 +2924,7 @@ export const TenantProfilePortal = () => {
                       <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-700 uppercase tracking-wider">
-                            <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                            <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
                             <span>Rent Months Paid</span>
                           </div>
                           <span className="bg-emerald-200/50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
@@ -2938,7 +2938,7 @@ export const TenantProfilePortal = () => {
                               const monthYear = pDate.toLocaleString('default', { month: 'long', year: 'numeric' });
                               return (
                                 <span key={p.id} className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-white border border-emerald-200 px-2 py-0.5 rounded-full shadow-sm">
-                                  <CheckCircle className="w-3 h-3 text-emerald-500" />
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                                   {monthYear}
                                 </span>
                               );
