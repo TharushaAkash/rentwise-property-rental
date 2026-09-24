@@ -116,6 +116,26 @@ export const Login = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            
+            {/* Quick Admin Login (For Demo) */}
+            <div className="mb-2 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/30 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-blue-800 dark:text-blue-300">Admin Credentials</p>
+                <p className="text-[10px] text-blue-600/80 dark:text-blue-400/80">admin@rentwise.com / AdminPassword123!</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => {
+                  setValue('email', 'admin@rentwise.com');
+                  setValue('password', 'AdminPassword123!');
+                  setActiveRole('PropertyOwner');
+                }}
+                className="text-[10px] font-bold bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg shadow-sm border border-blue-200/50 dark:border-blue-700/50 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white transition-colors"
+              >
+                Auto-fill
+              </button>
+            </div>
+
             {/* Email Field */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
