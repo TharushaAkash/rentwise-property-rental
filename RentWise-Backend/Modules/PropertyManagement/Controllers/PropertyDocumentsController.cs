@@ -50,8 +50,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                 return BadRequest("Document type is required (e.g. Deed, UtilityBill).");
 
             var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-            var bucketName = "property-documents";
-            var filePath = $"{propertyId}/{fileName}";
+            var bucketName = "Properties";
+            var filePath = $"property-documents/{propertyId}/{fileName}";
             
             var documentUrl = await _storageService.UploadFileAsync(file, bucketName, filePath);
 
