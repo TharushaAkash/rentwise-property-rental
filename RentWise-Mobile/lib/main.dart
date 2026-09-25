@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'features/auth/screens/landing_screen.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'features/shared/theme/app_theme.dart';
 
 void main() {
   runApp(
@@ -17,11 +18,8 @@ class RentWiseApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'RentWise',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const LandingScreen(),
+      theme: buildAppTheme(brightness: Brightness.light),
+      home: const LoginScreen(),
     );
   }
 }
