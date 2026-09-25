@@ -28,7 +28,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ]
         : [
             const _DiscoverPropertiesTab(),
-            const Center(child: Text('Saved Rentals')),
+            const Center(child: Text('Bookings')),
+            const Center(child: Text('Rentals')),
             const ProfileScreen(),
           ];
 
@@ -61,8 +62,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ]
                 : [
                     _NavItem(icon: Icons.search_rounded, label: 'Discover', index: 0, selectedIndex: _tab, onTap: (idx) => setState(() => _tab = idx)),
-                    _NavItem(icon: Icons.favorite_rounded, label: 'Saved', index: 1, selectedIndex: _tab, onTap: (idx) => setState(() => _tab = idx)),
-                    _NavItem(icon: Icons.person_rounded, label: 'My Profile', index: 2, selectedIndex: _tab, onTap: (idx) => setState(() => _tab = idx)),
+                    _NavItem(icon: Icons.calendar_today_rounded, label: 'Bookings', index: 1, selectedIndex: _tab, onTap: (idx) => setState(() => _tab = idx)),
+                    _NavItem(icon: Icons.key_rounded, label: 'Rentals', index: 2, selectedIndex: _tab, onTap: (idx) => setState(() => _tab = idx)),
+                    _NavItem(icon: Icons.person_rounded, label: 'Me', index: 3, selectedIndex: _tab, onTap: (idx) => setState(() => _tab = idx)),
                   ],
           ),
         ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../maintenance/screens/maintenance_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -119,7 +120,12 @@ class ProfileScreen extends ConsumerWidget {
                   leading: const Icon(Icons.build_outlined, color: AppColors.teal),
                   title: const Text('Maintenance Requests', style: TextStyle(fontWeight: FontWeight.w700)),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MaintenanceScreen()),
+                    );
+                  },
                 ),
               ],
             ),
