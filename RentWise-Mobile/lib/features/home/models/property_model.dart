@@ -29,7 +29,7 @@ class PropertyModel {
     // Determine a primary photo URL if there are photos
     String pUrl = '';
     if (json['photos'] != null && json['photos'] is List && json['photos'].isNotEmpty) {
-      pUrl = json['photos'][0]['url'] ?? '';
+      pUrl = json['photos'][0]['photoUrl'] ?? '';
     }
 
     return PropertyModel(

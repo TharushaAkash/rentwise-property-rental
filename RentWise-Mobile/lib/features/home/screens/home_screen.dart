@@ -139,12 +139,37 @@ class _DiscoverPropertiesTab extends ConsumerWidget {
           }
           return RefreshIndicator(
             onRefresh: () => ref.refresh(propertiesProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              itemCount: properties.length,
-              itemBuilder: (context, index) {
-                return _MobilePropertyCard(property: properties[index]);
-              },
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search properties...',
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    itemCount: properties.length,
+                    itemBuilder: (context, index) {
+                      return _MobilePropertyCard(property: properties[index]);
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
