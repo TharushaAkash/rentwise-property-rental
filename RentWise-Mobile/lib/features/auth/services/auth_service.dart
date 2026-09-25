@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../shared/utils/api_constants.dart';
+import '../../../shared/utils/api_constants.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -11,7 +11,7 @@ class AuthService {
         Uri.parse('${ApiConstants.baseUrl}${ApiConstants.loginEndpoint}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -26,13 +26,20 @@ class AuthService {
     }
   }
 
-  Future<UserModel?> register(String email, String password, String role) async {
+  Future<UserModel?> register(String name, String email, String password, String role, String phone, String nic) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}${ApiConstants.registerEndpoint}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password, 'role': role}),
-      );
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'role': role,
+          'phoneNumber': phone,
+          'nicNumber': nic
+        }),
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
