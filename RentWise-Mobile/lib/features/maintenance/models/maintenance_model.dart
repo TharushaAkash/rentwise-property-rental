@@ -5,6 +5,7 @@ class MaintenanceModel {
   final String photoUrl;
   final String status;
   final String priority;
+  final String aiCategory;
   final DateTime createdAt;
 
   MaintenanceModel({
@@ -14,6 +15,7 @@ class MaintenanceModel {
     required this.photoUrl,
     required this.status,
     required this.priority,
+    required this.aiCategory,
     required this.createdAt,
   });
 
@@ -30,6 +32,7 @@ class MaintenanceModel {
       photoUrl: json['photoUrl'] ?? '',
       status: parsedStatus,
       priority: json['aiPriority'] ?? 'Normal',
+      aiCategory: json['aiCategory'] ?? 'General',
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
     );
   }

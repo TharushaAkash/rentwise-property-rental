@@ -28,3 +28,40 @@ final propertiesProvider = FutureProvider<List<PropertyModel>>((ref) async {
     throw Exception('Failed to load properties: ${response.statusCode}');
   }
 });
+
+final bookedPropertiesProvider = FutureProvider<List<PropertyModel>>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  final token = authState.value?.token;
+
+  if (token == null || token.isEmpty) {
+    throw Exception('Authentication required');
+  }
+
+  final response = await http.get(
+    Uri.parse('${ApiConstants.baseUrl}/agreements/mine'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+  ).timeout(const Duration(seconds: 15));
+
+  if (response.statusCode == 200) {
+    final List<dynamic> data = jsonDecode(response.body);
+    final List<PropertyModel> properties = [];
+    
+    for (var agreement in data) {
+      if (agreement['property'] != null) {
+        properties.add(PropertyModel.fromJson(agreement['property']));
+      }
+    }
+    
+    // De-duplicate if a user has multiple agreements for the same property
+    final uniqueProperties = <String, PropertyModel>{};
+    for (var prop in properties) {
+      uniqueProperties[prop.id] = prop;
+    }
+    return uniqueProperties.values.toList();
+  } else {
+    throw Exception('Failed to load booked properties: ${response.statusCode}');
+  }
+});

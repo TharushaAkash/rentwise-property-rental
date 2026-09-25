@@ -7,6 +7,7 @@ import '../../../shared/utils/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/property_provider.dart';
 import '../providers/maintenance_provider.dart';
+import 'dart:async';
 
 class CreateMaintenanceScreen extends ConsumerStatefulWidget {
   const CreateMaintenanceScreen({super.key});
@@ -19,11 +20,78 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
   final _formKey = GlobalKey<FormState>();
   String? _selectedPropertyId;
   String _description = '';
+  String _category = 'General';
+  String _priority = 'Medium';
   bool _isLoading = false;
+  Timer? _debounceTimer;
+  String? _assignedProviderId;
+  String? _assignedProviderName;
+
+  final List<String> _categories = ['Plumbing', 'Electrical', 'HVAC', 'Appliance', 'Structural', 'Pest', 'General'];
+  final List<Map<String, dynamic>> _priorities = [
+    {'label': 'Low', 'value': 'Low', 'color': Colors.blueGrey},
+    {'label': 'Medium', 'value': 'Medium', 'color': Colors.orange},
+    {'label': 'High', 'value': 'High', 'color': Colors.red},
+    {'label': 'Emergency', 'value': 'Emergency', 'color': Colors.redAccent},
+  ];
+
+  Future<void> _runAiTriage(String text, {bool showToast = false}) async {
+    if (text.isEmpty) return;
+
+    String cat = 'General';
+    String prio = 'Medium';
+
+    final lowerDesc = text.toLowerCase();
+    if (['pipe', 'water', 'leak', 'plumbing', 'flood', 'faucet', 'sink', 'toilet', 'drain', 'burst'].any((w) => lowerDesc.contains(w))) {
+      cat = 'Plumbing';
+      prio = (lowerDesc.contains('flood') || lowerDesc.contains('burst')) ? 'Emergency' : 'High';
+    } else if (['power', 'light', 'electric', 'wire', 'socket'].any((w) => lowerDesc.contains(w))) {
+      cat = 'Electrical';
+      prio = 'High';
+    } else if (['ac', 'heater', 'cool', 'air', 'fan'].any((w) => lowerDesc.contains(w))) {
+      cat = 'HVAC';
+      prio = 'Medium';
+    }
+
+    String? assignedId;
+    String? assignedName;
+
+    try {
+      final authState = ref.read(authStateProvider);
+      final token = authState.value?.token;
+      
+      final res = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/service-providers'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        final List<dynamic> providers = jsonDecode(res.body);
+        final matches = providers.where((p) => p['category'].toString().toLowerCase().contains(cat.toLowerCase())).toList();
+        if (matches.isNotEmpty) {
+          assignedId = matches[0]['id'];
+          assignedName = matches[0]['name'];
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch providers: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _category = cat;
+        _priority = prio;
+        _assignedProviderId = assignedId;
+        _assignedProviderName = assignedName;
+      });
+      if (showToast) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('AI Triage: $cat - $prio\n${assignedName != null ? 'Provider: $assignedName' : 'No provider found'}')));
+      }
+    }
+  }
 
   Future<void> _submitRequest() async {
     if (!_formKey.currentState!.validate() || _selectedPropertyId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a property and fill all required fields')));
       return;
     }
     _formKey.currentState!.save();
@@ -44,9 +112,10 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
           'propertyId': _selectedPropertyId,
           'description': _description,
           'photoUrl': '', // Optional for now
-          'status': 'Reported',
-          'aiCategory': 'General',
-          'aiPriority': 'Normal'
+          'status': _assignedProviderId != null ? 'Assigned' : 'Reported',
+          'aiCategory': _category,
+          'aiPriority': _priority,
+          'assignedServiceProviderId': _assignedProviderId,
         }),
       );
 
@@ -72,19 +141,17 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
 
   @override
   Widget build(BuildContext context) {
-    final propertiesAsync = ref.watch(propertiesProvider);
+    final propertiesAsync = ref.watch(bookedPropertiesProvider);
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('New Request', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('New Maintenance Request', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: Colors.white,
         scrolledUnderElevation: 0,
       ),
       body: propertiesAsync.when(
         data: (properties) {
-          if (properties.isEmpty) {
-            return const Center(child: Text('No properties available to report maintenance for.'));
-          }
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Form(
@@ -92,37 +159,239 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Select Property', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedPropertyId,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    items: properties.map((prop) {
-                      return DropdownMenuItem(
-                        value: prop.id,
-                        child: Text(prop.title, overflow: TextOverflow.ellipsis),
-                      );
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedPropertyId = val),
-                    validator: (val) => val == null ? 'Please select a property' : null,
+                  // 1. Property Context
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('TARGET PROPERTY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                      if (_selectedPropertyId != null)
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded, size: 14, color: AppColors.teal),
+                            const SizedBox(width: 4),
+                            Text('Booked Home', style: TextStyle(color: AppColors.teal, fontSize: 11, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  if (properties.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: Colors.orange[800]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "You don't have an active booked property yet. Please book a property first to request maintenance.",
+                              style: TextStyle(color: Colors.orange[800], fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      value: _selectedPropertyId,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        hintText: '-- Choose your booked property --',
+                      ),
+                      items: properties.map((prop) {
+                        return DropdownMenuItem(
+                          value: prop.id,
+                          child: Text(prop.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => _selectedPropertyId = val),
+                      validator: (val) => val == null ? 'Please select a property' : null,
+                    ),
+
                   const SizedBox(height: 24),
-                  const Text('Issue Description', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
+
+                  // 2. Category & Priority
+                  // 2. Category & Priority
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('CATEGORY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                              Row(
+                                children: [
+                                  Icon(Icons.auto_awesome, size: 12, color: AppColors.teal),
+                                  const SizedBox(width: 2),
+                                  Text('Network', style: TextStyle(color: AppColors.teal, fontSize: 10, fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: _category,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)))).toList(),
+                            onChanged: (val) => setState(() => _category = val!),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Priority
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('URGENCY / PRIORITY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _priorities.map((p) {
+                              final isSelected = _priority == p['value'];
+                              return GestureDetector(
+                                onTap: () => setState(() => _priority = p['value']),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? p['color'] : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: isSelected ? p['color'] : AppColors.line),
+                                    boxShadow: isSelected ? [BoxShadow(color: p['color'].withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))] : [],
+                                  ),
+                                  child: Text(
+                                    p['label'],
+                                    style: TextStyle(
+                                      color: isSelected ? Colors.white : AppColors.muted,
+                                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                  
+                  // Provider suggestion
+                  if (_assignedProviderName != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue[200]!)),
+                      child: Row(
+                        children: [
+                          Icon(Icons.handyman_rounded, color: Colors.blue[700], size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('AI Suggested Provider', style: TextStyle(color: Colors.blue[700], fontSize: 10, fontWeight: FontWeight.bold)),
+                                Text(_assignedProviderName!, style: TextStyle(color: Colors.blue[900], fontSize: 13, fontWeight: FontWeight.w800)),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.blue[200]!)),
+                            child: Text('Auto-Assigned', style: TextStyle(color: Colors.blue[700], fontSize: 9, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // 3. Issue Description
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Text('ISSUE DESCRIPTION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                          SizedBox(width: 4),
+                          Text('*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          if (_description.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a description first')));
+                            return;
+                          }
+                          _runAiTriage(_description, showToast: true);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.teal,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [BoxShadow(color: AppColors.teal.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))],
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text('AI Triage', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     maxLines: 5,
                     decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
                       hintText: 'Describe the issue in detail...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      hintStyle: const TextStyle(color: AppColors.muted),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     ),
                     validator: (val) => val == null || val.isEmpty ? 'Description cannot be empty' : null,
                     onSaved: (val) => _description = val ?? '',
+                    onChanged: (val) {
+                      _description = val;
+                      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+                      if (val.trim().length > 8) {
+                        _debounceTimer = Timer(const Duration(milliseconds: 700), () {
+                          _runAiTriage(val);
+                        });
+                      }
+                    },
                   ),
+
                   const SizedBox(height: 32),
+
+                  // Submit Button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -131,11 +400,12 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.teal,
                         foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: _isLoading
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Submit Request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          : const Text('Submit Request', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                     ),
                   ),
                 ],
