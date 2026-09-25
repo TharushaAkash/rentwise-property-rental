@@ -1,0 +1,56 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'RentWise-Mobile/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'RentWise-Mobile/**'
+
+jobs:
+  build:
+    name: Build & Test Flutter App
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: RentWise-Mobile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+        continue-on-error: true
+
+      - name: Analyze project source
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RentWise-Android-APK
+          path: RentWise-Mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7

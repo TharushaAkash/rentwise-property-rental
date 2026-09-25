@@ -620,9 +620,6 @@ export const FindRentals = () => {
                   <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
                     Search by AI
                   </h2>
-                  <span className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
-                    Student 2 Agentic AI
-                  </span>
                 </div>
                 <p className="text-xs text-blue-200/80 mt-0.5">
                   Matching & Location Intelligence Agent • Calculates distance & travel-time to your destination
@@ -858,11 +855,6 @@ export const FindRentals = () => {
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
               <span>{aiSearchResult ? '✨ Agentic AI Matches' : 'Places to picture yourself in'}</span>
-              {aiSearchResult && (
-                <span className="text-xs bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-full border border-indigo-200">
-                  Student 2 Matching Agent
-                </span>
-              )}
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {aiSearchResult

@@ -151,7 +151,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
-                var agentUrl = _configuration["AgenticServiceUrl"] ?? "http://127.0.0.1:8000";
+                var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
                 var aiUrl = $"{agentUrl}/workflow/verify-property";
                 var payload = new { property_id = id.ToString() };
                 var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");

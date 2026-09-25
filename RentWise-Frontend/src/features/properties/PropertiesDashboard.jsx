@@ -319,14 +319,14 @@ export const PropertiesDashboard = () => {
         let billUrl = data.utilityBillUrl || '';
         if (utilityBillFile) {
           try {
-            const billForm = new FormData();
-            billForm.append('file', utilityBillFile);
-            billForm.append('isPrimary', false);
-            const photoRes = await api.post(`/properties/${createdId}/photos`, billForm, {
+            const docForm = new FormData();
+            docForm.append('file', utilityBillFile);
+            docForm.append('documentType', 'UtilityBill');
+            const docRes = await api.post(`/properties/${createdId}/documents`, docForm, {
               headers: { 'Content-Type': 'multipart/form-data' }
             });
-            if (photoRes.data?.photoUrl) {
-              billUrl = photoRes.data.photoUrl;
+            if (docRes.data?.documentUrl) {
+              billUrl = docRes.data.documentUrl;
             }
           } catch (billUploadErr) {
             console.warn('Utility bill photo upload note:', billUploadErr);
@@ -415,14 +415,14 @@ export const PropertiesDashboard = () => {
         let billUrl = data.utilityBillUrl || '';
         if (utilityBillFile) {
           try {
-            const billForm = new FormData();
-            billForm.append('file', utilityBillFile);
-            billForm.append('isPrimary', false);
-            const photoRes = await api.post(`/properties/${editingProperty.id}/photos`, billForm, {
+            const docForm = new FormData();
+            docForm.append('file', utilityBillFile);
+            docForm.append('documentType', 'UtilityBill');
+            const docRes = await api.post(`/properties/${editingProperty.id}/documents`, docForm, {
               headers: { 'Content-Type': 'multipart/form-data' }
             });
-            if (photoRes.data?.photoUrl) {
-              billUrl = photoRes.data.photoUrl;
+            if (docRes.data?.documentUrl) {
+              billUrl = docRes.data.documentUrl;
             }
           } catch (billUploadErr) {
             console.warn('Utility bill photo upload note:', billUploadErr);

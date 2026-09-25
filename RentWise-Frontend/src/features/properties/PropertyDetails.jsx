@@ -248,14 +248,14 @@ export const PropertyDetails = () => {
       if (utilityBillFile) {
         try {
           let billUrl = '';
-          const billForm = new FormData();
-          billForm.append('file', utilityBillFile);
-          billForm.append('isPrimary', false);
-          const photoRes = await api.post(`/properties/${propId}/photos`, billForm, {
+          const docForm = new FormData();
+          docForm.append('file', utilityBillFile);
+          docForm.append('documentType', 'UtilityBill');
+          const docRes = await api.post(`/properties/${propId}/documents`, docForm, {
             headers: { 'Content-Type': 'multipart/form-data' }
           });
-          if (photoRes.data?.photoUrl) {
-            billUrl = photoRes.data.photoUrl;
+          if (docRes.data?.documentUrl) {
+            billUrl = docRes.data.documentUrl;
           }
           if (billUrl) {
             await api.post(`/properties/${propId}/proof`, {

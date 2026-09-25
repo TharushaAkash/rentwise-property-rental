@@ -318,7 +318,7 @@ namespace RentWise.API.Modules.Users.Controllers
                         image_url = imageUrl
                     };
                     
-                    var agentUrl = _configuration["AgenticServiceUrl"] ?? "http://127.0.0.1:8000";
+                    var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
                     var agentRes = await httpClient.PostAsJsonAsync($"{agentUrl}/workflow/verify-nic", requestPayload);
                     if (agentRes.IsSuccessStatusCode)
                     {
