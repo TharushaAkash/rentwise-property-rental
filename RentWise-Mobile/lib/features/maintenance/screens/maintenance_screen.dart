@@ -4,6 +4,7 @@ import '../../shared/theme/app_theme.dart';
 import '../providers/maintenance_provider.dart';
 import '../models/maintenance_model.dart';
 import 'maintenance_detail_screen.dart';
+import 'create_maintenance_screen.dart';
 import 'package:intl/intl.dart';
 
 class MaintenanceScreen extends ConsumerWidget {
@@ -50,11 +51,14 @@ class MaintenanceScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateMaintenanceScreen()));
+        },
         backgroundColor: AppColors.teal,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add_rounded),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New Request', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -159,9 +163,9 @@ class MaintenanceScreen extends ConsumerWidget {
           Text(
             model.description,
             style: const TextStyle(color: AppColors.ink, fontSize: 14, height: 1.4),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 16),
-          _buildProgressTrack(model.status),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -197,79 +201,6 @@ class MaintenanceScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildProgressTrack(String currentStatus) {
-    final stages = ['Reported', 'Assigned', 'In Progress', 'Completed'];
-    int currentIndex = 0;
-
-    switch (currentStatus.toLowerCase()) {
-      case 'reported':
-      case 'pending':
-        currentIndex = 0;
-        break;
-      case 'assigned':
-        currentIndex = 1;
-        break;
-      case 'in progress':
-      case 'inprogress':
-        currentIndex = 2;
-        break;
-      case 'completed':
-        currentIndex = 3;
-        break;
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(stages.length, (index) {
-        bool isCompleted = index <= currentIndex;
-        bool isLast = index == stages.length - 1;
-
-        return Expanded(
-          child: Row(
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: isCompleted ? AppColors.teal : AppColors.canvas,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isCompleted ? AppColors.teal : AppColors.line,
-                        width: 2,
-                      ),
-                    ),
-                    child: isCompleted
-                        ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                        : null,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    stages[index],
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
-                      color: isCompleted ? AppColors.teal : AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    color: index < currentIndex ? AppColors.teal : AppColors.line,
-                    margin: const EdgeInsets.only(bottom: 16, left: 4, right: 4),
-                  ),
-                ),
-            ],
-          ),
-        );
-      }),
     );
   }
 }

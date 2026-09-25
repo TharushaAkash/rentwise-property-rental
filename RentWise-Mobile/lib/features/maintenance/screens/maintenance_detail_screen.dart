@@ -122,9 +122,84 @@ class MaintenanceDetailScreen extends StatelessWidget {
                 fontSize: 15,
               ),
             ),
+            const SizedBox(height: 32),
+            _buildProgressTrack(model.status),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProgressTrack(String currentStatus) {
+    final stages = ['Reported', 'Assigned', 'In Progress', 'Completed'];
+    int currentIndex = 0;
+
+    switch (currentStatus.toLowerCase()) {
+      case 'reported':
+      case 'pending':
+        currentIndex = 0;
+        break;
+      case 'assigned':
+        currentIndex = 1;
+        break;
+      case 'in progress':
+      case 'inprogress':
+        currentIndex = 2;
+        break;
+      case 'completed':
+        currentIndex = 3;
+        break;
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(stages.length, (index) {
+        bool isCompleted = index <= currentIndex;
+        bool isLast = index == stages.length - 1;
+
+        return Expanded(
+          child: Row(
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: isCompleted ? AppColors.teal : AppColors.canvas,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isCompleted ? AppColors.teal : AppColors.line,
+                        width: 2,
+                      ),
+                    ),
+                    child: isCompleted
+                        ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                        : null,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    stages[index],
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+                      color: isCompleted ? AppColors.teal : AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    height: 2,
+                    color: index < currentIndex ? AppColors.teal : AppColors.line,
+                    margin: const EdgeInsets.only(bottom: 20, left: 4, right: 4),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
     );
   }
 }
