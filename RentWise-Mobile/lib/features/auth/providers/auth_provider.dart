@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -6,14 +7,18 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
 
-final authStateProvider = StateNotifierProvider<AuthNotifier, AsyncValue<UserModel?>>((ref) {
-  return AuthNotifier(ref.read(authServiceProvider));
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, UserModel?>(() {
+  return AuthNotifier();
 });
 
-class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
-  final AuthService _authService;
+class AuthNotifier extends AsyncNotifier<UserModel?> {
+  late final AuthService _authService;
 
-  AuthNotifier(this._authService) : super(const AsyncValue.data(null));
+  @override
+  FutureOr<UserModel?> build() {
+    _authService = ref.read(authServiceProvider);
+    return null;
+  }
 
   Future<void> login(String email, String password) async {
     state = const AsyncValue.loading();
@@ -25,10 +30,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
     }
   }
 
-  Future<void> register(String email, String password, String role) async {
+  Future<void> register(String name, String email, String password, String role, String phone, String nic) async {
     state = const AsyncValue.loading();
     try {
-      final user = await _authService.register(email, password, role);
+      final user = await _authService.register(name, email, password, role, phone, nic);
       state = AsyncValue.data(user);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
