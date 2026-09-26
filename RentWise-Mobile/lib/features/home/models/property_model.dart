@@ -10,6 +10,12 @@ class PropertyModel {
   final String propertyType;
   final String status;
   final String photoUrl; // For convenience
+  final String ownerId;
+  final Map<String, dynamic> owner;
+  final List<String> photos;
+  final List<String> facilities;
+  final List<String> featureTags;
+  final Map<String, dynamic> raw;
 
   PropertyModel({
     required this.id,
@@ -23,27 +29,74 @@ class PropertyModel {
     required this.propertyType,
     required this.status,
     required this.photoUrl,
+    this.ownerId = '',
+    this.owner = const {},
+    this.photos = const [],
+    this.facilities = const [],
+    this.featureTags = const [],
+    this.raw = const {},
   });
 
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
-    // Determine a primary photo URL if there are photos
-    String pUrl = '';
-    if (json['photos'] != null && json['photos'] is List && json['photos'].isNotEmpty) {
-      pUrl = json['photos'][0]['photoUrl'] ?? '';
-    }
+    json = {
+      for (final entry in json.entries)
+        '${entry.key[0].toLowerCase()}${entry.key.substring(1)}': entry.value,
+    };
+    final photoEntries = List<dynamic>.from(json['photos'] as List? ?? []);
+    photoEntries.sort((a, b) {
+      int primary(dynamic p) =>
+          p is Map && (p['isPrimary'] == true || p['IsPrimary'] == true)
+          ? 1
+          : 0;
+      return primary(b).compareTo(primary(a));
+    });
+    final photos = photoEntries
+        .map(
+          (p) => p is String
+              ? p
+              : p is Map
+              ? (p['photoUrl'] ?? p['PhotoUrl'] ?? p['url'] ?? '').toString()
+              : '',
+        )
+        .where((p) => p.isNotEmpty)
+        .toSet()
+        .toList();
+    final pUrl = photos.isEmpty ? '' : photos.first;
+    num number(dynamic value) => num.tryParse(value?.toString() ?? '') ?? 0;
 
     return PropertyModel(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       address: json['address'] ?? '',
-      monthlyRent: (json['monthlyRent'] ?? 0).toDouble(),
-      bedrooms: json['bedrooms'] ?? 0,
-      bathrooms: json['bathrooms'] ?? 0,
-      sqft: json['sqft'] ?? 0,
+      monthlyRent: number(json['monthlyRent']).toDouble(),
+      bedrooms: number(json['bedrooms']).toInt(),
+      bathrooms: number(json['bathrooms']).toInt(),
+      sqft: number(json['sqft']).toInt(),
       propertyType: json['propertyType'] ?? 'Apartment',
-      status: json['status']?.toString() ?? 'Pending',
-      photoUrl: pUrl,
+      status: switch (json['status']?.toString()) {
+        '0' => 'PendingVerification',
+        '1' => 'Active',
+        '2' => 'Suspended',
+        final String s => s,
+        _ => 'PendingVerification',
+      },
+      photoUrl: pUrl.isEmpty ? json['photoUrl'] ?? '' : pUrl,
+      ownerId: json['ownerId']?.toString() ?? '',
+      owner: Map<String, dynamic>.from(json['owner'] ?? {}),
+      photos: photos,
+      facilities:
+          (json['facilities'] is List
+                  ? (json['facilities'] as List).join(',')
+                  : json['facilities']?.toString() ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList(),
+      featureTags: (json['featureTags'] as List? ?? [])
+          .map((s) => s.toString())
+          .toList(),
+      raw: json,
     );
   }
 }

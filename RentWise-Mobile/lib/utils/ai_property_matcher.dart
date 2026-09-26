@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
-import '../features/home/models/property_model.dart';
-import '../shared/utils/api_constants.dart';
+
+
 
 class AiPropertyMatchResult {
   final dynamic property;

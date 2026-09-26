@@ -39,6 +39,8 @@ dependencies:
   shared_preferences: ^2.5.5
   intl: ^0.20.3
   dio: ^5.11.1
+  file_picker: ^13.1.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

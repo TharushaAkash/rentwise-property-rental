@@ -1,4 +1,4 @@
-import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -7,7 +7,7 @@ import '../../../shared/utils/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/maintenance_model.dart';
 import '../providers/maintenance_provider.dart';
-import 'package:intl/intl.dart';
+
 
 class MaintenanceDetailScreen extends ConsumerWidget {
   final MaintenanceModel model;
@@ -39,7 +39,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (res.statusCode == 204 || res.statusCode == 200) {
-        ref.refresh(maintenanceProvider.future);
+        ref.invalidate(maintenanceProvider);
         if (context.mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request deleted successfully')));
@@ -58,27 +58,23 @@ class MaintenanceDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     Color statusColor;
     Color statusBg;
-    IconData statusIcon;
 
     switch (model.status.toLowerCase()) {
       case 'reported':
       case 'pending':
         statusColor = Colors.orange[800]!;
         statusBg = Colors.orange[50]!;
-        statusIcon = Icons.hourglass_top_rounded;
         break;
       case 'assigned':
       case 'in progress':
       case 'inprogress':
         statusColor = Colors.blue[800]!;
         statusBg = Colors.blue[50]!;
-        statusIcon = Icons.autorenew_rounded;
         break;
       case 'completed':
       default:
         statusColor = AppColors.teal;
         statusBg = AppColors.softTeal;
-        statusIcon = Icons.check_circle_outline_rounded;
         break;
     }
 
