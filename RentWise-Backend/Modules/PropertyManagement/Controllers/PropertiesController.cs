@@ -150,6 +150,9 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         {
             var property = await _context.Properties.FindAsync(id);
             if (property == null) return NotFound(new { message = "Property not found" });
+            var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var isAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin");
+            if (!isAdmin && (!Guid.TryParse(userIdValue, out var ownerId) || ownerId != property.OwnerId)) return Forbid();
 
             if (string.IsNullOrWhiteSpace(dto?.DocumentUrl))
             {
@@ -157,6 +160,16 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             }
 
             var documentType = string.IsNullOrWhiteSpace(dto.DocumentType) ? "OwnershipProof" : dto.DocumentType;
+            DocumentReviewRequest? reviewRequest = null;
+            if (dto.ReviewRequestId.HasValue)
+            {
+                reviewRequest = await _context.DocumentReviewRequests.FirstOrDefaultAsync(r =>
+                    r.Id == dto.ReviewRequestId.Value && r.PropertyId == id && r.OwnerId == property.OwnerId);
+                if (reviewRequest == null) return NotFound(new { message = "Document request not found." });
+                if (reviewRequest.ResubmittedAt.HasValue) return Conflict(new { message = "This document request has already been answered." });
+                if (reviewRequest.DocumentUrl == dto.DocumentUrl)
+                    return BadRequest(new { message = "Upload a new document to replace the document flagged by the administrator." });
+            }
             // A file upload may have already saved this document before /proof is called.
             var doc = await _context.PropertyDocuments.FirstOrDefaultAsync(d =>
                 d.PropertyId == id && d.DocumentUrl == dto.DocumentUrl && d.DocumentType == documentType);
@@ -164,6 +177,12 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             {
                 doc = new PropertyDocument { PropertyId = id, DocumentType = documentType, DocumentUrl = dto.DocumentUrl };
                 _context.PropertyDocuments.Add(doc);
+            }
+            if (reviewRequest != null)
+            {
+                reviewRequest.ReplacementDocumentUrl = doc.DocumentUrl;
+                reviewRequest.ResubmittedAt = DateTime.UtcNow;
+                reviewRequest.UpdatedAt = DateTime.UtcNow;
             }
             await _context.SaveChangesAsync();
 
@@ -213,7 +232,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
 
             // Recommendations needing review remain unpublished until an administrator decides.
             // Keep a pre-existing suspension when the agent cannot approve the new proof.
-            property.Status = recommendation == "Approve-ready" ? PropertyStatus.Active
+            var requiresAdminReview = reviewRequest != null || await _context.DocumentReviewRequests.AnyAsync(r => r.PropertyId == id && r.ResubmittedAt == null);
+            property.Status = recommendation == "Approve-ready" && !requiresAdminReview ? PropertyStatus.Active
                 : property.Status == PropertyStatus.Suspended ? PropertyStatus.Suspended : PropertyStatus.PendingVerification;
             property.UpdatedAt = DateTime.UtcNow;
             var report = new { recommendation, reasoning, propertyAddress = property.Address, documentUrl = doc.DocumentUrl };
@@ -227,7 +247,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { success = true, verificationCompleted,
-                message = recommendation == "Approve-ready" ? "Proof saved. Property verification passed."
+                message = requiresAdminReview ? $"Proof saved. Awaiting administrator review. AI recommendation: {recommendation}. {reasoning}"
+                    : recommendation == "Approve-ready" ? "Proof saved. Property verification passed."
                     : $"Proof saved. {recommendation}: {reasoning}",
                 document = doc, report, status = property.Status.ToString() });
         }
@@ -383,6 +404,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
 
     public class OwnershipProofDto
     {
+        public Guid? ReviewRequestId { get; set; }
         public string DocumentType { get; set; } = "OwnershipProof";
         public string DocumentUrl { get; set; } = string.Empty;
     }

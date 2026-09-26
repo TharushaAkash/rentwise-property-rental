@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Http;
 using RentWise.API.Modules.PropertyManagement.Entities;
 using RentWise.API.Modules.PropertyManagement.Interfaces;
 using RentWise.API.Common.Interfaces;
+using RentWise.API.Data;
+using System.Security.Claims;
 
 namespace RentWise.API.Modules.PropertyManagement.Controllers
 {
@@ -17,11 +19,13 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
     {
         private readonly IPropertyDocumentService _documentService;
         private readonly ISupabaseStorageService _storageService;
+        private readonly ApplicationDbContext _context;
 
-        public PropertyDocumentsController(IPropertyDocumentService documentService, ISupabaseStorageService storageService)
+        public PropertyDocumentsController(IPropertyDocumentService documentService, ISupabaseStorageService storageService, ApplicationDbContext context)
         {
             _documentService = documentService;
             _storageService = storageService;
+            _context = context;
         }
 
         [HttpGet]
@@ -43,6 +47,12 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [Authorize(Roles = "Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> CreateDocument(Guid propertyId, IFormFile file, [FromForm] string documentType)
         {
+            var property = await _context.Properties.FindAsync(propertyId);
+            if (property == null) return NotFound();
+            var isAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (!isAdmin && (!Guid.TryParse(userId, out var ownerId) || ownerId != property.OwnerId)) return Forbid();
+
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 

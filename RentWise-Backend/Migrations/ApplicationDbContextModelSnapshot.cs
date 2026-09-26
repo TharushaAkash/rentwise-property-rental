@@ -330,6 +330,48 @@ namespace RentWise.API.Migrations
                     b.ToTable("ServiceProviders");
                 });
 
+            modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.DocumentReviewRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdminId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DocumentUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReplacementDocumentUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ResubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("DocumentReviewRequests");
+                });
+
             modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.Property", b =>
                 {
                     b.Property<Guid>("Id")
@@ -730,6 +772,17 @@ namespace RentWise.API.Migrations
                         .IsRequired();
 
                     b.Navigation("MaintenanceRequest");
+                });
+
+            modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.DocumentReviewRequest", b =>
+                {
+                    b.HasOne("RentWise.API.Modules.PropertyManagement.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Property");
                 });
 
             modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.Property", b =>
