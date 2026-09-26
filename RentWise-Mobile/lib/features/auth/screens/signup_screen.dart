@@ -1,5 +1,8 @@
+import '../../shared/widgets/modern_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../shared/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../../home/screens/home_screen.dart';
@@ -39,7 +42,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _isValidPhone(String phone) {
     final clean = phone.replaceAll(RegExp(r'\D'), '');
     return clean.length == 10 &&
-        (clean.startsWith('07') || clean.startsWith('01') || clean.startsWith('0'));
+        (clean.startsWith('07') ||
+            clean.startsWith('01') ||
+            clean.startsWith('0'));
   }
 
   bool _isValidNic(String nic) {
@@ -58,7 +63,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final confirm = _confirmPassword.text;
 
     if (name.length < 3) {
-      setState(() => _error = 'Please enter your full name (minimum 3 characters).');
+      setState(
+        () => _error = 'Please enter your full name (minimum 3 characters).',
+      );
       return;
     }
     if (email.isEmpty || !email.contains('@')) {
@@ -66,11 +73,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       return;
     }
     if (!_isValidPhone(phone)) {
-      setState(() => _error = 'Phone number must be exactly 10 digits (e.g. 0771234567).');
+      setState(
+        () => _error =
+            'Phone number must be exactly 10 digits (e.g. 0771234567).',
+      );
       return;
     }
     if (!_isValidNic(nic)) {
-      setState(() => _error = 'NIC number must be 12 digits or 9 digits with V (e.g. 200012345678 or 981234567V).');
+      setState(
+        () => _error = 'NIC number must be 12 digits or 9 digits with V (e.g. 200012345678 or 981234567V).',
+      );
       return;
     }
     if (password.length < 8) {
@@ -84,7 +96,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     setState(() => _error = null);
 
-    ref.read(authStateProvider.notifier).register(
+    ref
+        .read(authStateProvider.notifier)
+        .register(
           name,
           email,
           password,
@@ -101,7 +115,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ref.listen(authStateProvider, (previous, next) {
       next.whenOrNull(
         error: (error, stackTrace) {
-          setState(() => _error = error.toString().replaceAll('Exception:', '').trim());
+          setState(
+            () => _error = error.toString().replaceAll('Exception:', '').trim(),
+          );
         },
         data: (user) {
           if (user != null) {
@@ -125,23 +141,29 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            const Text(
-              'Join RentWise',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppColors.ink),
+            const PageIntro(
+              eyebrow: 'Welcome to RentWise',
+              title: 'Your next chapter\nstarts here.',
+              description:
+                  'Find a place to call home, or share a space of your own.',
+              icon: Icons.waving_hand_outlined,
             ),
-            const SizedBox(height: 6),
-            const Text(
-              'Register with your phone & NIC to search, book, or rent properties.',
-              style: TextStyle(color: AppColors.muted, fontSize: 14),
+            const SizedBox(height: 28),
+            const FormHeading(
+              'Create your account',
+              'Choose how you will use RentWise.',
+              icon: Icons.person_outline,
             ),
-            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => _isOwner = false),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: !_isOwner ? AppColors.softTeal : Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -152,14 +174,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ),
                       child: Column(
                         children: [
-                          Icon(Icons.person_pin_rounded, color: !_isOwner ? AppColors.teal : AppColors.muted),
+                          Icon(
+                            Icons.person_pin_rounded,
+                            color: !_isOwner ? AppColors.teal : AppColors.muted,
+                          ),
                           const SizedBox(height: 6),
                           Text(
                             'I am a Tenant',
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
-                              color: !_isOwner ? AppColors.teal : AppColors.muted,
+                              color: !_isOwner
+                                  ? AppColors.teal
+                                  : AppColors.muted,
                             ),
                           ),
                         ],
@@ -172,7 +199,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   child: GestureDetector(
                     onTap: () => setState(() => _isOwner = true),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: _isOwner ? AppColors.softTeal : Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -183,14 +213,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ),
                       child: Column(
                         children: [
-                          Icon(Icons.real_estate_agent_rounded, color: _isOwner ? AppColors.teal : AppColors.muted),
+                          Icon(
+                            Icons.real_estate_agent_rounded,
+                            color: _isOwner ? AppColors.teal : AppColors.muted,
+                          ),
                           const SizedBox(height: 6),
                           Text(
                             'Property Owner',
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
-                              color: _isOwner ? AppColors.teal : AppColors.muted,
+                              color: _isOwner
+                                  ? AppColors.teal
+                                  : AppColors.muted,
                             ),
                           ),
                         ],
@@ -207,7 +242,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               decoration: const InputDecoration(
                 labelText: 'Full Name',
                 hintText: 'e.g. Kasun Kalhara',
-                prefixIcon: Icon(Icons.person_outline_rounded, color: AppColors.teal),
+                prefixIcon: Icon(
+                  Icons.person_outline_rounded,
+                  color: AppColors.teal,
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -217,7 +255,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               decoration: const InputDecoration(
                 labelText: 'Email Address',
                 hintText: 'e.g. kasun@gmail.com',
-                prefixIcon: Icon(Icons.mail_outline_rounded, color: AppColors.teal),
+                prefixIcon: Icon(
+                  Icons.mail_outline_rounded,
+                  color: AppColors.teal,
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -228,7 +269,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 labelText: 'Phone Number (10 Digits)',
                 hintText: '077 123 4567',
                 helperText: 'Validated to Sri Lankan 10-digit format',
-                prefixIcon: Icon(Icons.phone_iphone_rounded, color: AppColors.teal),
+                prefixIcon: Icon(
+                  Icons.phone_iphone_rounded,
+                  color: AppColors.teal,
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -248,10 +292,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 labelText: 'Password (Min 8 Characters)',
-                prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.teal),
+                prefixIcon: const Icon(
+                  Icons.lock_outline_rounded,
+                  color: AppColors.teal,
+                ),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
             ),
@@ -261,10 +313,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               obscureText: _obscureConfirm,
               decoration: InputDecoration(
                 labelText: 'Confirm Password',
-                prefixIcon: const Icon(Icons.lock_reset_rounded, color: AppColors.teal),
+                prefixIcon: const Icon(
+                  Icons.lock_reset_rounded,
+                  color: AppColors.teal,
+                ),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                  onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                  icon: Icon(
+                    _obscureConfirm
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscureConfirm = !_obscureConfirm),
                 ),
               ),
             ),
@@ -295,17 +355,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 onPressed: authState.isLoading ? null : _register,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.teal,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 child: authState.isLoading
                     ? const SizedBox(
                         height: 22,
                         width: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text(
                         'Create Account',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
                       ),
               ),
             ),
@@ -317,7 +385,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 ),
                 child: const Text(
                   'Already have an account? Sign in',
-                  style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),

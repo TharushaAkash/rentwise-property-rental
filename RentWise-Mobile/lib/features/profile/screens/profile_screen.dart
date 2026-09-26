@@ -1,171 +1,220 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../shared/theme/app_theme.dart';
+import '../../shared/widgets/modern_ui.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../maintenance/screens/maintenance_screen.dart';
+import '../../rentals/screens/my_rentals_screen.dart';
+import '../../properties/screens/properties_dashboard_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userState = ref.watch(authStateProvider);
     final user = userState.value;
-
     if (user == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: Text('Sign in to view your profile.')),
+      );
     }
-
+    final owner = user.role == 'Owner' || user.role == 'PropertyOwner';
+    void open(Widget page) =>
+        Navigator.push(context, MaterialPageRoute(builder: (_) => page));
     return Scaffold(
-      appBar: AppBar(title: const Text('My Profile & Settings')),
+      appBar: AppBar(title: const Text('Your profile')),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          // User Identity Card
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppColors.line),
-              boxShadow: const [
-                BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 4))
-              ],
+              gradient: const LinearGradient(
+                colors: [Color(0xFF103D2C), Color(0xFF176B49)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(28),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: AppColors.teal,
-                  child: Text(
-                    user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(user.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: AppColors.ink)),
-                      const SizedBox(height: 2),
-                      Text(user.email, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.softTeal,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          user.role == 'PropertyOwner' || user.role == 'Owner' ? 'Property Owner' : 'Verified Tenant',
-                          style: const TextStyle(color: AppColors.teal, fontSize: 11, fontWeight: FontWeight.w800),
+                Row(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD9EFC8),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        user.name.isEmpty
+                            ? 'U'
+                            : user.name.characters.first.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.darkGreen,
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        owner ? 'PROPERTY OWNER' : user.role.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFFD9EFC8),
+                          fontSize: 11,
+                          letterSpacing: 1.4,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  user.name,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -.6,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  user.email,
+                  style: const TextStyle(
+                    color: Color(0xFFD1E5DA),
+                    fontSize: 13,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-
-          if (user.phoneNumber != null || user.nicNumber != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.line),
-              ),
+          const SizedBox(height: 28),
+          const FormHeading(
+            'Personal details',
+            'Your account information, all together.',
+            icon: Icons.person_outline,
+          ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty)
-                    _infoRow(Icons.phone_outlined, 'Phone', user.phoneNumber!),
-                  if (user.nicNumber != null && user.nicNumber!.isNotEmpty) ...[
-                    const Divider(height: 16),
-                    _infoRow(Icons.badge_outlined, 'NIC Number', user.nicNumber!),
+                  DetailLine('Email address', user.email),
+                  if (user.phoneNumber?.isNotEmpty == true) ...[
+                    const Divider(),
+                    DetailLine('Phone number', user.phoneNumber!),
+                  ],
+                  if (user.nicNumber?.isNotEmpty == true) ...[
+                    const Divider(),
+                    DetailLine('NIC number', user.nicNumber!),
                   ],
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-          ],
-
-          // Settings Links
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.key_outlined, color: AppColors.teal),
-                  title: const Text('My Rentals', style: TextStyle(fontWeight: FontWeight.w700)),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.payments_outlined, color: AppColors.teal),
-                  title: const Text('Payments', style: TextStyle(fontWeight: FontWeight.w700)),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.build_outlined, color: AppColors.teal),
-                  title: const Text('Maintenance Requests', style: TextStyle(fontWeight: FontWeight.w700)),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MaintenanceScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
           ),
-          const SizedBox(height: 20),
-
-          // Logout Button
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: TextButton.icon(
-              onPressed: () {
-                ref.read(authStateProvider.notifier).logout();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              },
-              icon: const Icon(Icons.logout_rounded, color: Color(0xFFB91C1C)),
-              label: const Text('Sign Out', style: TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.bold)),
-              style: TextButton.styleFrom(
-                backgroundColor: const Color(0xFFFEE2E2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          const SizedBox(height: 28),
+          const FormHeading(
+            'Your workspace',
+            'Everything you need for your rental journey.',
+            icon: Icons.grid_view_outlined,
+          ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                children: [
+                  _ProfileLink(
+                    icon: Icons.key_outlined,
+                    title: 'Rentals & payments',
+                    subtitle: 'Agreements, receipts and your lease',
+                    onTap: () => open(const MyRentalsScreen()),
+                  ),
+                  const Divider(height: 1, indent: 70, endIndent: 20),
+                  _ProfileLink(
+                    icon: Icons.calendar_month_outlined,
+                    title: 'Bookings',
+                    subtitle: owner
+                        ? 'Manage tenant requests'
+                        : 'Track your rental requests',
+                    onTap: () => open(const PropertyBookingsScreen()),
+                  ),
+                  const Divider(height: 1, indent: 70, endIndent: 20),
+                  _ProfileLink(
+                    icon: Icons.handyman_outlined,
+                    title: 'Maintenance',
+                    subtitle: 'Get help with your home',
+                    onTap: () => open(const MaintenanceScreen()),
+                  ),
+                ],
               ),
             ),
+          ),
+          const SizedBox(height: 28),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFB42335),
+              side: const BorderSide(color: Color(0xFFF0D8DC)),
+            ),
+            onPressed: () async {
+              await ref.read(authStateProvider.notifier).logout();
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            icon: const Icon(Icons.logout_rounded, size: 19),
+            label: const Text('Sign out'),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _infoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: AppColors.muted),
-        const SizedBox(width: 12),
-        Text(label, style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600)),
-        const Spacer(),
-        Text(value, style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w800)),
-      ],
-    );
-  }
+class _ProfileLink extends StatelessWidget {
+  const _ProfileLink({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title, subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+    leading: Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: AppColors.softTeal,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(icon, color: AppColors.teal, size: 21),
+    ),
+    title: Text(
+      title,
+      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+    ),
+    subtitle: Text(
+      subtitle,
+      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+    ),
+    trailing: const Icon(
+      Icons.arrow_forward_ios_rounded,
+      size: 14,
+      color: AppColors.muted,
+    ),
+    onTap: onTap,
+  );
 }
