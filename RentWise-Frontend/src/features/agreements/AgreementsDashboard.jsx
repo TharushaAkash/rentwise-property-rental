@@ -970,9 +970,9 @@ export const AgreementsDashboard = () => {
           isOpen={Boolean(uploadingProofProp)}
           onClose={() => setUploadingProofProp(null)}
           property={uploadingProofProp}
-          onSuccess={() => {
+          onSuccess={(result) => {
             setUploadingProofProp(null);
-            setFeedback({ text: 'Ownership proof submitted for Admin verification!', type: 'success' });
+            setFeedback({ text: result?.message || 'Ownership proof submitted for Admin verification!', type: 'success' });
             fetchProperties();
           }}
         />
@@ -1687,17 +1687,14 @@ const UploadProofModal = ({ isOpen, onClose, property, onSuccess }) => {
 
     setIsUploading(true);
     try {
-      await api.post(`/properties/${property.id}/proof`, {
+      const response = await api.post(`/properties/${property.id}/proof`, {
         documentType: docType,
         documentUrl
       });
-      onSuccess();
+      onSuccess(response.data);
     } catch (err) {
       console.error('Failed to upload proof:', err);
-      // Fallback local update
-      property.documents = property.documents || [];
-      property.documents.push({ documentType: docType, documentUrl });
-      onSuccess();
+      alert('Ownership proof could not be submitted. Please try again.');
     } finally {
       setIsUploading(false);
     }

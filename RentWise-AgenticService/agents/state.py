@@ -17,6 +17,7 @@ class AgentWorkflowState(TypedDict):
     
     # Property Verification Agent State
     verification_report: dict
+    document_url: str
     
     # Maintenance Triage Agent State
     maintenance_ticket: dict

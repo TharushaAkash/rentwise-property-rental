@@ -245,31 +245,36 @@ export const PropertyDetails = () => {
         }));
       }
 
-      if (utilityBillFile) {
+      let verificationMessage = '';
+      if (utilityBillFile || formData.utilityBillUrl) {
         try {
-          let billUrl = '';
-          const docForm = new FormData();
-          docForm.append('file', utilityBillFile);
-          docForm.append('documentType', 'UtilityBill');
-          const docRes = await api.post(`/properties/${propId}/documents`, docForm, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
-          if (docRes.data?.documentUrl) {
-            billUrl = docRes.data.documentUrl;
+          let billUrl = formData.utilityBillUrl || '';
+          if (utilityBillFile) {
+            const docForm = new FormData();
+            docForm.append('file', utilityBillFile);
+            docForm.append('documentType', 'UtilityBill');
+            const docRes = await api.post(`/properties/${propId}/documents`, docForm, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            if (docRes.data?.documentUrl) {
+              billUrl = docRes.data.documentUrl;
+            }
           }
           if (billUrl) {
-            await api.post(`/properties/${propId}/proof`, {
+            const proofResponse = await api.post(`/properties/${propId}/proof`, {
               documentType: 'UtilityBill',
               documentUrl: billUrl
             });
+            verificationMessage = proofResponse.data?.message || 'Proof submitted for verification.';
           }
         } catch (billErr) {
           console.warn('Utility bill photo upload failed:', billErr);
+          verificationMessage = 'Proof verification could not be submitted. Please try again.';
         }
       }
 
       setIsEditModalOpen(false);
-      setFeedbackMsg('Property details updated successfully!');
+      setFeedbackMsg(`Property details updated successfully! ${verificationMessage}`);
       setTimeout(() => {
         window.location.reload();
       }, 700);
@@ -927,7 +932,7 @@ export const PropertyDetails = () => {
             {verificationInfo.isVerified && (
               <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-md font-extrabold shadow-2xs">
                 <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>✓ Address & Utility Verified</span>
+                <span>{verificationInfo.statusLabel}</span>
               </span>
             )}
             <span className="inline-flex items-center gap-1.5 bg-gray-100 px-3 py-1 rounded-md text-gray-600 border border-gray-200">
@@ -1181,8 +1186,8 @@ export const PropertyDetails = () => {
           {/* Card: Electricity / Utility Bill Verification Section */}
           {(isAdmin || (isOwner && user?.id === currentProperty?.ownerId)) && (() => {
             const docs = Array.isArray(currentProperty?.documents) ? currentProperty.documents : [];
-            const utilityDoc = docs.find(d => d?.documentType === 'UtilityBill' || d?.documentType === 'OwnershipProof') ||
-                              (currentProperty?.utilityBillUrl ? { documentType: 'UtilityBill', documentUrl: currentProperty.utilityBillUrl } : null);
+            const utilityDoc = docs.find(d => d.documentUrl === verificationInfo.billUrl) ||
+                              (verificationInfo.billUrl ? { documentType: 'OwnershipProof', documentUrl: verificationInfo.billUrl } : null);
 
             return (
               <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-3 mt-8">
@@ -1195,7 +1200,7 @@ export const PropertyDetails = () => {
                   <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
                     Electricity / Utility Bill Verification
                   </h4>
-                  <span className="text-[11px] text-amber-800 font-medium">Scanned by Agentic AI OCR</span>
+                  <span className="text-[11px] text-amber-800 font-medium">Property verification status</span>
                 </div>
               </div>
               <span className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-bold flex items-center gap-1 border ${
@@ -1213,7 +1218,7 @@ export const PropertyDetails = () => {
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
                 )}
                 <span>
-                  {utilityDoc?.documentUrl ? verificationInfo.statusLabel : 'Pending Proof'}
+                  {verificationInfo.statusLabel}
                 </span>
               </span>
             </div>
@@ -1241,18 +1246,9 @@ export const PropertyDetails = () => {
                         Document Type: <strong>{utilityDoc.documentType || 'UtilityBill'}</strong>
                       </p>
                       
-                      {verificationInfo.isVerified ? (
-                        <p className="text-emerald-700 text-[11.5px] font-medium">
-                          ✓ Matches listed address: <strong>{propertyAddress}</strong>
-                        </p>
-                      ) : (
-                        <div className="text-red-700 text-[11.5px] font-medium">
-                          <p>✗ Address Mismatch Detected!</p>
-                          <p className="text-red-600 text-[10.5px]">Extracted: {verificationInfo.billAddress || 'Unknown'}</p>
-                          <p className="text-gray-500 text-[10.5px]">Expected: {propertyAddress}</p>
-                        </div>
-                      )}
-
+                      <p className="text-gray-700 text-[11.5px] font-medium">
+                        {verificationInfo.matchDetails}
+                      </p>
                       <a
                         href={utilityDoc.documentUrl}
                         target="_blank"

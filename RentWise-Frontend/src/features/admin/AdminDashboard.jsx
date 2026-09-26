@@ -159,45 +159,18 @@ export const AdminDashboard = () => {
     e?.stopPropagation();
     const cleanId = String(propertyId || '').trim();
 
-    const updateCachedProperty = () => {};
-
     try {
-      await api.put(`/properties/${cleanId}/approve`);
-      updateCachedProperty();
-      setFeedback({ 
-        text: isManualOverride 
-          ? 'Property manually verified and activated by Administrator!' 
-          : 'Property listing approved and activated!', 
-        type: 'success' 
+      await api.put(`/properties/${cleanId}/approve`, {});
+      setFeedback({
+        text: isManualOverride ? 'Property manually verified and activated by Administrator!' : 'Property listing approved and activated!',
+        type: 'success'
       });
-      fetchAllProperties();
-      setInspectingProperty(prev => (prev && String(prev.id || prev.Id).toLowerCase() === cleanId.toLowerCase() ? { 
-        ...prev, 
-        status: 'Active', 
-        adminManuallyVerified: true,
-        isAddressVerified: true 
-      } : prev));
+      await fetchAllProperties();
+      const response = await api.get(`/properties/${cleanId}`);
+      setInspectingProperty(prev => prev && String(prev.id || prev.Id).toLowerCase() === cleanId.toLowerCase() ? response.data : prev);
     } catch (err) {
-      console.error('Failed to approve property:', err);
-      updateCachedProperty();
-      setProperties(prev => prev.map(p => String(p.id || p.Id).toLowerCase() === cleanId.toLowerCase() ? { 
-        ...p, 
-        status: 'Active', 
-        adminManuallyVerified: true,
-        isAddressVerified: true 
-      } : p));
-      setInspectingProperty(prev => (prev && String(prev.id || prev.Id).toLowerCase() === cleanId.toLowerCase() ? { 
-        ...prev, 
-        status: 'Active', 
-        adminManuallyVerified: true,
-        isAddressVerified: true 
-      } : prev));
-      setFeedback({ 
-        text: isManualOverride 
-          ? 'Property manually verified and activated by Administrator.' 
-          : 'Property approved and activated.', 
-        type: 'success' 
-      });
+      console.error('Failed to approve or refresh property:', err);
+      setFeedback({ text: 'Could not confirm property approval. Refresh the listing and try again.', type: 'error' });
     }
   };
 
@@ -276,6 +249,7 @@ export const AdminDashboard = () => {
       }
 
       // 2. Process Utility Bill
+      let verificationMessage = '';
       let utilityBillUrl = data.utilityBillUrl || '';
       if (utilityBillFile) {
         utilityBillUrl = await new Promise((resolve) => {
@@ -305,11 +279,7 @@ export const AdminDashboard = () => {
           status: data.status === 'Active' ? 1 : data.status === 'Suspended' ? 2 : 0
         };
 
-        try {
-          await api.put(`/properties/${editId}`, payload);
-        } catch (apiErr) {
-          console.warn('Backend update note, saving in local state:', apiErr);
-        }
+        await api.put(`/properties/${editId}`, payload);
 
         if (files && files.length > 0) {
           await Promise.all(files.map(async (file, index) => {
@@ -326,17 +296,20 @@ export const AdminDashboard = () => {
 
         if (utilityBillUrl) {
           try {
-            await api.post(`/properties/${editId}/proof`, {
+            const proofResponse = await api.post(`/properties/${editId}/proof`, {
               documentType: 'UtilityBill',
               documentUrl: utilityBillUrl
             });
-          } catch {}
+            verificationMessage = proofResponse.data?.message || 'Proof submitted for verification.';
+          } catch {
+            verificationMessage = 'Proof verification could not be submitted. Please try again.';
+          }
         }
 
-        const res = await api.put(`/properties/${editId}`, payload);
+        const res = await api.get(`/properties/${editId}`);
         const updatedRecord = res.data || { ...editingProperty, ...payload };
         setProperties(prev => prev.map(p => (String(p.id || p.Id) === String(editId) ? updatedRecord : p)));
-        setFeedback({ text: `Property "${data.title}" updated successfully!`, type: 'success' });
+        setFeedback({ text: `Property "${data.title}" updated successfully! ${verificationMessage}`, type: 'success' });
         fetchAllProperties();
       } else {
         // Create new property
@@ -370,14 +343,17 @@ export const AdminDashboard = () => {
 
         if (utilityBillUrl && createdId) {
           try {
-            await api.post(`/properties/${createdId}/proof`, {
+            const proofResponse = await api.post(`/properties/${createdId}/proof`, {
               documentType: 'UtilityBill',
               documentUrl: utilityBillUrl
             });
-          } catch {}
+            verificationMessage = proofResponse.data?.message || 'Proof submitted for verification.';
+          } catch {
+            verificationMessage = 'Proof verification could not be submitted. Please try again.';
+          }
         }
 
-        setFeedback({ text: `New property listing "${data.title}" created successfully!`, type: 'success' });
+        setFeedback({ text: `New property listing "${data.title}" created successfully! ${verificationMessage}`, type: 'success' });
         fetchAllProperties();
       }
 
@@ -772,13 +748,13 @@ export const AdminDashboard = () => {
                 <CheckCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 <span>✓ Address Verified</span>
               </span>
-              <span className="text-[10.5px] text-gray-600 font-medium truncate" title={ver.billAddress}>
-                {ver.billAddress}
+              <span className="text-[10.5px] text-gray-600 font-medium truncate" title={ver.matchDetails}>
+                {ver.matchDetails}
               </span>
               <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
                 <span>AI OCR Match</span>
                 <span>•</span>
-                <span>{ver.matchScore}% Confidence</span>
+                <span>Checks completed</span>
               </span>
             </div>
           );
@@ -789,7 +765,7 @@ export const AdminDashboard = () => {
             <div className="flex flex-col gap-1 max-w-[210px]" onClick={(e) => e.stopPropagation()}>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-50 text-rose-700 border border-rose-300 w-fit">
                 <AlertCircle className="w-3 h-3 text-rose-600 shrink-0" />
-                <span>Address Mismatch</span>
+                <span>{ver.statusLabel}</span>
               </span>
               <Button
                 size="sm"
@@ -1543,12 +1519,12 @@ export const AdminDashboard = () => {
                             ) : ver.isVerified ? (
                               <>
                                 <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>✓ Address Verified ({ver.matchScore}%)</span>
+                                <span>{ver.statusLabel}</span>
                               </>
                             ) : (
                               <>
                                 <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-                                <span>⚠️ Address Mismatch ({ver.matchScore}%)</span>
+                                <span>{ver.statusLabel}</span>
                               </>
                             )}
                           </span>
@@ -1569,10 +1545,10 @@ export const AdminDashboard = () => {
                                 <strong className="text-gray-900">Entered Property Address:</strong> {ver.propertyAddress || 'N/A'}
                               </p>
                               <p className="text-[11px] text-gray-600">
-                                <strong className="text-gray-900">Detected Bill Address:</strong> <span className={ver.isVerified ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>{ver.billAddress}</span>
+                                <strong className="text-gray-900">Detected Bill Address:</strong> <span className={ver.isVerified ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>{ver.billAddress || 'Not provided in the verification report'}</span>
                               </p>
                               <p className="text-[10.5px] text-gray-500 font-mono">
-                                Provider: <strong>{ver.utilityProvider}</strong> • Acc: <strong>{ver.accountNo}</strong>
+                                Provider: <strong>{ver.utilityProvider || 'Not provided'}</strong> • Acc: <strong>{ver.accountNo || 'Not provided'}</strong>
                               </p>
                             </div>
                             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
