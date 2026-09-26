@@ -324,6 +324,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
+app.UseMiddleware<RentWise_Backend.Common.Middleware.ApiKeyMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

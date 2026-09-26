@@ -146,6 +146,7 @@ namespace RentWise.API.Modules.PropertyManagement.Services
             return await _context.Properties
                 .Include(p => p.Photos)
                 .Include(p => p.Documents)
+                .Include(p => p.VerificationRecords)
                 .Include(p => p.Owner)
                 .ToListAsync();
         }
@@ -158,6 +159,7 @@ namespace RentWise.API.Modules.PropertyManagement.Services
                 var prop = await _context.Properties
                     .Include(p => p.Photos)
                     .Include(p => p.Documents)
+                    .Include(p => p.VerificationRecords)
                     .Include(p => p.Owner)
                     .FirstOrDefaultAsync(p => p.Id == id);
                 if (prop != null) return prop;
@@ -172,6 +174,7 @@ namespace RentWise.API.Modules.PropertyManagement.Services
                 return await _context.Properties
                     .Include(p => p.Photos)
                     .Include(p => p.Documents)
+                    .Include(p => p.VerificationRecords)
                     .FirstOrDefaultAsync(p => p.Id == id);
             }
             catch (Exception ex2)
@@ -188,6 +191,7 @@ namespace RentWise.API.Modules.PropertyManagement.Services
                 .Where(p => p.OwnerId == ownerId)
                 .Include(p => p.Photos)
                 .Include(p => p.Documents)
+                .Include(p => p.VerificationRecords)
                 .Include(p => p.Owner)
                 .ToListAsync();
         }

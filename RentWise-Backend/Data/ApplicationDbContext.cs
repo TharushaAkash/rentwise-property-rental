@@ -18,6 +18,7 @@ namespace RentWise.API.Data
         public DbSet<PropertyPhoto> PropertyPhotos { get; set; }
         public DbSet<PropertyDocument> PropertyDocuments { get; set; }
         public DbSet<VerificationRecord> VerificationRecords { get; set; }
+        public DbSet<DocumentReviewRequest> DocumentReviewRequests { get; set; }
 
         public DbSet<TenantProfile> TenantProfiles { get; set; }
         public DbSet<SavedProperty> SavedProperties { get; set; }

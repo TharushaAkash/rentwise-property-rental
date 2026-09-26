@@ -200,6 +200,13 @@ class _DiscoverPropertiesTabState
   AiSearchResult? _aiSearchResult;
   final TextEditingController _searchController = TextEditingController();
 
+  final List<String> _samplePrompts = [
+    '2-bed near SLIIT Malabe under 75k',
+    'Colombo 07 luxury apartment',
+    'Near Orion City IT Park with AC',
+    'Budget place in Dehiwala with parking',
+  ];
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -220,8 +227,7 @@ class _DiscoverPropertiesTabState
           _aiSearchResult = result;
         });
       }
-    } catch (e) {
-      // Handle error gracefully
+    } catch (_) {
     } finally {
       if (mounted) {
         setState(() {
@@ -229,6 +235,12 @@ class _DiscoverPropertiesTabState
         });
       }
     }
+  }
+
+  void _applyPrompt(String prompt, List<dynamic> properties) {
+    _searchController.text = prompt;
+    _searchQuery = prompt;
+    _runAiSearch(properties);
   }
 
   @override
@@ -272,16 +284,16 @@ class _DiscoverPropertiesTabState
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'WELCOME HOME',
+                              'RENTWISE AI INTELLIGENCE',
                               style: TextStyle(
                                 fontSize: 10,
                                 letterSpacing: 1.8,
@@ -289,7 +301,7 @@ class _DiscoverPropertiesTabState
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                            SizedBox(height: 5),
+                            SizedBox(height: 4),
                             Text(
                               'A space for your next chapter.',
                               style: TextStyle(
@@ -303,45 +315,47 @@ class _DiscoverPropertiesTabState
                           ],
                         ),
                       ),
-                      SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Container(
-                        padding: EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: AppColors.softTeal,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.cottage_outlined,
                           color: AppColors.teal,
-                          size: 30,
+                          size: 28,
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                // ── AI Search Card ──────────────────────────────────────────
                 _isAiSearch
                     ? Container(
                         padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.fromLTRB(20, 10, 20, 5),
+                        margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
-                              Color(0xFF1E1B4B),
                               Color(0xFF0F172A),
-                              Color(0xFF172554),
+                              Color(0xFF1E1B4B),
+                              Color(0xFF0284C7),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.indigo.withValues(alpha: 0.3),
+                            color: Colors.blue.withAlpha(80),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.indigo.withValues(alpha: 0.2),
+                              color: Colors.indigo.withAlpha(60),
                               blurRadius: 20,
-                              offset: const Offset(0, 10),
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
@@ -356,14 +370,10 @@ class _DiscoverPropertiesTabState
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: Colors.blue.withValues(
-                                          alpha: 0.2,
-                                        ),
+                                        color: Colors.blue.withAlpha(50),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: Colors.blue.withValues(
-                                            alpha: 0.3,
-                                          ),
+                                          color: Colors.blue.withAlpha(80),
                                         ),
                                       ),
                                       child: const Icon(
@@ -407,13 +417,15 @@ class _DiscoverPropertiesTabState
                                   },
                                   icon: const Icon(
                                     Icons.close,
-                                    color: Colors.white54,
+                                    color: Colors.white70,
                                     size: 20,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
+
+                            // Prompt Input Field
                             Row(
                               children: [
                                 Expanded(
@@ -422,30 +434,28 @@ class _DiscoverPropertiesTabState
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                     onSubmitted: (val) {
                                       _searchQuery = val;
                                       _runAiSearch(properties);
                                     },
                                     decoration: InputDecoration(
-                                      hintText: 'e.g. 2 bed near SLIIT under 70k with AC...',
+                                      hintText:
+                                          'e.g. 2 bed near SLIIT Malabe under 75k...',
                                       hintStyle: TextStyle(
-                                        color: Colors.blue.shade200.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                        fontSize: 13,
+                                        color: Colors.white.withAlpha(120),
+                                        fontSize: 12,
                                       ),
                                       filled: true,
-                                      fillColor: Colors.white.withValues(
-                                        alpha: 0.1,
-                                      ),
+                                      fillColor: Colors.white.withAlpha(30),
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 12,
-                                          ),
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
                                       border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(14),
                                         borderSide: BorderSide.none,
                                       ),
                                     ),
@@ -457,39 +467,84 @@ class _DiscoverPropertiesTabState
                                     _searchQuery = _searchController.text;
                                     _runAiSearch(properties);
                                   },
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16,
                                       vertical: 13,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.shade600,
-                                      borderRadius: BorderRadius.circular(12),
+                                      color: const Color(0xFF0284C7),
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.lightBlue.withAlpha(100),
+                                          blurRadius: 8,
+                                        ),
+                                      ],
                                     ),
                                     child: _isAiSearching
                                         ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
+                                            width: 18,
+                                            height: 18,
                                             child: CircularProgressIndicator(
-                                              strokeWidth: 2,
+                                              strokeWidth: 2.5,
                                               color: Colors.white,
                                             ),
                                           )
                                         : const Icon(
                                             Icons.auto_awesome,
                                             color: Colors.amberAccent,
-                                            size: 18,
+                                            size: 20,
                                           ),
                                   ),
                                 ),
                               ],
                             ),
+
+                            const SizedBox(height: 12),
+
+                            // Sample Prompt Chips
+                            SizedBox(
+                              height: 30,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _samplePrompts.length,
+                                itemBuilder: (context, i) {
+                                  final p = _samplePrompts[i];
+                                  return GestureDetector(
+                                    onTap: () => _applyPrompt(p, properties),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.white.withAlpha(40),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        p,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           ],
                         ),
                       )
                     : Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 5),
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                         child: Row(
                           children: [
                             Expanded(
@@ -544,61 +599,142 @@ class _DiscoverPropertiesTabState
                                   _isAiSearch = true;
                                 });
                               },
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                               child: Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(13),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(12),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF1E1B4B),
+                                      Color(0xFF0284C7),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.indigo.withAlpha(60),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
                                 ),
-                                child: Icon(
+                                child: const Icon(
                                   Icons.auto_awesome,
-                                  color: Colors.grey.shade600,
+                                  color: Colors.amberAccent,
+                                  size: 20,
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
+
                 if (_isAiSearch && _aiSearchResult != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
-                      vertical: 5,
+                      vertical: 6,
                     ),
                     child: Row(
                       children: [
                         const Icon(
                           Icons.auto_awesome,
                           size: 14,
-                          color: Colors.deepPurpleAccent,
+                          color: Color(0xFF0284C7),
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'AI Matched ${displayedProperties.length} Properties',
+                          'AI Matched ${displayedProperties.length} Properties to "${_aiSearchResult!.destinationLandmark}"',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Colors.deepPurpleAccent,
+                            color: Color(0xFF0369A1),
                           ),
                         ),
                       ],
                     ),
                   ),
+
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    itemCount: displayedProperties.length,
-                    itemBuilder: (context, index) {
-                      return _MobilePropertyCard(
-                        property: displayedProperties[index],
-                        aiResult: aiMatchResults?[index],
-                      );
-                    },
-                  ),
+                  child: displayedProperties.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF1F5F9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.search_off_rounded,
+                                    size: 32,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _isAiSearch
+                                      ? 'No AI matches for "${_aiSearchResult?.destinationLandmark ?? _searchQuery}"'
+                                      : 'No properties found',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.ink,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Try searching for another location like SLIIT Malabe, Colombo 07, Kandy, or Galle.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.muted,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 20),
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isAiSearch = false;
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                      _aiSearchResult = null;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                                  label: const Text('Reset Search'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.ink,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          itemCount: displayedProperties.length,
+                          itemBuilder: (context, index) {
+                            return _MobilePropertyCard(
+                              property: displayedProperties[index],
+                              aiResult: aiMatchResults != null &&
+                                      index < aiMatchResults.length
+                                  ? aiMatchResults[index]
+                                  : null,
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
@@ -686,17 +822,18 @@ class _MobilePropertyCard extends StatelessWidget {
                     left: 14,
                     child: Row(
                       children: [
+                        // Match Score Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade600,
+                            color: const Color(0xFF16a34a),
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: Colors.black.withAlpha(50),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -707,7 +844,7 @@ class _MobilePropertyCard extends StatelessWidget {
                               const Icon(
                                 Icons.auto_awesome,
                                 color: Colors.amberAccent,
-                                size: 14,
+                                size: 13,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -722,6 +859,8 @@ class _MobilePropertyCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
+
+                        // Distance Badge
                         if (aiResult!.distanceKm > 0)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -729,11 +868,11 @@ class _MobilePropertyCard extends StatelessWidget {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.85),
+                              color: Colors.black.withAlpha(200),
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
+                                  color: Colors.black.withAlpha(50),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
@@ -742,15 +881,15 @@ class _MobilePropertyCard extends StatelessWidget {
                             child: Row(
                               children: [
                                 const Icon(
-                                  Icons.navigation,
-                                  color: Colors.blueAccent,
+                                  Icons.navigation_rounded,
+                                  color: Colors.lightBlueAccent,
                                   size: 12,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${aiResult!.distanceKm} km',
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w800,
                                     fontSize: 11,
                                     color: Colors.white,
                                   ),
@@ -783,7 +922,7 @@ class _MobilePropertyCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           const Text(
-                            'New',
+                            'Featured',
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 12,
@@ -849,7 +988,7 @@ class _MobilePropertyCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
                       _buildFeature(
@@ -871,32 +1010,32 @@ class _MobilePropertyCard extends StatelessWidget {
 
                   if (aiResult != null &&
                       aiResult!.matchReasons.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.shade50.withValues(alpha: 0.7),
-                        border: Border.all(color: Colors.indigo.shade100),
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFFF0F9FF),
+                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(
-                                Icons.explore,
-                                size: 14,
-                                color: Colors.indigo.shade600,
+                              const Icon(
+                                Icons.explore_rounded,
+                                size: 15,
+                                color: Color(0xFF0284C7),
                               ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   '${aiResult!.distanceKm} km • ~${aiResult!.travelTimeMins} mins commute to ${aiResult!.destinationLandmark}',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.indigo.shade900,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0369A1),
                                   ),
                                 ),
                               ),
@@ -909,7 +1048,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                 (reason) => Padding(
                                   padding: const EdgeInsets.only(
                                     bottom: 4,
-                                    left: 4,
+                                    left: 2,
                                   ),
                                   child: Row(
                                     crossAxisAlignment:
@@ -918,7 +1057,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                       const Text(
                                         '•',
                                         style: TextStyle(
-                                          color: Colors.grey,
+                                          color: Color(0xFF0284C7),
                                           fontSize: 14,
                                           height: 1.2,
                                         ),
@@ -929,7 +1068,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                           reason,
                                           style: const TextStyle(
                                             fontSize: 11.5,
-                                            color: Colors.black87,
+                                            color: AppColors.ink,
                                             height: 1.4,
                                           ),
                                         ),
@@ -943,9 +1082,9 @@ class _MobilePropertyCard extends StatelessWidget {
                     ),
                   ],
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   const Divider(height: 1, color: AppColors.line),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -962,7 +1101,7 @@ class _MobilePropertyCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'LKR ${property.monthlyRent.toStringAsFixed(0)}',
+                            'LKR ${_fmtMoney(property.monthlyRent)}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
@@ -1027,5 +1166,12 @@ class _MobilePropertyCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _fmtMoney(dynamic v) {
+    final numVal = num.tryParse(v?.toString() ?? '') ?? 0;
+    return numVal
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');
   }
 }

@@ -17,6 +17,11 @@ class PropertyModel {
   final List<String> featureTags;
   final Map<String, dynamic> raw;
 
+  String get city =>
+      (raw['city'] ?? raw['City'] ?? (address.contains(',') ? address.split(',').last : address))
+          .toString()
+          .trim();
+
   PropertyModel({
     required this.id,
     required this.title,

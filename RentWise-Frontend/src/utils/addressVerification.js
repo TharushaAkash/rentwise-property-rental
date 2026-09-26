@@ -1,27 +1,4 @@
 /**
- * Utility Bill Address Verification & Agentic AI OCR Checker
- * Automatically checks if the property address matches the utility bill address.
- */
-
-// Known mock / sample utility bills mapped to verified addresses
-const KNOWN_BILL_ADDRESS_MAP = [
-  {
-    pattern: /554224155|electricity/i,
-    detectedAddress: 'Thalangama North, Battaramulla, Colombo',
-    accountNo: 'CEB-084-992147-9',
-    utilityProvider: 'Ceylon Electricity Board (CEB)',
-    billDate: '2026-08-15'
-  },
-  {
-    pattern: /586769852|water/i,
-    detectedAddress: '45 Ward Place, Colombo 07',
-    accountNo: 'NWSDB-COL-55120-X',
-    utilityProvider: 'National Water Supply & Drainage Board',
-    billDate: '2026-08-20'
-  }
-];
-
-/**
  * Normalizes an address string for comparison (lowercasing, removing punctuation, standard abbreviations).
  */
 export function normalizeAddress(addr) {
@@ -90,136 +67,58 @@ export function compareAddresses(propertyAddress, billAddress) {
   };
 }
 
-/**
- * Comprehensive verification status evaluation for a property.
- * Evaluates utility bill attachment, document address, and matches with property address.
- *
- * @param {object} property
- * @returns {{
- *   hasBill: boolean,
- *   billUrl: string | null,
- *   propertyAddress: string,
- *   billAddress: string,
- *   accountNo: string,
- *   utilityProvider: string,
- *   isVerified: boolean,
- *   matchScore: number,
- *   matchDetails: string,
- *   statusLabel: 'Verified' | 'Address Mismatch' | 'No Bill Attached',
- *   statusBadgeVariant: 'success' | 'danger' | 'warning' | 'default'
- * }}
- */
+// Verification badges use persisted backend decisions, never sample OCR data.
 export function evaluatePropertyVerification(property) {
-  if (!property) {
-    return {
-      hasBill: false,
-      billUrl: null,
-      propertyAddress: '',
-      billAddress: '',
-      accountNo: '',
-      utilityProvider: '',
-      isVerified: false,
-      matchScore: 0,
-      matchDetails: 'No property provided',
-      statusLabel: 'No Bill Attached',
-      statusBadgeVariant: 'default'
-    };
+  const prop = property || {};
+  const address = prop.address || prop.Address || prop.city || '';
+  const documents = prop.documents || prop.Documents || [];
+  const proofDocuments = documents.filter(d => /utilitybill|proof|deed/i.test(d.documentType || d.DocumentType || ''));
+  const latestDocument = [...proofDocuments].sort((a, b) =>
+    Date.parse(b.createdAt || b.CreatedAt || 0) - Date.parse(a.createdAt || a.CreatedAt || 0))[0];
+  const billUrl = latestDocument?.documentUrl || latestDocument?.DocumentUrl || prop.utilityBillUrl || null;
+  const base = {
+    hasBill: Boolean(billUrl), billUrl, propertyAddress: address,
+    billAddress: '', accountNo: '', utilityProvider: '',
+    isVerified: false, isManuallyVerified: false, matchScore: null,
+    matchDetails: billUrl ? 'Proof submitted. Verification is pending.' : 'No ownership proof attached.',
+    statusLabel: billUrl ? 'Pending Verification' : 'No Bill Attached',
+    statusBadgeVariant: billUrl ? 'warning' : 'default'
+  };
+  const records = [...(prop.verificationRecords || prop.VerificationRecords || prop.verifications || [])]
+    .sort((a, b) => Date.parse(b.createdAt || b.CreatedAt || 0) - Date.parse(a.createdAt || a.CreatedAt || 0));
+  const status = prop.status ?? prop.Status;
+  const active = status === 'Active' || status === 1;
+  const record = records.find(r => {
+    const comments = r.comments || r.Comments || '';
+    return comments.startsWith('[AI_PROPERTY_VERIFICATION]') ||
+      r.adminId || r.AdminId || comments.startsWith('[REJECTED:') ||
+      (r.agentReport || r.AgentReport || '').startsWith('Approved by Admin');
+  });
+  if (!record) return base;
+
+  const raw = record.agentReport || record.AgentReport || '';
+  if (!(record.comments || record.Comments || '').startsWith('[AI_PROPERTY_VERIFICATION]')) {
+    const approved = active && (record.isApproved ?? record.IsApproved) === true;
+    return { ...base, isVerified: approved, isManuallyVerified: approved,
+      matchDetails: record.comments || record.Comments || raw,
+      statusLabel: approved ? 'Admin Verified' : 'Needs Review',
+      statusBadgeVariant: approved ? 'success' : 'warning' };
   }
 
-  const propAddress = property.address || property.Address || property.city || '';
-  
-  // Find utility bill URL
-  let billUrl = property.utilityBillUrl || null;
-  if (!billUrl && Array.isArray(property.documents)) {
-    const doc = property.documents.find(d => d?.documentType === 'UtilityBill' || d?.documentType === 'OwnershipProof');
-    if (doc?.documentUrl) billUrl = doc.documentUrl;
-  }
-
-  // Handle Admin Manual Approval / Verification Override
-  if (property.adminManuallyVerified || property.isManuallyApproved) {
-    return {
-      hasBill: Boolean(billUrl),
-      billUrl: billUrl || null,
-      propertyAddress: propAddress,
-      billAddress: billUrl ? (property.utilityBillAddress || propAddress) : 'Manually Approved by Administrator',
-      accountNo: property.utilityBillAccountNo || 'ADMIN-APPROVED',
-      utilityProvider: property.utilityProvider || 'Admin Manual Review',
-      isVerified: true,
-      isManuallyVerified: true,
-      matchScore: 100,
-      matchDetails: property.manualVerificationNote || 'Listing manually reviewed and verified by Administrator',
-      statusLabel: 'Admin Verified',
-      statusBadgeVariant: 'success'
-    };
-  }
-
-  if (!billUrl) {
-    return {
-      hasBill: false,
-      billUrl: null,
-      propertyAddress: propAddress,
-      billAddress: '',
-      accountNo: '',
-      utilityProvider: '',
-      isVerified: false,
-      matchScore: 0,
-      matchDetails: 'No utility bill proof attached to listing',
-      statusLabel: 'No Bill Attached',
-      statusBadgeVariant: 'default'
-    };
-  }
-
-  // Determine OCR extracted address:
-  // 1. Explicitly recorded utilityBillAddress on property
-  // 2. Or matched against known mock/sample bills
-  // 3. Or if uploaded/attached, default to matching the property address (verified proof)
-  let extractedAddress = property.utilityBillAddress || '';
-  let accountNo = property.utilityBillAccountNo || 'CEB-084-992147-9';
-  let utilityProvider = property.utilityProvider || 'Ceylon Electricity Board (CEB)';
-
-  if (!extractedAddress) {
-    const known = KNOWN_BILL_ADDRESS_MAP.find(k => k.pattern.test(billUrl));
-    if (known) {
-      extractedAddress = known.detectedAddress;
-      accountNo = known.accountNo;
-      utilityProvider = known.utilityProvider;
-    } else {
-      // For user-uploaded bill files in this demo, simulate OCR extracting a specific address
-      // This allows demonstrating both match and mismatch states based on what the user types in the form.
-      extractedAddress = 'No 12/3 Garden Lane, Piliyandala';
-    }
-  }
-
-  const comparison = compareAddresses(propAddress, extractedAddress);
-
-  if (comparison.isMatch) {
-    return {
-      hasBill: true,
-      billUrl,
-      propertyAddress: propAddress,
-      billAddress: extractedAddress,
-      accountNo,
-      utilityProvider,
-      isVerified: true,
-      matchScore: comparison.score,
-      matchDetails: comparison.details,
-      statusLabel: 'Verified',
-      statusBadgeVariant: 'success'
-    };
-  } else {
-    return {
-      hasBill: true,
-      billUrl,
-      propertyAddress: propAddress,
-      billAddress: extractedAddress,
-      accountNo,
-      utilityProvider,
-      isVerified: false,
-      matchScore: comparison.score,
-      matchDetails: comparison.details,
-      statusLabel: 'Address Mismatch',
-      statusBadgeVariant: 'danger'
-    };
-  }
+  let report;
+  try { report = JSON.parse(raw); } catch { return base; }
+  if (!report || typeof report !== 'object') return base;
+  // An old approval must not verify an edited address or a replacement proof.
+  if (normalizeAddress(report.propertyAddress) !== normalizeAddress(address) ||
+      !proofDocuments.some(d => (d.documentUrl || d.DocumentUrl) === report.documentUrl) ||
+      (latestDocument && Date.parse(latestDocument.createdAt || latestDocument.CreatedAt) >
+        Date.parse(record.createdAt || record.CreatedAt))) return base;
+  const recommendation = report.recommendation;
+  if (!['Approve-ready', 'Needs Review', 'Reject-recommended'].includes(recommendation)) return base;
+  const approved = active && recommendation === 'Approve-ready';
+  return { ...base, billUrl: report.documentUrl, hasBill: true,
+    isVerified: approved, recommendation,
+    matchDetails: report.reasoning || 'Administrator review is required.',
+    statusLabel: approved ? 'Verified' : recommendation === 'Reject-recommended' ? 'Review Recommended' : 'Needs Review',
+    statusBadgeVariant: approved ? 'success' : recommendation === 'Reject-recommended' ? 'danger' : 'warning' };
 }
-

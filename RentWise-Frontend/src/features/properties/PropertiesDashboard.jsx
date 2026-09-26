@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PropertyForm } from './PropertyForm';
+import { OwnerDocumentMessages } from './DocumentReviewMessages';
 import { Plus, Pencil, Trash2, Eye, SlidersHorizontal, Check, X, Clock, Calendar, Building2, Users, Mail, MapPin, CheckCircle2, AlertCircle, ArrowRight, FileText, DollarSign, Phone, ShieldCheck } from 'lucide-react';
 import { handleImageError, PROPERTY_PLACEHOLDER_IMAGE } from '../../utils/imagePlaceholder';
 
@@ -285,6 +286,7 @@ export const PropertiesDashboard = () => {
   };
 
   const handleCreate = async (data, files, utilityBillFile) => {
+    let verificationMessage = '';
     try {
       const payload = { 
         ...data, 
@@ -330,30 +332,26 @@ export const PropertiesDashboard = () => {
             }
           } catch (billUploadErr) {
             console.warn('Utility bill photo upload note:', billUploadErr);
+            verificationMessage = 'Utility bill upload failed. Please try again.';
           }
         }
 
         if (billUrl) {
           try {
-            await api.post(`/properties/${createdId}/proof`, {
+            const proofResponse = await api.post(`/properties/${createdId}/proof`, {
               documentType: 'UtilityBill',
               documentUrl: billUrl
             });
+            verificationMessage = proofResponse.data?.message || 'Proof submitted for verification.';
           } catch (proofErr) {
-            try {
-              await api.post(`/properties/${createdId}/documents`, {
-                documentType: 'UtilityBill',
-                documentUrl: billUrl
-              });
-            } catch (docErr) {
-              console.warn('Document proof note:', docErr);
-            }
+            console.warn('Proof submission failed:', proofErr);
+            verificationMessage = 'Property saved, but proof verification could not be submitted. Please try again.';
           }
         }
       }
 
       setFeedback({
-        text: `Property "${data.title}" created successfully! Awaiting Admin Approval.`,
+        text: `Property "${data.title}" created successfully! ${verificationMessage || 'Awaiting Admin Approval.'}`,
         type: 'success'
       });
       setIsModalOpen(false);
@@ -370,6 +368,7 @@ export const PropertiesDashboard = () => {
   // Handle Edit / Update Property
   const handleUpdate = async (data, files, utilityBillFile) => {
     if (!editingProperty?.id) return;
+    let verificationMessage = '';
     try {
       setIsSaving(true);
       setFeedback({ text: '', type: '' });
@@ -426,24 +425,20 @@ export const PropertiesDashboard = () => {
             }
           } catch (billUploadErr) {
             console.warn('Utility bill photo upload note:', billUploadErr);
+            verificationMessage = 'Utility bill upload failed. Please try again.';
           }
         }
 
         if (billUrl) {
           try {
-            await api.post(`/properties/${editingProperty.id}/proof`, {
+            const proofResponse = await api.post(`/properties/${editingProperty.id}/proof`, {
               documentType: 'UtilityBill',
               documentUrl: billUrl
             });
+            verificationMessage = proofResponse.data?.message || 'Proof submitted for verification.';
           } catch (proofErr) {
-            try {
-              await api.post(`/properties/${editingProperty.id}/documents`, {
-                documentType: 'UtilityBill',
-                documentUrl: billUrl
-              });
-            } catch (docErr) {
-              console.warn('Document proof note:', docErr);
-            }
+            console.warn('Proof submission failed:', proofErr);
+            verificationMessage = 'Property saved, but proof verification could not be submitted. Please try again.';
           }
         }
       }
@@ -453,7 +448,7 @@ export const PropertiesDashboard = () => {
       setIsModalOpen(false);
       setEditingProperty(null);
       setFeedback({
-        text: `Property "${data.title}" updated successfully!`,
+        text: `Property "${data.title}" updated successfully! ${verificationMessage}`,
         type: 'success'
       });
       refetchProps();
@@ -755,6 +750,8 @@ export const PropertiesDashboard = () => {
           <span>Manage Details</span>
         </Button>
       </div>
+
+      <OwnerDocumentMessages onSubmitted={refetchProps} />
 
       {/* Top Metric: Properties Count Only */}
       <div className="rounded-2xl bg-white border border-gray-200/90 p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

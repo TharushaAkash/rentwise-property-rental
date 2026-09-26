@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/providers/auth_provider.dart';
+import '../../home/models/property_model.dart';
+import '../../home/providers/property_provider.dart';
+import '../../properties/property_service.dart';
 import '../../shared/theme/app_theme.dart';
 import '../models/rental_model.dart';
 import '../providers/rental_provider.dart';
@@ -22,9 +25,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
   @override
   void initState() {
     super.initState();
-    final user = ref.read(authStateProvider).value;
-    final isOwner = _isOwner(user?.role);
-    _tabController = TabController(length: isOwner ? 2 : 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -33,13 +34,14 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
     super.dispose();
   }
 
-  bool _isOwner(String? role) => role == 'PropertyOwner' || role == 'Owner';
+  bool _isOwnerOrAdmin(String? role) =>
+      role == 'PropertyOwner' || role == 'Owner' || role == 'Administrator' || role == 'Admin';
 
   @override
   Widget build(BuildContext context) {
     final userState = ref.watch(authStateProvider);
     final user = userState.value;
-    final isOwner = _isOwner(user?.role);
+    final isManager = _isOwnerOrAdmin(user?.role);
     final agreementsAsync = ref.watch(agreementsProvider);
 
     return Scaffold(
@@ -68,8 +70,8 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                     ),
                   ),
                   Text(
-                    isOwner
-                        ? 'Manage tenant leases'
+                    isManager
+                        ? 'Tenant & Owner Leases & Listing Approvals'
                         : 'Your active lease agreements',
                     style: const TextStyle(
                       fontSize: 12,
@@ -128,10 +130,15 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
-                  tabs: const [
-                    Tab(text: 'Agreements'),
-                    Tab(text: 'Payments'),
-                  ],
+                  tabs: isManager
+                      ? const [
+                          Tab(text: 'Tenant & Owner Leases'),
+                          Tab(text: 'Listing Approvals'),
+                        ]
+                      : const [
+                          Tab(text: 'Agreements'),
+                          Tab(text: 'Payments'),
+                        ],
                 ),
               ),
             ),
@@ -140,10 +147,15 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
         body: agreementsAsync.when(
           data: (agreements) => TabBarView(
             controller: _tabController,
-            children: [
-              _AgreementsTab(agreements: agreements, isOwner: isOwner),
-              _PaymentsTab(agreements: agreements),
-            ],
+            children: isManager
+                ? [
+                    _OwnerLeasesTab(agreements: agreements),
+                    const _ListingApprovalsTab(),
+                  ]
+                : [
+                    _AgreementsTab(agreements: agreements, isOwner: false),
+                    _PaymentsTab(agreements: agreements),
+                  ],
           ),
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.teal),
@@ -188,7 +200,293 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 1: Agreements
+// Owner/Admin TAB 1: Tenant & Owner Leases (No "Pay Monthly Rent" button for Owner)
+// ─────────────────────────────────────────────────────────────────────────────
+class _OwnerLeasesTab extends ConsumerWidget {
+  final List<AgreementModel> agreements;
+
+  const _OwnerLeasesTab({required this.agreements});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RefreshIndicator(
+      color: AppColors.teal,
+      onRefresh: () async => ref.read(agreementsProvider.notifier).refresh(),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF005C27), Color(0xFF008037)],
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('OWNER LEASE MANAGEMENT',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2)),
+                    const SizedBox(height: 4),
+                    Text('${agreements.length} Total Tenant Leases',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18)),
+                  ],
+                ),
+                const Icon(Icons.verified_user_rounded,
+                    color: Colors.white, size: 28),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (agreements.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(
+                child: Text(
+                  'No tenant leases issued yet. Accept a booking request to generate a lease.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.muted),
+                ),
+              ),
+            ),
+
+          ...agreements.map((a) => _AgreementCard(agreement: a)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Owner/Admin TAB 2: Listing Approvals & Verification
+// ─────────────────────────────────────────────────────────────────────────────
+class _ListingApprovalsTab extends ConsumerWidget {
+  const _ListingApprovalsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final propertiesAsync = ref.watch(propertiesProvider);
+    final user = ref.watch(authStateProvider).value;
+    final admin = user?.role == 'Administrator' || user?.role == 'Admin';
+
+    return propertiesAsync.when(
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: AppColors.teal)),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (properties) {
+        if (properties.isEmpty) {
+          return const Center(child: Text('No property listings found.'));
+        }
+
+        return RefreshIndicator(
+          color: AppColors.teal,
+          onRefresh: () async => ref.refresh(propertiesProvider.future),
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            itemCount: properties.length,
+            itemBuilder: (context, i) {
+              final p = properties[i];
+              final active = p.status == 'Active';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.line),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x06000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            p.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: AppColors.ink,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: active
+                                ? const Color(0xFFDCFCE7)
+                                : const Color(0xFFFEF9C3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            active ? 'Approved • Active' : 'Pending Verification',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: active
+                                  ? const Color(0xFF166534)
+                                  : const Color(0xFF854D0E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${p.address} • LKR ${p.monthlyRent.toStringAsFixed(0)}/mo',
+                      style: const TextStyle(
+                          color: AppColors.muted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Checklist Status Grid
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.canvas,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Ownership Proof',
+                                    style: TextStyle(
+                                        fontSize: 10, color: AppColors.muted)),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      active
+                                          ? Icons.check_circle_rounded
+                                          : Icons.schedule_rounded,
+                                      size: 14,
+                                      color: active
+                                          ? AppColors.teal
+                                          : Colors.amber.shade800,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      active ? 'Verified' : 'Pending Review',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: active
+                                            ? AppColors.teal
+                                            : Colors.amber.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                              width: 1, height: 28, color: AppColors.line),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Listing Fee (LKR 2,500)',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.muted)),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        active
+                                            ? Icons.check_circle_rounded
+                                            : Icons.schedule_rounded,
+                                        size: 14,
+                                        color: active
+                                            ? AppColors.teal
+                                            : Colors.amber.shade800,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        active ? 'Paid ✓' : 'Recorded',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: active
+                                              ? AppColors.teal
+                                              : Colors.amber.shade800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Admin Actions
+                    if (admin && !active)
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () async {
+                            final api = ref.read(propertyServiceProvider);
+                            await api.request(
+                                'PUT', '/properties/${p.id}/approve', {});
+                            ref.refresh(propertiesProvider.future);
+                          },
+                          icon: const Icon(Icons.verified_rounded, size: 16),
+                          label: const Text('Approve & Publish Listing'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF16a34a),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 1 (Tenant): Agreements
 // ─────────────────────────────────────────────────────────────────────────────
 class _AgreementsTab extends ConsumerWidget {
   final List<AgreementModel> agreements;
@@ -221,7 +519,7 @@ class _AgreementsTab extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 2: Payments summary & Recurring Monthly Rent
+// TAB 2 (Tenant): Payments summary & Recurring Monthly Rent
 // ─────────────────────────────────────────────────────────────────────────────
 class _PaymentsTab extends ConsumerWidget {
   final List<AgreementModel> agreements;
@@ -405,6 +703,9 @@ class _AgreementCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    final isTenant = user?.role == 'Tenant' || user == null;
+
     final step = agreement.lifecycleStep;
     final rent = agreement.agreedMonthlyRent;
     final deposit = agreement.securityDeposit > 0
@@ -426,7 +727,7 @@ class _AgreementCard extends ConsumerWidget {
         stepIcon = Icons.payment_rounded;
       default:
         stepColor = const Color(0xFF2563eb);
-        stepLabel = 'Pending Your Review';
+        stepLabel = 'Pending Review';
         stepIcon = Icons.pending_actions_rounded;
     }
 
@@ -701,7 +1002,7 @@ class _AgreementCard extends ConsumerWidget {
                         ),
                       ),
 
-                      if (step < 3) ...[
+                      if (step < 3 && isTenant) ...[
                         const SizedBox(width: 10),
                         Expanded(
                           child: FilledButton.icon(
@@ -759,7 +1060,7 @@ class _AgreementCard extends ConsumerWidget {
                         ),
                       ],
 
-                      if (step == 3) ...[
+                      if (step == 3 && isTenant) ...[
                         const SizedBox(width: 10),
                         Expanded(
                           child: FilledButton.icon(

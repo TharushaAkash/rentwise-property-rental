@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
-
-
+import '../shared/utils/api_constants.dart';
+import '../features/home/models/property_model.dart';
 
 class AiPropertyMatchResult {
-  final dynamic property;
+  final PropertyModel property;
   final int matchScore;
   final double distanceKm;
   final int travelTimeMins;
@@ -25,233 +25,268 @@ class AiPropertyMatchResult {
 class AiSearchResult {
   final List<AiPropertyMatchResult> results;
   final String destinationLandmark;
-  
+
   AiSearchResult(this.results, this.destinationLandmark);
 }
 
-Future<AiSearchResult> matchPropertiesWithAi(String query, List<dynamic> properties) async {
+Future<AiSearchResult> matchPropertiesWithAi(
+  String query,
+  List<dynamic> properties,
+) async {
   if (query.trim().isEmpty || properties.isEmpty) {
     return AiSearchResult([], '');
   }
 
-  final q = query.toLowerCase().trim();
-  
-  // Budget extraction (needed for Agentic Service payload)
+  final qLower = query.toLowerCase().trim();
+
+  // 1. Natural Language Location Extraction
+  final extractedDest = _extractLandmarkName(qLower);
+  final destKey = _extractDestKey(qLower);
+
+  // Budget extraction
   double targetMaxBudget = 0;
-  final budgetMatch = RegExp(r'(?:under|below|less than|max)\s*(?:lkr\s*|rs\.?\s*)?(\d+)(?:k|000)?', caseSensitive: false).firstMatch(q) ??
-                      RegExp(r'(\d+)k', caseSensitive: false).firstMatch(q);
+  final budgetMatch = RegExp(
+          r'(?:under|below|less than|max)\s*(?:lkr\s*|rs\.?\s*)?(\d+)(?:k|000)?',
+          caseSensitive: false)
+      .firstMatch(qLower) ??
+      RegExp(r'(\d+)k', caseSensitive: false).firstMatch(qLower);
   if (budgetMatch != null) {
-    double num = double.parse(budgetMatch.group(1)!);
-    if (num < 1000) num = num * 1000;
-    targetMaxBudget = num;
+    double numVal = double.parse(budgetMatch.group(1)!);
+    if (numVal < 1000) numVal = numVal * 1000;
+    targetMaxBudget = numVal;
   }
 
-  // 1. Try Calling Backend Agentic Service (Python Server)
+  // Bedroom extraction
+  int targetBeds = 0;
+  if (qLower.contains('1-bed') || qLower.contains('1 bed') || qLower.contains('single') || qLower.contains('studio')) {
+    targetBeds = 1;
+  } else if (qLower.contains('2-bed') || qLower.contains('2 bed')) {
+    targetBeds = 2;
+  } else if (qLower.contains('3-bed') || qLower.contains('3 bed')) {
+    targetBeds = 3;
+  } else if (qLower.contains('4-bed') || qLower.contains('4 bed')) {
+    targetBeds = 4;
+  }
+
+  // Facilities extraction
+  final wantsAC = qLower.contains('ac') || qLower.contains('air condition');
+  final wantsParking = qLower.contains('park') || qLower.contains('garage');
+  final wantsPool = qLower.contains('pool');
+  final wantsFurnished = qLower.contains('furnish');
+  final wantsGarden = qLower.contains('garden');
+
+  // 2. Try Calling Backend Agentic Service Proxy / Python Service
   try {
-    // Try 127.0.0.1 first (for Windows/iOS), fallback to 10.0.2.2 (for Android Emulator)
-    // Also try the deployed Render URL if local agent isn't running.
     final urlsToTry = [
-      'http://127.0.0.1:8000/workflow/match-location',
+      '${ApiConstants.baseUrl}/agentic/workflow/match-location',
+      'https://rentwise-ai-service.onrender.com/workflow/match-location',
       'http://10.0.2.2:8000/workflow/match-location',
-      'https://rentwise-ai-service.onrender.com/workflow/match-location'
+      'http://127.0.0.1:8000/workflow/match-location',
     ];
 
     http.Response? response;
-    
+
     for (String urlString in urlsToTry) {
       try {
         final url = Uri.parse(urlString);
-        // Render free tier can take 50 seconds to wake up from sleep
-        final timeoutSeconds = urlString.contains('onrender') ? 60 : 5;
-        response = await http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'objective': query,
-            'tenant_profile': {
-              'name': 'Prospective Tenant',
-              'role': 'Tenant',
-              'preferredBudgetMax': targetMaxBudget > 0 ? targetMaxBudget : null
-            }
-          }),
-        ).timeout(Duration(seconds: timeoutSeconds));
-        
+        final timeoutSeconds =
+            urlString.contains('onrender') || urlString.contains('azure') ? 60 : 6;
+        response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'objective': query,
+                'tenant_profile': {
+                  'name': 'Prospective Tenant',
+                  'role': 'Tenant',
+                  'preferredBudgetMax':
+                      targetMaxBudget > 0 ? targetMaxBudget : null
+                }
+              }),
+            )
+            .timeout(Duration(seconds: timeoutSeconds));
+
         if (response.statusCode == 200) {
           break; // Success!
         }
-      } catch (_) {
-        // Ignore and try next URL
-      }
+      } catch (_) {}
     }
 
     if (response != null && response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final returnedProperties = data['ranked_properties'] ?? data['matching_results'];
-      
+      final returnedProperties =
+          data['ranked_properties'] ?? data['matching_results'];
+
       if (returnedProperties != null && returnedProperties is List) {
-        String destLandmark = data['destination_landmark'] ?? 'Target Area';
+        String destLandmark = data['destination_landmark'] ?? extractedDest;
         List<AiPropertyMatchResult> backendMatches = [];
 
         for (var p in returnedProperties) {
-          final propId = p['property_id'] ?? p['id'];
-          // Find the matching original property model to ensure we have all local fields
-          final matchExisting = properties.firstWhere(
-            (ep) => ep.id.toString() == propId.toString(),
-            orElse: () => null,
-          );
-          
-          if (matchExisting != null) {
-            backendMatches.add(AiPropertyMatchResult(
-              property: matchExisting,
-              matchScore: (p['match_score'] ?? 0).toInt(),
-              distanceKm: (p['distance_km'] ?? 0).toDouble(),
-              travelTimeMins: (p['travel_time_mins'] ?? 0).toInt(),
-              matchReasons: (p['match_reasons'] as List?)?.map((e) => e.toString()).toList() ?? [],
-              destinationLandmark: destLandmark,
-            ));
+          final propId = (p['property_id'] ?? p['id'] ?? '').toString();
+
+          // Match with local property model
+          PropertyModel? matchExisting;
+          for (var ep in properties) {
+            if (ep is PropertyModel) {
+              if (ep.id.toString().toLowerCase() == propId.toLowerCase() ||
+                  (p['title'] != null &&
+                      ep.title.toLowerCase() ==
+                          p['title'].toString().toLowerCase())) {
+                matchExisting = ep;
+                break;
+              }
+            }
           }
+
+          final propModel = matchExisting ??
+              PropertyModel.fromJson({
+                'id': propId.isNotEmpty
+                    ? propId
+                    : 'ai_prop_${backendMatches.length}',
+                'title': p['title'] ?? 'Matching Property',
+                'description': p['description'] ?? '',
+                'address': p['address'] ?? p['city'] ?? 'Sri Lanka',
+                'monthlyRent': p['monthly_rent'] ?? p['monthlyRent'] ?? 0,
+                'bedrooms': p['bedrooms'] ?? 1,
+                'bathrooms': p['bathrooms'] ?? 1,
+                'sqft': p['sqft'] ?? 1200,
+                'propertyType':
+                    p['property_type'] ?? p['propertyType'] ?? 'Apartment',
+                'status': 'Active',
+                'photoUrl': p['photo_url'] ?? p['photoUrl'] ?? '',
+                'facilities': p['facilities'] ?? '',
+              });
+
+          double dist = num.tryParse(p['distance_km']?.toString() ??
+                      p['distance']?.toString() ??
+                      '')
+                  ?.toDouble() ??
+              1.8;
+          int timeMins = num.tryParse(p['travel_time_mins']?.toString() ??
+                      p['travel_time']?.toString() ??
+                      '')
+                  ?.toInt() ??
+              (dist * 2.5).round();
+
+          List<String> reasons = (p['match_reasons'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+          if (reasons.isEmpty && p['reasoning'] != null) {
+            reasons = [p['reasoning'].toString()];
+          }
+
+          backendMatches.add(AiPropertyMatchResult(
+            property: propModel,
+            matchScore:
+                (num.tryParse(p['match_score']?.toString() ?? '') ?? 85)
+                    .toInt(),
+            distanceKm: dist,
+            travelTimeMins: timeMins > 0 ? timeMins : 6,
+            matchReasons: reasons,
+            destinationLandmark: p['destination_landmark'] ?? destLandmark,
+          ));
         }
-        
-        // Sort descending by score
-        backendMatches.sort((a, b) => b.matchScore.compareTo(a.matchScore));
-        return AiSearchResult(backendMatches, destLandmark);
+
+        if (backendMatches.isNotEmpty) {
+          backendMatches.sort((a, b) => b.matchScore.compareTo(a.matchScore));
+          return AiSearchResult(backendMatches, destLandmark);
+        }
       }
     }
   } catch (e) {
     print('Agentic AI backend note, executing client-side fallback: $e');
   }
 
-  // 2. Resilient Client-Side Agent Engine (Fallback)
-  
-  // Extract destination
-  String extractedDest = 'Target Area';
-  String destKey = 'any';
-  
-  if (q.contains('jaffna')) {
-    extractedDest = 'Jaffna'; destKey = 'jaffna';
-  } else if (q.contains('galle')) {
-    extractedDest = 'Galle'; destKey = 'galle';
-  } else if (q.contains('kurunegala')) {
-    extractedDest = 'Kurunegala'; destKey = 'kurunegala';
-  } else if (q.contains('sliit') || q.contains('malabe')) {
-    extractedDest = 'SLIIT Malabe'; destKey = 'malabe';
-  } else if (q.contains('orion')) {
-    extractedDest = 'Orion City IT Park'; destKey = 'orion';
-  } else if (q.contains('colombo 07') || q.contains('ward place') || q.contains('cinnamon')) {
-    extractedDest = 'Colombo 07'; destKey = 'colombo 07';
-  } else if (q.contains('colombo 03') || q.contains('kollupitiya') || q.contains('marine')) {
-    extractedDest = 'Colombo 03'; destKey = 'colombo 03';
-  } else if (q.contains('colombo')) {
-    extractedDest = 'Colombo'; destKey = 'colombo';
-  } else if (q.contains('university') || q.contains('uoc')) {
-    extractedDest = 'University of Colombo'; destKey = 'university';
-  } else if (q.contains('battaramulla') || q.contains('thalangama')) {
-    extractedDest = 'Battaramulla'; destKey = 'battaramulla';
-  } else if (q.contains('pelawatte')) {
-    extractedDest = 'Pelawatte'; destKey = 'pelawatte';
-  } else if (q.contains('dehiwala') || q.contains('mount lavinia')) {
-    extractedDest = 'Dehiwala'; destKey = 'dehiwala';
-  } else if (q.contains('kandy') || q.contains('peradeniya')) {
-    extractedDest = 'Kandy'; destKey = 'kandy';
-  }
-
-  // Budget extraction was moved to the top of the file
-
-  // Bedroom extraction
-  int targetBeds = 0;
-  if (q.contains('1-bed') || q.contains('1 bed') || q.contains('single') || q.contains('studio')) targetBeds = 1;
-  else if (q.contains('2-bed') || q.contains('2 bed')) targetBeds = 2;
-  else if (q.contains('3-bed') || q.contains('3 bed')) targetBeds = 3;
-  else if (q.contains('4-bed') || q.contains('4 bed')) targetBeds = 4;
-
-  // Facilities extraction
-  final wantsAC = q.contains('ac') || q.contains('air condition');
-  final wantsParking = q.contains('park') || q.contains('garage');
-  final wantsPool = q.contains('pool');
-  final wantsFurnished = q.contains('furnish');
-  final wantsGarden = q.contains('garden');
+  // 3. Resilient Client-Side Agent Engine (Matching FindRentals.jsx)
+  final targetTown = destKey;
 
   List<AiPropertyMatchResult> scoredList = [];
 
-  for (var prop in properties) {
-    final title = (prop.title ?? '').toString().toLowerCase();
-    final address = (prop.address ?? '').toString().toLowerCase();
-    final description = (prop.description ?? '').toString().toLowerCase();
-    
-    // In our model we don't have facilities or city, we'll parse from description/address
-    final propFacilities = description; 
-    
-    final rent = (prop.monthlyRent ?? 0).toDouble();
-    final beds = (prop.bedrooms ?? 0).toInt();
+  for (int idx = 0; idx < properties.length; idx++) {
+    var rawProp = properties[idx];
+    final PropertyModel prop = rawProp is PropertyModel
+        ? rawProp
+        : PropertyModel.fromJson(rawProp as Map<String, dynamic>);
 
-    // Strict location filtering for fallback
-    if (destKey != 'any' && destKey != 'colombo') {
-      if (!address.contains(destKey) && !description.contains(destKey) && !title.contains(destKey)) {
-        continue;
+    final title = prop.title.toLowerCase();
+    final address = prop.address.toLowerCase();
+    final description = prop.description.toLowerCase();
+    final city = prop.city.toLowerCase();
+    final propFacilities = prop.facilities.join(', ').toLowerCase();
+
+    final rent = prop.monthlyRent;
+    final beds = prop.bedrooms;
+
+    // Strict location filtering for client-side engine (matching FindRentals.jsx)
+    if (targetTown != 'any') {
+      final matchesTarget = address.contains(targetTown) ||
+          city.contains(targetTown) ||
+          title.contains(targetTown) ||
+          description.contains(targetTown) ||
+          (targetTown == 'malabe' &&
+              (address.contains('battaramulla') ||
+                  address.contains('pelawatte') ||
+                  address.contains('kaduwela'))) ||
+          (targetTown == 'orion' &&
+              (address.contains('dematagoda') || address.contains('colombo'))) ||
+          (targetTown == 'colombo 07' && address.contains('colombo')) ||
+          (targetTown == 'colombo 03' && address.contains('colombo')) ||
+          (targetTown == 'dehiwala' && address.contains('mount lavinia'));
+
+      if (!matchesTarget) {
+        continue; // Exclude properties not in or near the target location!
       }
     }
 
-    double distanceKm = 3.5;
-    int travelMins = 10;
-    
-    if (address.contains(destKey) || title.contains(destKey)) {
-      distanceKm = 1.6;
-      travelMins = 5;
-    } else if (destKey == 'sliit' && (address.contains('malabe') || description.contains('malabe'))) {
-      distanceKm = 1.8;
-      travelMins = 6;
-    } else if (destKey == 'sliit' && (address.contains('battaramulla') || address.contains('pelawatte'))) {
-      distanceKm = 4.2;
-      travelMins = 12;
-    } else if (destKey == 'colombo 07' && (address.contains('colombo') || address.contains('ward'))) {
-      distanceKm = 1.2;
-      travelMins = 4;
-    } else if (destKey == 'dehiwala' && (address.contains('dehiwala') || address.contains('marine'))) {
-      distanceKm = 1.4;
-      travelMins = 5;
+    // Calculate commute distance & travel time
+    double distanceKm = 1.8;
+    int travelMins = 6;
+
+    if (address.contains(targetTown) || title.contains(targetTown) || city.contains(targetTown)) {
+      distanceKm = double.parse((1.2 + (idx * 0.4)).toStringAsFixed(1));
+      travelMins = (distanceKm * 2.8).round().clamp(3, 12);
     } else {
-      distanceKm = 6.8;
-      travelMins = 20;
+      distanceKm = double.parse((3.5 + (idx * 0.6)).toStringAsFixed(1));
+      travelMins = (distanceKm * 2.5).round().clamp(8, 20);
     }
 
+    // Compute Match Score (0 - 100%)
     int score = 70;
     List<String> reasons = [];
+
+    // Location / Distance scoring
+    score += 20;
+    reasons.add(
+        'Proximity match: $distanceKm km (~$travelMins mins commute) to $extractedDest');
 
     // Budget evaluation (30 pts)
     if (targetMaxBudget > 0) {
       if (rent <= targetMaxBudget) {
         score += 15;
-        reasons.add('Monthly rent of LKR ${rent.toStringAsFixed(0)} fits within your LKR ${targetMaxBudget.toStringAsFixed(0)} budget');
+        reasons.add(
+            'Monthly rent of LKR ${_fmt(rent)} fits within your LKR ${_fmt(targetMaxBudget)} budget');
       } else if (rent <= targetMaxBudget * 1.1) {
         score += 8;
-        reasons.add('Rent of LKR ${rent.toStringAsFixed(0)} is very close to your budget');
+        reasons.add(
+            'Rent of LKR ${_fmt(rent)} is very close to your budget ceiling');
       } else {
         score -= 10;
       }
     } else {
       score += 10;
-      reasons.add('Competitively priced at LKR ${rent.toStringAsFixed(0)} per month');
-    }
-
-    // Distance & Commute evaluation (30 pts)
-    if (distanceKm <= 2.5) {
-      score += 15;
-      reasons.add('Excellent proximity: only ${distanceKm} km (~${travelMins} mins commute) to ${extractedDest}');
-    } else if (distanceKm <= 5.0) {
-      score += 8;
-      reasons.add('Reasonable commute: ${distanceKm} km (~${travelMins} mins) to ${extractedDest}');
-    } else {
-      score -= 5;
+      reasons.add('Competitively priced at LKR ${_fmt(rent)} per month');
     }
 
     // Bedroom evaluation (20 pts)
     if (targetBeds > 0) {
       if (beds == targetBeds) {
         score += 10;
-        reasons.add('Exactly matches your ${targetBeds}-bedroom preference');
+        reasons.add('Exactly matches your $targetBeds-bedroom preference');
       } else if (beds > targetBeds) {
         score += 6;
-        reasons.add('Offers ${beds} bedrooms (extra space for your needs)');
+        reasons.add('Offers $beds bedrooms (extra space for your needs)');
       } else {
         score -= 8;
       }
@@ -261,15 +296,28 @@ Future<AiSearchResult> matchPropertiesWithAi(String query, List<dynamic> propert
 
     // Facility matches (20 pts)
     List<String> facilityMatches = [];
-    if (wantsAC && (propFacilities.contains('air') || propFacilities.contains('ac'))) facilityMatches.add('Air Conditioning');
-    if (wantsParking && (propFacilities.contains('park') || propFacilities.contains('garage'))) facilityMatches.add('Parking');
-    if (wantsPool && propFacilities.contains('pool')) facilityMatches.add('Swimming Pool');
-    if (wantsFurnished && propFacilities.contains('furnish')) facilityMatches.add('Furnished');
-    if (wantsGarden && propFacilities.contains('garden')) facilityMatches.add('Garden');
+    if (wantsAC &&
+        (propFacilities.contains('air') || propFacilities.contains('ac'))) {
+      facilityMatches.add('Air Conditioning');
+    }
+    if (wantsParking &&
+        (propFacilities.contains('park') ||
+            propFacilities.contains('garage'))) {
+      facilityMatches.add('Parking');
+    }
+    if (wantsPool && propFacilities.contains('pool')) {
+      facilityMatches.add('Swimming Pool');
+    }
+    if (wantsFurnished && propFacilities.contains('furnish')) {
+      facilityMatches.add('Furnished');
+    }
+    if (wantsGarden && propFacilities.contains('garden')) {
+      facilityMatches.add('Garden');
+    }
 
     if (facilityMatches.isNotEmpty) {
       score += min(10, facilityMatches.length * 5);
-      reasons.add('Equipped with requested \${facilityMatches.join(" and ")}');
+      reasons.add('Equipped with requested ${facilityMatches.join(" and ")}');
     } else {
       score += 3;
     }
@@ -287,6 +335,135 @@ Future<AiSearchResult> matchPropertiesWithAi(String query, List<dynamic> propert
   }
 
   scoredList.sort((a, b) => b.matchScore.compareTo(a.matchScore));
-  
+
   return AiSearchResult(scoredList, extractedDest);
 }
+
+String _extractLandmarkName(String q) {
+  final Map<String, String> knowns = {
+    'jaffna': 'Jaffna',
+    'galle': 'Galle',
+    'kandy': 'Kandy',
+    'matara': 'Matara',
+    'kurunegala': 'Kurunegala',
+    'negombo': 'Negombo',
+    'trincomalee': 'Trincomalee',
+    'anuradhapura': 'Anuradhapura',
+    'batticaloa': 'Batticaloa',
+    'badulla': 'Badulla',
+    'ratnapura': 'Ratnapura',
+    'nuwara eliya': 'Nuwara Eliya',
+    'gampaha': 'Gampaha',
+    'kalutara': 'Kalutara',
+    'panadura': 'Panadura',
+    'moratuwa': 'Moratuwa',
+    'dehiwala': 'Dehiwala',
+    'mount lavinia': 'Mount Lavinia',
+    'nugegoda': 'Nugegoda',
+    'maharagama': 'Maharagama',
+    'kotte': 'Kotte',
+    'rajagiriya': 'Rajagiriya',
+    'battaramulla': 'Battaramulla',
+    'pelawatte': 'Pelawatte',
+    'malabe': 'SLIIT Malabe',
+    'sliit': 'SLIIT Malabe',
+    'orion': 'Orion City IT Park',
+    'colombo 07': 'Colombo 07',
+    'colombo 03': 'Colombo 03',
+    'colombo 01': 'Colombo Fort',
+    'fort': 'Colombo Fort',
+    'colombo': 'Colombo',
+    'kaduwela': 'Kaduwela',
+    'piliyandala': 'Piliyandala',
+    'wattala': 'Wattala',
+    'ja-ela': 'Ja-Ela',
+    'kelaniya': 'Kelaniya',
+    'university': 'University of Colombo',
+    'uoc': 'University of Colombo',
+    'peradeniya': 'Peradeniya',
+  };
+
+  for (final entry in knowns.entries) {
+    if (q.contains(entry.key)) {
+      return entry.value;
+    }
+  }
+
+  final stopwords = {
+    'house', 'home', 'apartment', 'flat', 'villa', 'studio', 'annex', 'room',
+    'rooms', 'under', 'below', 'max', 'budget', 'with', 'near', 'from', 'want',
+    'looking', 'rent', 'lkr', 'rs', 'and', 'for', 'the', 'property'
+  };
+  final words = q.split(RegExp(r'\s+')).where((w) => w.length > 2 && !stopwords.contains(w)).toList();
+  if (words.isNotEmpty) {
+    final w = words.first;
+    return '${w[0].toUpperCase()}${w.substring(1)}';
+  }
+
+  return 'Target Area';
+}
+
+String _extractDestKey(String q) {
+  final Map<String, String> knowns = {
+    'jaffna': 'jaffna',
+    'galle': 'galle',
+    'kandy': 'kandy',
+    'matara': 'matara',
+    'kurunegala': 'kurunegala',
+    'negombo': 'negombo',
+    'trincomalee': 'trincomalee',
+    'anuradhapura': 'anuradhapura',
+    'batticaloa': 'batticaloa',
+    'badulla': 'badulla',
+    'ratnapura': 'ratnapura',
+    'nuwara eliya': 'nuwara eliya',
+    'gampaha': 'gampaha',
+    'kalutara': 'kalutara',
+    'panadura': 'panadura',
+    'moratuwa': 'moratuwa',
+    'dehiwala': 'dehiwala',
+    'mount lavinia': 'dehiwala',
+    'nugegoda': 'nugegoda',
+    'maharagama': 'maharagama',
+    'kotte': 'kotte',
+    'rajagiriya': 'rajagiriya',
+    'battaramulla': 'battaramulla',
+    'pelawatte': 'pelawatte',
+    'malabe': 'malabe',
+    'sliit': 'malabe',
+    'orion': 'orion',
+    'colombo 07': 'colombo 07',
+    'colombo 03': 'colombo 03',
+    'colombo 01': 'colombo',
+    'fort': 'colombo',
+    'colombo': 'colombo',
+    'kaduwela': 'kaduwela',
+    'piliyandala': 'piliyandala',
+    'wattala': 'wattala',
+    'ja-ela': 'ja-ela',
+    'kelaniya': 'kelaniya',
+    'peradeniya': 'kandy',
+  };
+
+  for (final entry in knowns.entries) {
+    if (q.contains(entry.key)) {
+      return entry.value;
+    }
+  }
+
+  final stopwords = {
+    'house', 'home', 'apartment', 'flat', 'villa', 'studio', 'annex', 'room',
+    'rooms', 'under', 'below', 'max', 'budget', 'with', 'near', 'from', 'want',
+    'looking', 'rent', 'lkr', 'rs', 'and', 'for', 'the', 'property'
+  };
+  final words = q.split(RegExp(r'\s+')).where((w) => w.length > 2 && !stopwords.contains(w)).toList();
+  if (words.isNotEmpty) {
+    return words.first;
+  }
+
+  return 'any';
+}
+
+String _fmt(double v) => v
+    .toStringAsFixed(0)
+    .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');

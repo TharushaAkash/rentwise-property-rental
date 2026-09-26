@@ -21,7 +21,7 @@ namespace RentWise_Backend.Common.Middleware
             {
                 var apiKey = Environment.GetEnvironmentVariable("AgenticServiceApiKey") ?? configuration.GetValue<string>("AgenticServiceApiKey");
                 
-                if (!string.IsNullOrEmpty(apiKey) && apiKey.Equals(extractedApiKey))
+                if (!string.IsNullOrEmpty(apiKey) && string.Equals(apiKey, extractedApiKey.ToString(), StringComparison.Ordinal))
                 {
                     // Create a dummy identity so [Authorize] passes
                     var claims = new[] 
