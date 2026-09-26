@@ -10,6 +10,7 @@ import { PropertyForm } from '../properties/PropertyForm';
 import { handleImageError } from '../../utils/imagePlaceholder';
 import { Building2, Users, FileText, UserCheck, ShieldCheck, Search, Plus, Pencil, Trash2, Eye, Check, X, Clock, Calendar, Mail, Phone, CreditCard, CheckCircle2, AlertCircle, SlidersHorizontal, ArrowRight, RefreshCw, Lock, Unlock, UserCog, ShieldAlert, Ban, Zap, CheckCheck, FileCheck2 } from 'lucide-react';
 import { evaluatePropertyVerification } from '../../utils/addressVerification';
+import { AdminDocumentReviews } from '../properties/DocumentReviewMessages';
 
 const formatMoney = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
@@ -1448,6 +1449,15 @@ export const AdminDashboard = () => {
                       <span>Inspect Owner in Users Tab</span>
                     </Button>
                   </div>
+
+                  <AdminDocumentReviews
+                    key={p.id || p.Id}
+                    property={p}
+                    onSent={() => {
+                      fetchAllProperties();
+                      setInspectingProperty(prev => prev ? { ...prev, status: prev.status === 'Suspended' ? 'Suspended' : 'PendingVerification' } : prev);
+                    }}
+                  />
 
                   {/* Utility Bill / Ownership Document Inspection & Auto-Verification */}
                   {(() => {

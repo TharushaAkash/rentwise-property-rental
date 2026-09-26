@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PropertyForm } from './PropertyForm';
+import { OwnerDocumentMessages } from './DocumentReviewMessages';
 import { Plus, Pencil, Trash2, Eye, SlidersHorizontal, Check, X, Clock, Calendar, Building2, Users, Mail, MapPin, CheckCircle2, AlertCircle, ArrowRight, FileText, DollarSign, Phone, ShieldCheck } from 'lucide-react';
 import { handleImageError, PROPERTY_PLACEHOLDER_IMAGE } from '../../utils/imagePlaceholder';
 
@@ -749,6 +750,8 @@ export const PropertiesDashboard = () => {
           <span>Manage Details</span>
         </Button>
       </div>
+
+      <OwnerDocumentMessages onSubmitted={refetchProps} />
 
       {/* Top Metric: Properties Count Only */}
       <div className="rounded-2xl bg-white border border-gray-200/90 p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
