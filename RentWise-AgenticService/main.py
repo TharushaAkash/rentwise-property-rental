@@ -11,6 +11,7 @@ class WorkflowRequest(BaseModel):
     objective: str = ""
     tenant_profile: dict = None
     property_id: str = None
+    document_url: str = None
     # Add other parameters as needed based on the workflow type
 
 @app.get("/health")
@@ -51,6 +52,7 @@ def run_verification_workflow(req: WorkflowRequest):
     initial_state = {
         "property_id": req.property_id,
         "verification_report": {},
+        "document_url": req.document_url,
         "current_agent": "PropertyVerification"
     }
     

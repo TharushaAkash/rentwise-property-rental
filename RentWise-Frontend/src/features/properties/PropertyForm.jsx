@@ -5,6 +5,7 @@ import { propertySchema } from './types';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../hooks/useAuth';
+import { evaluatePropertyVerification } from '../../utils/addressVerification';
 import { Tag, Plus, X, Sparkles, Building, Home, Check, FileText, ShieldCheck, Upload, Camera, AlertCircle, Zap, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 
 
@@ -56,8 +57,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
   const [photoUrlInput, setPhotoUrlInput] = useState('');
   
   // Utility Bill / Ownership Document state (for Agentic AI OCR verification)
-  const initialUtilityBill = initialData?.utilityBillUrl || 
-    (Array.isArray(initialData?.documents) ? initialData.documents.find(d => d?.documentType === 'UtilityBill' || d?.documentType === 'OwnershipProof')?.documentUrl : '') || '';
+  const initialUtilityBill = evaluatePropertyVerification(initialData).billUrl || '';
   const [utilityBillFile, setUtilityBillFile] = useState(null);
   const [utilityBillPreview, setUtilityBillPreview] = useState(initialUtilityBill);
 
