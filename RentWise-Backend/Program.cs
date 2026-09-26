@@ -106,6 +106,12 @@ var supabaseClient = new Supabase.Client(supabaseUrl, supabaseKey, supabaseOptio
 builder.Services.AddSingleton(supabaseClient);
 builder.Services.AddHttpClient<ISupabaseStorageService, RentWise.API.Common.Services.SupabaseStorageService>();
 
+// Named HttpClient for the Agentic AI proxy — 120s timeout to allow for Gemini ReAct loops
+builder.Services.AddHttpClient("AgenticProxy", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(120);
+});
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

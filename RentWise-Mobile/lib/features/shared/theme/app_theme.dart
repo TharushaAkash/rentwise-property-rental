@@ -4,8 +4,8 @@ abstract final class AppColors {
   static const ink = Color(0xFF0F172A); // Deep Slate
   static const muted = Color(0xFF64748B); // Slate 500
   static const surface = Color(0xFFFFFFFF);
-  static const canvas = Color(0xFFF8FAFC); // Slate 50
-  static const line = Color(0xFFE2E8F0); // Slate 200
+  static const canvas = Color(0xFFF4F7F5); // Slate 50
+  static const line = Color(0xFFE3EBE6); // Slate 200
   static const navy = Color(0xFF008037); // RentWise Emerald Green #008037
   static const teal = Color(0xFF008037); // Primary Action
   static const darkGreen = Color(0xFF005C27); // Darker Green
@@ -19,16 +19,55 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
   final scheme = ColorScheme.fromSeed(
     seedColor: AppColors.teal,
     brightness: brightness,
-    surface: brightness == Brightness.light ? AppColors.surface : const Color(0xFF1E293B),
+    surface: brightness == Brightness.light
+        ? AppColors.surface
+        : const Color(0xFF1E293B),
   );
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: brightness == Brightness.light ? AppColors.canvas : const Color(0xFF0F172A),
+    scaffoldBackgroundColor: brightness == Brightness.light
+        ? AppColors.canvas
+        : const Color(0xFF0F172A),
+    visualDensity: VisualDensity.standard,
+    dividerTheme: const DividerThemeData(
+      color: AppColors.line,
+      thickness: 1,
+      space: 24,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColors.surface,
+      selectedColor: AppColors.softTeal,
+      side: const BorderSide(color: AppColors.line),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      labelStyle: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: AppColors.ink,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.teal,
+        minimumSize: const Size(48, 50),
+        side: const BorderSide(color: AppColors.line),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
     fontFamily: 'sans-serif',
     appBarTheme: AppBarTheme(
-      backgroundColor: brightness == Brightness.light ? AppColors.canvas : const Color(0xFF0F172A),
-      foregroundColor: brightness == Brightness.light ? AppColors.ink : Colors.white,
+      backgroundColor: brightness == Brightness.light
+          ? AppColors.canvas
+          : const Color(0xFF0F172A),
+      foregroundColor: brightness == Brightness.light
+          ? AppColors.ink
+          : Colors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
@@ -40,9 +79,20 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: brightness == Brightness.light ? AppColors.surface : const Color(0xFF1E293B),
+      fillColor: brightness == Brightness.light
+          ? AppColors.surface
+          : const Color(0xFF1E293B),
+      floatingLabelStyle: const TextStyle(
+        color: AppColors.teal,
+        fontWeight: FontWeight.w700,
+      ),
+      prefixIconColor: AppColors.muted,
       hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
-      labelStyle: const TextStyle(color: AppColors.muted, fontSize: 13, fontWeight: FontWeight.w600),
+      labelStyle: const TextStyle(
+        color: AppColors.muted,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: AppColors.line),
@@ -58,7 +108,9 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
     ),
     cardTheme: CardThemeData(
-      color: brightness == Brightness.light ? AppColors.surface : const Color(0xFF1E293B),
+      color: brightness == Brightness.light
+          ? AppColors.surface
+          : const Color(0xFF1E293B),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
@@ -68,6 +120,8 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 52),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
         backgroundColor: AppColors.teal,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

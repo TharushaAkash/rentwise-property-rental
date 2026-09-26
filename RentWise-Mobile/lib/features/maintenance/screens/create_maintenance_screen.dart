@@ -1,22 +1,29 @@
+import '../../shared/widgets/modern_ui.dart';
+
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+
 import '../../shared/theme/app_theme.dart';
 import '../../../shared/utils/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/property_provider.dart';
 import '../providers/maintenance_provider.dart';
+
 import 'dart:async';
 
 class CreateMaintenanceScreen extends ConsumerStatefulWidget {
   const CreateMaintenanceScreen({super.key});
 
   @override
-  ConsumerState<CreateMaintenanceScreen> createState() => _CreateMaintenanceScreenState();
+  ConsumerState<CreateMaintenanceScreen> createState() =>
+      _CreateMaintenanceScreenState();
 }
 
-class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScreen> {
+class _CreateMaintenanceScreenState
+    extends ConsumerState<CreateMaintenanceScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedPropertyId;
   String _description = '';
@@ -27,7 +34,15 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
   String? _assignedProviderId;
   String? _assignedProviderName;
 
-  final List<String> _categories = ['Plumbing', 'Electrical', 'HVAC', 'Appliance', 'Structural', 'Pest', 'General'];
+  final List<String> _categories = [
+    'Plumbing',
+    'Electrical',
+    'HVAC',
+    'Appliance',
+    'Structural',
+    'Pest',
+    'General',
+  ];
   final List<Map<String, dynamic>> _priorities = [
     {'label': 'Low', 'value': 'Low', 'color': Colors.blueGrey},
     {'label': 'Medium', 'value': 'Medium', 'color': Colors.orange},
@@ -42,13 +57,38 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
     String prio = 'Medium';
 
     final lowerDesc = text.toLowerCase();
-    if (['pipe', 'water', 'leak', 'plumbing', 'flood', 'faucet', 'sink', 'toilet', 'drain', 'burst'].any((w) => lowerDesc.contains(w))) {
+    if ([
+      'pipe',
+      'water',
+      'leak',
+      'plumbing',
+      'flood',
+      'faucet',
+      'sink',
+      'toilet',
+      'drain',
+      'burst',
+    ].any((w) => lowerDesc.contains(w))) {
       cat = 'Plumbing';
-      prio = (lowerDesc.contains('flood') || lowerDesc.contains('burst')) ? 'Emergency' : 'High';
-    } else if (['power', 'light', 'electric', 'wire', 'socket'].any((w) => lowerDesc.contains(w))) {
+      prio = (lowerDesc.contains('flood') || lowerDesc.contains('burst'))
+          ? 'Emergency'
+          : 'High';
+    } else if ([
+      'power',
+      'light',
+      'electric',
+      'wire',
+      'socket',
+    ].any((w) => lowerDesc.contains(w))) {
       cat = 'Electrical';
       prio = 'High';
-    } else if (['ac', 'heater', 'cool', 'air', 'fan'].any((w) => lowerDesc.contains(w))) {
+    } else if ([
+      'ac',
+      'heater',
+      'cool',
+      'air',
+      'fan',
+    ].any((w) => lowerDesc.contains(w))) {
       cat = 'HVAC';
       prio = 'Medium';
     }
@@ -59,14 +99,20 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
     try {
       final authState = ref.read(authStateProvider);
       final token = authState.value?.token;
-      
+
       final res = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/service-providers'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (res.statusCode == 200) {
         final List<dynamic> providers = jsonDecode(res.body);
-        final matches = providers.where((p) => p['category'].toString().toLowerCase().contains(cat.toLowerCase())).toList();
+        final matches = providers
+            .where(
+              (p) => p['category'].toString().toLowerCase().contains(
+                cat.toLowerCase(),
+              ),
+            )
+            .toList();
         if (matches.isNotEmpty) {
           assignedId = matches[0]['id'];
           assignedName = matches[0]['name'];
@@ -84,14 +130,26 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
         _assignedProviderName = assignedName;
       });
       if (showToast) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('AI Triage: $cat - $prio\n${assignedName != null ? 'Provider: $assignedName' : 'No provider found'}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'AI Triage: $cat - $prio\n${assignedName != null ? 'Provider: $assignedName' : 'No provider found'}',
+            ),
+          ),
+        );
       }
     }
   }
 
   Future<void> _submitRequest() async {
     if (!_formKey.currentState!.validate() || _selectedPropertyId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a property and fill all required fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select a property and fill all required fields',
+          ),
+        ),
+      );
       return;
     }
     _formKey.currentState!.save();
@@ -120,17 +178,22 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        ref.refresh(maintenanceProvider.future);
+        ref.invalidate(maintenanceProvider);
         if (mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maintenance request submitted successfully!')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Maintenance request submitted successfully!'),
+            ),
+          );
         }
       } else {
         throw Exception('Failed to create request: ${response.body}');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -144,10 +207,13 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
     final propertiesAsync = ref.watch(bookedPropertiesProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('New Maintenance Request', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: Colors.white,
+        title: const Text(
+          'New Maintenance Request',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        backgroundColor: AppColors.canvas,
         scrolledUnderElevation: 0,
       ),
       body: propertiesAsync.when(
@@ -159,17 +225,43 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const PageIntro(
+                    eyebrow: 'Care for your home',
+                    title: 'Let?s get it fixed.',
+                    description: 'Tell us what needs attention. Add a few details so your owner can help.',
+                    icon: Icons.handyman_outlined,
+                  ),
+                  const SizedBox(height: 28),
                   // 1. Property Context
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('TARGET PROPERTY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                      const Text(
+                        'TARGET PROPERTY',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.muted,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                       if (_selectedPropertyId != null)
                         Row(
                           children: [
-                            Icon(Icons.check_circle_rounded, size: 14, color: AppColors.teal),
+                            Icon(
+                              Icons.check_circle_rounded,
+                              size: 14,
+                              color: AppColors.teal,
+                            ),
                             const SizedBox(width: 4),
-                            Text('Booked Home', style: TextStyle(color: AppColors.teal, fontSize: 11, fontWeight: FontWeight.w700)),
+                            Text(
+                              'Booked Home',
+                              style: TextStyle(
+                                color: AppColors.teal,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                     ],
@@ -185,12 +277,19 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, size: 16, color: Colors.orange[800]),
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.orange[800],
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               "You don't have an active booked property yet. Please book a property first to request maintenance.",
-                              style: TextStyle(color: Colors.orange[800], fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.orange[800],
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
@@ -198,23 +297,40 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                     )
                   else
                     DropdownButtonFormField<String>(
-                      value: _selectedPropertyId,
+                      initialValue: _selectedPropertyId,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.line),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.line),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         hintText: '-- Choose your booked property --',
                       ),
                       items: properties.map((prop) {
                         return DropdownMenuItem(
                           value: prop.id,
-                          child: Text(prop.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          child: Text(
+                            prop.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
                         );
                       }).toList(),
-                      onChanged: (val) => setState(() => _selectedPropertyId = val),
-                      validator: (val) => val == null ? 'Please select a property' : null,
+                      onChanged: (val) =>
+                          setState(() => _selectedPropertyId = val),
+                      validator: (val) =>
+                          val == null ? 'Please select a property' : null,
                     ),
 
                   const SizedBox(height: 24),
@@ -231,28 +347,74 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('CATEGORY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                              const Text(
+                                'CATEGORY',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.muted,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                               Row(
                                 children: [
-                                  Icon(Icons.auto_awesome, size: 12, color: AppColors.teal),
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    size: 12,
+                                    color: AppColors.teal,
+                                  ),
                                   const SizedBox(width: 2),
-                                  Text('Network', style: TextStyle(color: AppColors.teal, fontSize: 10, fontWeight: FontWeight.w700)),
+                                  Text(
+                                    'Network',
+                                    style: TextStyle(
+                                      color: AppColors.teal,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: _category,
+                            initialValue: _category,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.white,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.line,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.line,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                             ),
-                            items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)))).toList(),
-                            onChanged: (val) => setState(() => _category = val!),
+                            items: _categories
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(
+                                      c,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => _category = val!),
                           ),
                         ],
                       ),
@@ -261,7 +423,15 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('URGENCY / PRIORITY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                          const Text(
+                            'URGENCY / PRIORITY',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.muted,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
@@ -269,20 +439,44 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                             children: _priorities.map((p) {
                               final isSelected = _priority == p['value'];
                               return GestureDetector(
-                                onTap: () => setState(() => _priority = p['value']),
+                                onTap: () =>
+                                    setState(() => _priority = p['value']),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 10,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isSelected ? p['color'] : Colors.white,
+                                    color: isSelected
+                                        ? p['color']
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: isSelected ? p['color'] : AppColors.line),
-                                    boxShadow: isSelected ? [BoxShadow(color: p['color'].withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))] : [],
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? p['color']
+                                          : AppColors.line,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: p['color'].withValues(
+                                                alpha: 0.3,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : [],
                                   ),
                                   child: Text(
                                     p['label'],
                                     style: TextStyle(
-                                      color: isSelected ? Colors.white : AppColors.muted,
-                                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppColors.muted,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w900
+                                          : FontWeight.w600,
                                       fontSize: 11,
                                     ),
                                   ),
@@ -296,29 +490,65 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                   ),
 
                   const SizedBox(height: 16),
-                  
+
                   // Provider suggestion
                   if (_assignedProviderName != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue[200]!)),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
                       child: Row(
                         children: [
-                          Icon(Icons.handyman_rounded, color: Colors.blue[700], size: 16),
+                          Icon(
+                            Icons.handyman_rounded,
+                            color: Colors.blue[700],
+                            size: 16,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('AI Suggested Provider', style: TextStyle(color: Colors.blue[700], fontSize: 10, fontWeight: FontWeight.bold)),
-                                Text(_assignedProviderName!, style: TextStyle(color: Colors.blue[900], fontSize: 13, fontWeight: FontWeight.w800)),
+                                Text(
+                                  'AI Suggested Provider',
+                                  style: TextStyle(
+                                    color: Colors.blue[700],
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  _assignedProviderName!,
+                                  style: TextStyle(
+                                    color: Colors.blue[900],
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.blue[200]!)),
-                            child: Text('Auto-Assigned', style: TextStyle(color: Colors.blue[700], fontSize: 9, fontWeight: FontWeight.bold)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.blue[200]!),
+                            ),
+                            child: Text(
+                              'Auto-Assigned',
+                              style: TextStyle(
+                                color: Colors.blue[700],
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -333,31 +563,71 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                     children: [
                       const Row(
                         children: [
-                          Text('ISSUE DESCRIPTION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                          Text(
+                            'ISSUE DESCRIPTION',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.muted,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                           SizedBox(width: 4),
-                          Text('*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          Text(
+                            '*',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                       GestureDetector(
                         onTap: () {
                           if (_description.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a description first')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please enter a description first',
+                                ),
+                              ),
+                            );
                             return;
                           }
                           _runAiTriage(_description, showToast: true);
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.teal,
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow: [BoxShadow(color: AppColors.teal.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))],
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.teal.withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+                              Icon(
+                                Icons.auto_awesome,
+                                size: 12,
+                                color: Colors.white,
+                              ),
                               SizedBox(width: 4),
-                              Text('AI Triage', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                              Text(
+                                'AI Triage',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -372,19 +642,35 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                       fillColor: Colors.white,
                       hintText: 'Describe the issue in detail...',
                       hintStyle: const TextStyle(color: AppColors.muted),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                     ),
-                    validator: (val) => val == null || val.isEmpty ? 'Description cannot be empty' : null,
+                    validator: (val) => val == null || val.isEmpty
+                        ? 'Description cannot be empty'
+                        : null,
                     onSaved: (val) => _description = val ?? '',
                     onChanged: (val) {
                       _description = val;
-                      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+                      if (_debounceTimer?.isActive ?? false) {
+                        _debounceTimer!.cancel();
+                      }
                       if (val.trim().length > 8) {
-                        _debounceTimer = Timer(const Duration(milliseconds: 700), () {
-                          _runAiTriage(val);
-                        });
+                        _debounceTimer = Timer(
+                          const Duration(milliseconds: 700),
+                          () {
+                            _runAiTriage(val);
+                          },
+                        );
                       }
                     },
                   ),
@@ -401,11 +687,26 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
                         backgroundColor: AppColors.teal,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Submit Request', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Submit Request',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -414,7 +715,8 @@ class _CreateMaintenanceScreenState extends ConsumerState<CreateMaintenanceScree
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error loading properties: $err')),
+        error: (err, stack) =>
+            Center(child: Text('Error loading properties: $err')),
       ),
     );
   }

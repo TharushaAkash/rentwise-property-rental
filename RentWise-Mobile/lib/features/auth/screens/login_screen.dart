@@ -1,5 +1,8 @@
+import '../../shared/widgets/modern_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../shared/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../../home/screens/home_screen.dart';
@@ -31,10 +34,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     setState(() => _error = null);
-    ref.read(authStateProvider.notifier).login(
-          _email.text.trim(),
-          _password.text,
-        );
+    ref
+        .read(authStateProvider.notifier)
+        .login(_email.text.trim(), _password.text);
   }
 
   @override
@@ -44,7 +46,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.listen(authStateProvider, (previous, next) {
       next.whenOrNull(
         error: (error, stackTrace) {
-          setState(() => _error = error.toString().replaceAll('Exception:', '').trim());
+          setState(
+            () => _error = error.toString().replaceAll('Exception:', '').trim(),
+          );
         },
         data: (user) {
           if (user != null) {
@@ -66,49 +70,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 60,
-                    width: 60,
-                    decoration: BoxDecoration(
-                      color: AppColors.teal,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.teal.withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.home_work_rounded,
-                      color: Colors.white,
-                      size: 32,
-                    ),
+                  const PageIntro(
+                    eyebrow: 'RentWise',
+                    title: 'Welcome home.',
+                    description: 'Your home, your plans, your next chapter. All in one place.',
+                    icon: Icons.cottage_outlined,
                   ),
                   const SizedBox(height: 28),
-                  const Text(
-                    'Welcome to\nRentWise',
-                    style: TextStyle(
-                      fontSize: 34,
-                      height: 1.15,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.ink,
-                    ),
+                  const FormHeading(
+                    'Sign in',
+                    'Pick up where you left off.',
+                    icon: Icons.lock_outline_rounded,
                   ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Sri Lanka’s premier smart rental & property management ecosystem.',
-                    style: TextStyle(fontSize: 15, height: 1.5, color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 30),
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: 'Email Address',
                       hintText: 'e.g. resident@rentwise.lk',
-                      prefixIcon: Icon(Icons.mail_outline_rounded, color: AppColors.teal),
+                      prefixIcon: Icon(
+                        Icons.mail_outline_rounded,
+                        color: AppColors.teal,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -118,10 +101,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       hintText: 'Enter your password',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.teal),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        color: AppColors.teal,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          _obscured
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
                           color: AppColors.muted,
                         ),
                         onPressed: () => setState(() => _obscured = !_obscured),
@@ -140,7 +128,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline_rounded, color: Color(0xFFB91C1C), size: 18),
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: Color(0xFFB91C1C),
+                              size: 18,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -164,19 +156,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: authState.isLoading ? null : _signIn,
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.teal,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        shadowColor: AppColors.teal.withOpacity(0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        shadowColor: AppColors.teal.withValues(alpha: 0.3),
                         elevation: 4,
                       ),
                       child: authState.isLoading
                           ? const SizedBox(
                               height: 22,
                               width: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
                             )
                           : const Text(
                               'Sign In to Account',
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                              ),
                             ),
                     ),
                   ),
@@ -188,7 +188,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       child: const Text(
                         'New to RentWise? Create an account',
-                        style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),

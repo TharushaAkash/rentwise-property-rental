@@ -71,27 +71,23 @@ class MaintenanceScreen extends ConsumerWidget {
     final userInitials = userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : 'T';
     Color statusColor;
     Color statusBg;
-    IconData statusIcon;
 
     switch (model.status.toLowerCase()) {
       case 'reported':
       case 'pending':
         statusColor = Colors.orange[800]!;
         statusBg = Colors.orange[50]!;
-        statusIcon = Icons.hourglass_top_rounded;
         break;
       case 'assigned':
       case 'in progress':
       case 'inprogress':
         statusColor = Colors.blue[800]!;
         statusBg = Colors.blue[50]!;
-        statusIcon = Icons.autorenew_rounded;
         break;
       case 'completed':
       default:
         statusColor = AppColors.teal;
         statusBg = AppColors.softTeal;
-        statusIcon = Icons.check_circle_outline_rounded;
         break;
     }
 
