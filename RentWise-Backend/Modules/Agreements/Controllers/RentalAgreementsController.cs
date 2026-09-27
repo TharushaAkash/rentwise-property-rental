@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using RentWise.API.Data;
 using RentWise.API.Modules.Agreements.Entities;
 using RentWise.API.Modules.Agreements.Interfaces;
+using RentWise.API.Modules.Agreements.Services;
 
 namespace RentWise.API.Modules.Agreements.Controllers
 {
@@ -19,13 +20,19 @@ namespace RentWise.API.Modules.Agreements.Controllers
     {
         private readonly IRentalAgreementService _agreementService;
         private readonly ApplicationDbContext _context;
+        private readonly IBookingConfirmationEmailSender _bookingEmail;
+        private readonly ILogger<RentalAgreementsController> _logger;
 
         public RentalAgreementsController(
             IRentalAgreementService agreementService,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IBookingConfirmationEmailSender bookingEmail,
+            ILogger<RentalAgreementsController> logger)
         {
             _agreementService = agreementService;
             _context = context;
+            _bookingEmail = bookingEmail;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -190,6 +197,8 @@ namespace RentWise.API.Modules.Agreements.Controllers
         {
             var agreement = await _context.RentalAgreements
                 .Include(ra => ra.Property)
+                .Include(ra => ra.Tenant)
+                .Include(ra => ra.Owner)
                 .FirstOrDefaultAsync(ra => ra.Id == id);
 
             if (agreement == null) return NotFound(new { message = "Rental agreement not found" });
@@ -222,9 +231,22 @@ namespace RentWise.API.Modules.Agreements.Controllers
 
             await _context.SaveChangesAsync();
 
+            // The payment is already saved. Email failure must not make the tenant pay again.
+            var confirmationEmailSent = false;
+            try
+            {
+                await _bookingEmail.SendAsync(agreement, payment, dto?.PaymentMethod ?? "Card");
+                confirmationEmailSent = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Booking email failed for payment {PaymentId} ({ErrorType}). Check SMTP configuration/delivery.", payment.Id, ex.GetType().Name);
+            }
+
             return Ok(new 
             { 
-                success = true, 
+                success = true,
+                confirmationEmailSent,
                 message = "Payment successful! The rental lease is now active and complete.", 
                 agreement, 
                 payment 

@@ -92,6 +92,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<IRentalAgreementService, RentalAgreementService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IBookingConfirmationEmailSender, BookingConfirmationEmailSender>();
 builder.Services.AddScoped<IRentReminderService, RentReminderService>();
 
 builder.Services.AddScoped<IMaintenanceRequestService, MaintenanceRequestService>();
