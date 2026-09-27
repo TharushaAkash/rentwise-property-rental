@@ -1,6 +1,6 @@
 # Durable rental workflow
 
-The React **Rental workflows** page (`/rental-workflows`) adds a separate rental preparation flow. Existing search, document verification, agreement and maintenance endpoints remain compatible. Flutter is intentionally not changed.
+The React **Rental concierge** page (`/rental-workflows`) adds a separate rental preparation flow. Existing search, document verification, agreement and maintenance endpoints remain compatible. Flutter is intentionally not changed.
 
 ## Flow and ownership
 
@@ -23,7 +23,7 @@ flowchart TD
     R <--> P
 ```
 
-Arrows to PostgreSQL are mediated by ASP.NET and EF Core. Python does not connect directly to the application database. Each `/advance` request loads the stored state, claims the next step with an optimistic concurrency token, passes the previous outputs to the internal Python role, validates its result, then saves it before the next step can run. React automatically advances remaining steps after **Run remaining steps**; closing the page leaves persisted progress available for recovery.
+Arrows to PostgreSQL are mediated by ASP.NET and EF Core. Python does not connect directly to the application database. Each `/advance` request loads the stored state, claims the next step with an optimistic concurrency token, passes the previous outputs to the internal Python role, validates its result, then saves it before the next step can run. React automatically prepares the proposal after **Find my next home**; closing the page leaves persisted progress available for recovery.
 
 The domain-specific coordinator creates a deterministic four-step plan from the validated rental preparation request. It is custom orchestration, not the old placeholder LangGraph chain. This deliberately keeps existing standalone graphs working.
 
@@ -87,6 +87,6 @@ Python tests use a controlled model and verify the chain, required tools, output
 
 Verification on 2026-09-27: 40 C# checks passed on SQLite and again on an isolated PostgreSQL 18 database with the actual migrations; 10 Python checks passed; backend and React builds passed. `tests/live_rental_smoke.py` also completed all four roles against the configured real model using synthetic listing data, without creating business records. Browser interaction and a deployed full-stack run have not been verified. Local ignored `.env` files were configured with a shared workflow key; deployed environments still require their own configuration and rollout.
 
-Demo: log in as a tenant, create a workflow, run its steps, then open the same reference as its owner/admin, review the agent results, request a revision or approve, and return to the tenant's page and refresh. Show PostgreSQL state and the saved draft/history. Test rejection and a failed step as well.
+Demo: log in as a tenant, submit preferences with **Find my next home**, wait for the proposal, then open the same reference as its owner/admin, review the agent results, request a revision or approve, and return to the tenant's page and refresh. Show PostgreSQL state and the saved draft/history. Test rejection and a failed step as well.
 
 **Assignment gap intentionally left:** Section 10 requires starting in one client and approving in the other. This change provides the React flow and shared API, but does not complete the Flutter part. Draft creation is the defined approval-gated action; explain that scope clearly in the demo. Keep each contributor's AI usage log and verify their understanding of their role.

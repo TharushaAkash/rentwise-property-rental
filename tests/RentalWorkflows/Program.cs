@@ -155,7 +155,47 @@ await using (var second = NewDb())
     try { await second.SaveChangesAsync(); } catch (DbUpdateConcurrencyException) { conflict = true; }
     Check(conflict, "Concurrent workers cannot overwrite workflow state");
 }
-Console.WriteLine($"{checks} rental workflow checks passed ({(string.IsNullOrEmpty(pgConnection) ? "SQLite" : "PostgreSQL migrations")}; no real LLM or deployment calls).");
+var bank = new RentWise.API.Modules.Users.Controllers.BankDetailsController(db);
+Login(owner.Id, "PropertyOwner");
+Check(await controller.Delete(run.Id) is ForbidResult, "Owner cannot delete tenant request");
+Login(stranger.Id, "Tenant");
+Check(await controller.Delete(run.Id) is NotFoundResult, "Another tenant cannot delete request");
+Login(tenant.Id, "Tenant");
+var runningDeletion = await service.Start(tenant.Id, Request());
+runningDeletion.Status = "Executing";
+await db.SaveChangesAsync();
+Check(await controller.Delete(runningDeletion.Id) is ConflictObjectResult, "Active preparation cannot be deleted mid-step");
+Check(await controller.Delete(run.Id) is NoContentResult, "Tenant deletes own completed request");
+Check(await controller.Get(run.Id) is NotFoundResult, "Deleted request cannot be opened");
+Check(await controller.Advance(run.Id) is NotFoundResult, "Deleted request cannot resume");
+Check(await db.RentalAgreements.AnyAsync(a => a.Id == agreement.Id), "Deleting request preserves saved agreement");
+Check(await db.AgentWorkflowSteps.AnyAsync(s => s.WorkflowId == run.Id && s.AgentName == "TenantDeletion"), "Deletion retains an audit record");
+void BankLogin(Guid id, string role) => bank.ControllerContext = new ControllerContext
+{
+    HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity([
+        new Claim(ClaimTypes.NameIdentifier, id.ToString()), new Claim(ClaimTypes.Role, role)], "Test")) }
+};
+var bankDto = new RentWise.API.Modules.Users.Controllers.BankDetailsDto
+{ BankName = "Test Bank", AccountName = "Test Owner", AccountNumber = "001234567890", Branch = "Test Branch" };
+BankLogin(tenant.Id, "Tenant");
+Check(await bank.Save(bankDto) is ForbidResult, "Tenant cannot change owner bank details");
+var missingBank = (OkObjectResult)await bank.ForAgreement(agreement.Id);
+Check(!JsonSerializer.SerializeToElement(missingBank.Value).GetProperty("configured").GetBoolean(), "Missing bank account produces an explicit unconfigured response");
+BankLogin(owner.Id, "PropertyOwner");
+Check(await bank.Save(new RentWise.API.Modules.Users.Controllers.BankDetailsDto()) is BadRequestObjectResult, "Incomplete bank details cannot be saved");
+Check(await bank.Save(bankDto) is OkObjectResult, "Owner can save their bank account");
+BankLogin(stranger.Id, "PropertyOwner");
+Check(await bank.ForAgreement(agreement.Id) is NotFoundResult, "Unrelated owner cannot read tenant payment instructions");
+BankLogin(tenant.Id, "Tenant");
+var transfer = JsonSerializer.SerializeToElement(((OkObjectResult)await bank.ForAgreement(agreement.Id)).Value);
+Check(transfer.GetProperty("accountNumber").GetString() == bankDto.AccountNumber, "Tenant receives the agreement owner's saved account, preserving leading zeroes");
+Check(!JsonSerializer.SerializeToElement(owner).TryGetProperty("BankAccountNumber", out _), "Generic user serialization does not expose bank account details");
+BankLogin(owner.Id, "PropertyOwner"); bankDto.AccountNumber = "009999999999";
+await bank.Save(bankDto);
+BankLogin(tenant.Id, "Tenant");
+transfer = JsonSerializer.SerializeToElement(((OkObjectResult)await bank.ForAgreement(agreement.Id)).Value);
+Check(transfer.GetProperty("accountNumber").GetString() == bankDto.AccountNumber, "Owner updates appear in subsequent transfer instructions");
+Console.WriteLine($"{checks} workflow and bank-detail checks passed ({(string.IsNullOrEmpty(pgConnection) ? "SQLite" : "PostgreSQL migrations")}; no real LLM or deployment calls).");
 
 class TestDb(DbContextOptions<ApplicationDbContext> options) : ApplicationDbContext(options)
 {

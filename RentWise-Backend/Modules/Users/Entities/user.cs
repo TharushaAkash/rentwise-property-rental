@@ -37,5 +37,13 @@ namespace RentWise.API.Modules.Users
         public string? NicImageUrl { get; set; }
 
         public bool IsBlocked { get; set; } = false;
+        [MaxLength(120), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankName { get; set; }
+        [MaxLength(150), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankAccountName { get; set; }
+        [MaxLength(40), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankAccountNumber { get; set; }
+        [MaxLength(120), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankBranch { get; set; }
     }
 }

@@ -89,7 +89,7 @@ export const Layout = () => {
       return [
         { name: 'Properties', path: '/properties', icon: <Home className="w-5 h-5" /> },
         { name: 'Find Rentals', path: '/find-rentals', icon: <Search className="w-5 h-5" /> },
-        { name: 'Rental workflows', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
+        { name: 'Rental concierge', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
         { name: 'Saved Items', path: '/saved-items', icon: <Heart className="w-5 h-5" /> },
         { name: 'My Profile', path: '/tenants', icon: <Users className="w-5 h-5" /> },
         { name: 'My Agreements', path: '/agreements', icon: <FileText className="w-5 h-5" /> },
@@ -98,7 +98,7 @@ export const Layout = () => {
     } else if (role === 'PropertyOwner') {
       return [
         { name: 'My Properties', path: '/properties', icon: <Home className="w-5 h-5" /> },
-        { name: 'Rental workflows', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
+        { name: 'Rental concierge', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
         { name: 'My Profile', path: '/profile', icon: <User className="w-5 h-5" /> },
         { name: 'My Tenants', path: '/tenants', icon: <Users className="w-5 h-5" /> },
         { name: 'Agreements', path: '/agreements', icon: <FileText className="w-5 h-5" /> },
@@ -108,7 +108,7 @@ export const Layout = () => {
     // Administrator
     return [
       { name: 'Manage Properties', path: '/admin?tab=properties', icon: <Building2 className="w-5 h-5" /> },
-      { name: 'Rental workflows', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
+      { name: 'Rental concierge', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
       { name: 'Manage Users', path: '/admin?tab=users', icon: <Users className="w-5 h-5" /> },
       { name: 'Agreements Requests', path: '/admin?tab=agreements', icon: <FileText className="w-5 h-5" /> },
       { name: 'Manage Profile', path: '/admin?tab=profile', icon: <User className="w-5 h-5" /> }
@@ -230,7 +230,7 @@ export const Layout = () => {
                 >
                   Find Rentals
                 </Link>
-                {user && <Link to="/rental-workflows" className="px-3 py-1 rounded text-white hover:bg-[#006e2e]">Rental workflows</Link>}
+                {user && <Link to="/rental-workflows" className="px-3 py-1 rounded text-white hover:bg-[#006e2e]">Rental concierge</Link>}
 
                 <Link
                   to="/agreements"
