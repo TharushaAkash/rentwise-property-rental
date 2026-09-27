@@ -7,6 +7,7 @@ import '../../shared/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../../home/screens/home_screen.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -114,6 +115,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         onPressed: () => setState(() => _obscured = !_obscured),
                       ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: authState.isLoading ? null : () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => ForgotPasswordScreen(initialEmail: _email.text.trim()),
+                        ));
+                      },
+                      child: const Text('Forgot password?'),
                     ),
                   ),
                   if (_error != null)
