@@ -38,6 +38,8 @@ namespace RentWise.API.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<AgentWorkflowRun>().HasIndex(r => new { r.RequestedById, r.CreatedAt });
+            modelBuilder.Entity<AgentWorkflowRun>().HasIndex(r => new { r.ReviewerId, r.Status });
             
             // Delete behaviors and relationships config
             modelBuilder.Entity<Property>()
