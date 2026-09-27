@@ -213,7 +213,7 @@ export const Login = () => {
               </label>
               <button
                 type="button"
-                onClick={() => alert('Please contact administrator or reset through support.')}
+                onClick={() => navigate('/forgot-password')}
                 className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
               >
                 Forgot Password?

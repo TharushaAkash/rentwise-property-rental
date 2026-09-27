@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Layout } from '../components/Layout';
 import { Landing } from '../features/landing/Landing';
 import { Login } from '../features/auth/Login';
+import { ForgotPassword } from '../features/auth/ForgotPassword';
 import { Register } from '../features/auth/Register';
 import { PropertiesDashboard } from '../features/properties/PropertiesDashboard';
 import { PropertyDetails } from '../features/properties/PropertyDetails';
@@ -53,6 +54,7 @@ export const AppRouter = () => {
       {/* Public Routes */}
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/register" element={<Register />} />
       
       {/* Routes wrapped in Dashboard / Portal Layout */}
