@@ -7,6 +7,23 @@ load_dotenv()
 
 app = FastAPI(title="RentWise Agentic Service")
 
+# Separate, authenticated endpoint: existing single-agent routes remain compatible.
+from agents.rental_workflow import StepRequest, run_step
+from fastapi import Header, HTTPException
+import secrets
+import os
+
+@app.post("/internal/rental-step")
+def rental_step(req: StepRequest, x_workflow_key: str = Header(default="")):
+    configured_key = os.getenv("AGENT_WORKFLOW_KEY", "")
+    if not configured_key or not secrets.compare_digest(x_workflow_key, configured_key):
+        raise HTTPException(status_code=403, detail="Internal workflow access required")
+    try:
+        return run_step(req)
+    except Exception:
+        # Provider payloads may contain private context. Only a safe error leaves this boundary.
+        raise HTTPException(status_code=502, detail="Rental agent failed safely; no business action was executed")
+
 class WorkflowRequest(BaseModel):
     objective: str = ""
     tenant_profile: dict = None

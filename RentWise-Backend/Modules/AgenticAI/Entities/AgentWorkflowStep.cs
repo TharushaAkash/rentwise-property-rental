@@ -12,5 +12,8 @@ namespace RentWise.API.Modules.AgenticAI.Entities
         public string ToolCallsJson { get; set; } = string.Empty;
         public string OutputJson { get; set; } = string.Empty;
         public string ValidationResult { get; set; } = string.Empty;
+        public string InputJson { get; set; } = "{}";
+        public int Sequence { get; set; }
+        public int Attempt { get; set; }
     }
 }

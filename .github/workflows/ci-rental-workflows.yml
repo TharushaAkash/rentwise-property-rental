@@ -1,0 +1,40 @@
+name: Rental workflow checks
+on:
+  push:
+    branches: [main, dev]
+    paths: ['RentWise-Backend/**', 'RentWise-AgenticService/**', 'tests/RentalWorkflows/**', '.github/workflows/ci-rental-workflows.yml']
+  pull_request:
+    paths: ['RentWise-Backend/**', 'RentWise-AgenticService/**', 'tests/RentalWorkflows/**', '.github/workflows/ci-rental-workflows.yml']
+jobs:
+  workflow:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: workflow_test
+          POSTGRES_PASSWORD: local_ci_fixture_only
+          POSTGRES_DB: rentwise_workflow_test_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U workflow_test -d rentwise_workflow_test_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: SQLite workflow checks
+        run: dotnet run --project tests/RentalWorkflows
+      - name: PostgreSQL migrations and workflow checks
+        env:
+          RENTWISE_WORKFLOW_TEST_DB: Host=localhost;Database=rentwise_workflow_test_ci;Username=workflow_test;Password=local_ci_fixture_only
+        run: dotnet run --project tests/RentalWorkflows --no-restore
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+        working-directory: RentWise-AgenticService
+      - name: Agent contracts and safe-failure checks
+        working-directory: RentWise-AgenticService
+        run: python -m unittest discover -s tests -p test_rental_workflow.py -v

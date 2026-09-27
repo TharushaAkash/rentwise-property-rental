@@ -19,6 +19,7 @@ import { OwnerProfileSection } from '../features/properties/OwnerProfileSection'
 import { AdminDashboard } from '../features/admin/AdminDashboard';
 import { FindRentals } from '../features/rentals/FindRentals';
 import { SavedItems } from '../features/rentals/SavedItems';
+import { RentalWorkflows } from '../features/workflows/RentalWorkflows';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -67,6 +68,7 @@ export const AppRouter = () => {
         {/* Protected Dashboard Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<RoleBasedRedirect />} />
+          <Route path="/rental-workflows" element={<RentalWorkflows />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/properties" element={<RoleRoute tenant={<TenantPropertyPortal />} other={<PropertiesDashboard />} admin={<Navigate to="/admin?tab=properties" replace />} />} />
           <Route path="/profile" element={<RoleRoute tenant={<TenantProfilePortal />} other={<OwnerProfileSection />} />} />
