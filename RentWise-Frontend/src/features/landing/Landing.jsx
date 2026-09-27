@@ -173,20 +173,46 @@ export const Landing = () => {
   }, [realProperties, searchLocation, minPrice, propertyType, bedrooms]);
 
   // Execute AI semantic matching search
-  const handleAiSearch = (promptOverride) => {
+  const handleAiSearch = async (promptOverride) => {
     const target = typeof promptOverride === 'string' ? promptOverride : aiPrompt;
-    if (!target || !target.trim()) return;
+    if (!target || !target.trim() || isAiSearching || loadingProperties) return;
 
     setAiPrompt(target);
     setIsAiSearching(true);
 
-    setTimeout(() => {
-      const results = matchPropertiesWithAi(target, realProperties);
+    try {
+      const res = await api.post('/agentic/workflow/match-location', {
+        objective: target.trim(),
+        tenant_profile: { name: 'Prospective Tenant', role: 'Tenant' }
+      });
+      const rankedProperties = res.data?.ranked_properties || res.data?.matching_results;
+      if (!Array.isArray(rankedProperties)) {
+        throw new Error('Invalid AI matching response');
+      }
+      const results = rankedProperties.flatMap((p) => {
+        const existing = realProperties.find((property) => String(property.id) === String(p.property_id || p.id));
+        if (!existing || getActiveBookingForProperty(existing.id).isBooked) return [];
+        return [{
+          ...existing,
+          aiScore: p.match_score,
+          aiMatchPercentage: p.match_score,
+          aiReasons: p.match_reasons || []
+        }];
+      });
       setAiMatchedProperties(results);
       setActiveAiPrompt(target);
+    } catch (err) {
+      console.warn('AI matching unavailable, using local property matching:', err);
+      const candidates = realProperties.map((p) => ({
+        ...p,
+        facilities: properties.find((property) => property.id === p.id)?.facilities || ''
+      }));
+      setAiMatchedProperties(matchPropertiesWithAi(target, candidates));
+      setActiveAiPrompt(target);
+    } finally {
       setIsAiSearching(false);
       document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
-    }, 350);
+    }
   };
 
   // Clear AI active search filter
@@ -467,7 +493,7 @@ export const Landing = () => {
 
                     <button
                       type="submit"
-                      disabled={isAiSearching || !aiPrompt.trim()}
+                      disabled={isAiSearching || loadingProperties || !aiPrompt.trim()}
                       className="px-7 py-3 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-95"
                     >
                       {isAiSearching ? (
@@ -496,6 +522,7 @@ export const Landing = () => {
                         key={prompt}
                         type="button"
                         onClick={() => handleAiSearch(prompt)}
+                        disabled={isAiSearching || loadingProperties}
                         className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-xs text-slate-300 hover:text-white transition-all text-left flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
                         <span>{prompt}</span>
