@@ -822,7 +822,9 @@ export const AgreementsDashboard = () => {
             syncAgreementUpdate(updated);
             setPayingAgreement(null);
             setFeedback({ 
-              text: 'Payment successful! The lease agreement is active and the process is complete!', 
+              text: updated.confirmationEmailSent === true
+                ? 'Payment successful! Confirmation email sent. Check your inbox and spam folder.'
+                : 'Payment successful. Email delivery was not confirmed. Contact support with your payment reference; do not pay again.',
               type: 'success' 
             });
             fetchAgreements();
@@ -1434,14 +1436,14 @@ const TenantPaymentModal = ({ isOpen, onClose, agreement, onPaymentSuccess }) =>
         paymentReference: `PAY-${Date.now().toString().slice(-6)}`
       };
 
-      let res = { data: { success: true, agreement: { ...agreement, status: 'Active' } } };
-      if (!String(agreement.id).startsWith('agr_')) {
-        res = await api.post(`/agreements/${agreement.id}/pay`, payload).catch(() => ({
-          data: { success: true, agreement: { ...agreement, status: 'Active' } }
-        }));
+      if (String(agreement.id).startsWith('agr_')) {
+        throw new Error('This booking is not saved on the server. Reopen a saved booking before paying.');
       }
+      const res = await api.post(`/agreements/${agreement.id}/pay`, payload);
+      if (res.data?.success !== true) throw new Error('Payment was not confirmed. Refresh payment history before retrying.');
       const updated = {
         ...agreement,
+        confirmationEmailSent: res.data.confirmationEmailSent,
         status: 'Active',
         termsAndConditions: `${agreement.termsAndConditions || ''}\n[PAYMENT_SUCCESS: LKR ${totalPayable} | Ref: ${payload.paymentReference} | Date: ${new Date().toISOString()} | Method: ${paymentMethodName}]`
       };
@@ -1449,7 +1451,7 @@ const TenantPaymentModal = ({ isOpen, onClose, agreement, onPaymentSuccess }) =>
       onPaymentSuccess(updated);
     } catch (err) {
       console.error('Payment failed:', err);
-      setPayError('Payment failed. Please check your card details or try again.');
+      setPayError(err.isAxiosError ? 'Payment was not confirmed. Refresh payment history before retrying.' : err.message);
     } finally {
       setIsProcessing(false);
     }

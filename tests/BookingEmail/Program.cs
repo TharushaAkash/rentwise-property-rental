@@ -62,6 +62,25 @@ try
     throw new Exception("Failed payment produced confirmation");
 }
 catch (InvalidOperationException) { Check(true, "Failed payment cannot produce a successful receipt"); }
+// The tenant portal uses /payments, not /pay. Exercise that route as well.
+sender.Fail = false;
+var paymentService = new PaymentService(new Repository<Payment>(db), db, sender, NullLogger<PaymentService>.Instance);
+var paymentsController = new PaymentsController(paymentService);
+var countBefore = sender.Count;
+var portalResult = (CreatedAtActionResult)await paymentsController.CreatePayment(agreement.Id, new Payment
+{
+    Amount = 50000, PaymentDate = DateTime.UtcNow, PaymentReference = "PORTAL-123",
+    PaymentMethod = "Bank transfer", IsSuccessful = true
+});
+var portalPayment = (Payment)portalResult.Value!;
+Check(sender.Count == countBefore + 1 && sender.SavedBeforeEmail, "Tenant portal /payments sends email after saving");
+Check(portalPayment.ConfirmationEmailSent == true && sender.Method == "Bank transfer", "Tenant portal returns email status and supplies payment method");
+await paymentsController.CreatePayment(agreement.Id, new Payment { IsSuccessful = false, Amount = 50000 });
+Check(sender.Count == countBefore + 1, "Unsuccessful portal payment sends no email");
+sender.Fail = true;
+portalResult = (CreatedAtActionResult)await paymentsController.CreatePayment(agreement.Id, new Payment { IsSuccessful = true, Amount = 50000 });
+Check(((Payment)portalResult.Value!).ConfirmationEmailSent == false, "Portal payment remains successful when SMTP fails");
+Check(await paymentsController.CreatePayment(Guid.NewGuid(), new Payment { IsSuccessful = true }) is NotFoundObjectResult, "Missing portal agreement returns 404 without email");
 Console.WriteLine($"All {checks} booking email checks passed.");
 
 sealed class FakeSender(ApplicationDbContext db) : IBookingConfirmationEmailSender
