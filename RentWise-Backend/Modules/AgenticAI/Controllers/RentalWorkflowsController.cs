@@ -21,7 +21,7 @@ public class RentalWorkflowsController(ApplicationDbContext db, RentalWorkflowSe
     public async Task<IActionResult> List()
     {
         if (Actor == null) return Forbid();
-        var query = db.AgentWorkflowRuns.AsNoTracking().Where(r => r.ObjectiveType == "RentalPreparation");
+        var query = db.AgentWorkflowRuns.AsNoTracking().Where(r => r.ObjectiveType == "RentalPreparation" && r.Status != "Deleted");
         if (!Admin) query = query.Where(r => r.RequestedById == Actor || r.ReviewerId == Actor);
         return Ok(await query.OrderByDescending(r => r.CreatedAt).Take(100)
             .Select(r => new { r.Id, r.Status, r.CreatedAt, r.UpdatedAt, r.Version, r.PropertyId, r.AgreementId }).ToListAsync());
@@ -118,5 +118,27 @@ public class RentalWorkflowsController(ApplicationDbContext db, RentalWorkflowSe
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
-    private Task<AgentWorkflowRun?> Find(Guid id) => db.AgentWorkflowRuns.SingleOrDefaultAsync(r => r.Id == id && r.ObjectiveType == "RentalPreparation");
+    [HttpDelete("{id:guid}"), Authorize(Roles = "Tenant")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        if (Actor == null || !User.IsInRole("Tenant")) return Forbid();
+        var run = await Find(id);
+        if (run == null || run.RequestedById != Actor) return NotFound();
+        if (run.Status == "Executing" && run.UpdatedAt > DateTime.UtcNow.AddMinutes(-3))
+            return Conflict(new { message = "Your proposal is still being prepared. Please wait for this step to finish before deleting it." });
+        // Retain the audit trail and any saved agreement; remove the request from active views.
+        run.Status = "Deleted";
+        run.Version++;
+        run.UpdatedAt = DateTime.UtcNow;
+        db.AgentWorkflowSteps.Add(new AgentWorkflowStep
+        {
+            WorkflowId = run.Id, AgentName = "TenantDeletion", Attempt = 1,
+            OutputJson = RentalWorkflowRules.Serialize(new { status = "Deleted", actorId = Actor }),
+            ValidationResult = "Passed: requester deleted the rental request; existing agreement unchanged."
+        });
+        try { await db.SaveChangesAsync(); return NoContent(); }
+        catch (DbUpdateConcurrencyException) { return Conflict(new { message = "The request changed. Refresh before deleting it." }); }
+    }
+
+    private Task<AgentWorkflowRun?> Find(Guid id) => db.AgentWorkflowRuns.SingleOrDefaultAsync(r => r.Id == id && r.ObjectiveType == "RentalPreparation" && r.Status != "Deleted");
 }
