@@ -37,6 +37,21 @@ export const AgreementDetails = () => {
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvc, setCardCvc] = useState('');
   const [payError, setPayError] = useState('');
+  const [emailNotice, setEmailNotice] = useState('');
+
+  const showEmailStatus = (sent) => {
+    setEmailNotice(sent === true
+      ? 'Your payment is recorded. The confirmation email was sent; please check your inbox and spam folder.'
+      : sent === false
+        ? 'Your payment is recorded, but the confirmation email could not be sent. Contact support with your payment reference. Do not pay again.'
+        : 'Your payment is recorded. Email delivery was not confirmed. Contact support if no email arrives; do not pay again.');
+  };
+
+  const requireSavedBooking = () => {
+    if (String(agreement.id).startsWith('agr_')) {
+      throw new Error('This booking has not been saved to the server. Please reopen a saved booking before making payment.');
+    }
+  };
 
   // Card Brand Detection
   const getCardBrand = (num) => {
@@ -181,27 +196,18 @@ export const AgreementDetails = () => {
         ? `${brand.name} Card (•••• ${cardNumber.slice(-4) || '4242'})`
         : 'Bank Transfer (Escrow Account)';
 
-      // 1. Try sending agree to backend (graceful fallback if local or offline)
-      try {
-        if (!String(agreement.id).startsWith('agr_')) {
-          await api.put(`/agreements/${agreement.id}/agree`, { signatureName });
-        }
-      } catch (agreeErr) {
-        console.warn('Backend agree note (syncing locally):', agreeErr);
+      // Only show payment success after the server confirms it.
+      requireSavedBooking();
+      await api.put(`/agreements/${agreement.id}/agree`, { signatureName });
+      const paymentResponse = await api.post(`/agreements/${agreement.id}/pay`, {
+        amount: payAmount,
+        paymentReference: ref,
+        paymentMethod: paymentMethodName
+      });
+      if (paymentResponse.data?.success !== true) {
+        throw new Error('Payment was not confirmed. Refresh payment history before retrying.');
       }
-
-      // 2. Try sending payment to backend (graceful fallback if local or offline)
-      try {
-        if (!String(agreement.id).startsWith('agr_')) {
-          await api.post(`/agreements/${agreement.id}/pay`, {
-            amount: payAmount,
-            paymentReference: ref,
-            paymentMethod: paymentMethodName
-          });
-        }
-      } catch (payErr) {
-        console.warn('Backend pay note (syncing locally):', payErr);
-      }
+      showEmailStatus(paymentResponse.data.confirmationEmailSent);
 
       // 3. Update agreement state with both signature and payment confirmation
       const updated = {
@@ -242,7 +248,9 @@ export const AgreementDetails = () => {
       fetchPayments();
     } catch (err) {
       console.error('Agree and payment process failed:', err);
-      setPayError('Failed to process payment. Please verify your details or use the demo autofill card.');
+      setPayError(err.response?.data?.message || (err.isAxiosError
+        ? 'Payment was not confirmed. Refresh payment history before retrying.'
+        : err.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -278,13 +286,16 @@ export const AgreementDetails = () => {
         ? `${brand.name} Card (•••• ${cardNumber.slice(-4) || '4242'})`
         : 'Bank Transfer (Escrow Account)';
 
-      if (!String(agreement.id).startsWith('agr_')) {
-        await api.post(`/agreements/${agreement.id}/pay`, {
-          amount: payAmount,
-          paymentReference: ref,
-          paymentMethod: paymentMethodName
-        });
+      requireSavedBooking();
+      const paymentResponse = await api.post(`/agreements/${agreement.id}/pay`, {
+        amount: payAmount,
+        paymentReference: ref,
+        paymentMethod: paymentMethodName
+      });
+      if (paymentResponse.data?.success !== true) {
+        throw new Error('Payment was not confirmed. Refresh payment history before retrying.');
       }
+      showEmailStatus(paymentResponse.data.confirmationEmailSent);
 
       const updated = {
         ...agreement,
@@ -322,7 +333,9 @@ export const AgreementDetails = () => {
       fetchPayments();
     } catch (err) {
       console.error('Payment failed:', err);
-      setPayError('Payment processing failed. Please check your card details or try again.');
+      setPayError(err.response?.data?.message || (err.isAxiosError
+        ? 'Payment was not confirmed. Refresh payment history before retrying.'
+        : err.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -341,6 +354,11 @@ export const AgreementDetails = () => {
       </button>
 
       {/* House Hero Banner */}
+      {emailNotice && (
+        <div role="status" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          {emailNotice}
+        </div>
+      )}
       <div className="relative rounded-3xl overflow-hidden shadow-lg border border-gray-200 bg-slate-900 text-white">
         <div className="relative aspect-[21/9] w-full max-h-[340px] overflow-hidden bg-slate-800">
           <img

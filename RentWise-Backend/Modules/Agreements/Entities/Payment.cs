@@ -13,5 +13,11 @@ namespace RentWise.API.Modules.Agreements.Entities
         
         public string PaymentReference { get; set; } = string.Empty;
         public bool IsSuccessful { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public string PaymentMethod { get; set; } = "Not specified";
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public bool? ConfirmationEmailSent { get; set; }
     }
 }

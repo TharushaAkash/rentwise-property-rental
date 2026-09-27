@@ -1240,6 +1240,9 @@ export const TenantProfilePortal = () => {
 
   const handlePaymentSuccess = (newPayment) => {
     setPayments((prev) => [newPayment, ...prev]);
+    setAgreeSuccessMessage(newPayment.confirmationEmailSent === true
+      ? 'Payment recorded. Confirmation email sent; check your inbox and spam folder.'
+      : 'Payment recorded, but email delivery was not confirmed. Contact support with your payment reference. Do not pay again.');
 
     if (selectedAgreementForPayment) {
       const targetId = selectedAgreementForPayment.id;
@@ -1251,6 +1254,7 @@ export const TenantProfilePortal = () => {
             const terms = ag.termsAndConditions || ag.terms || '';
             return {
               ...ag,
+              id: newPayment.rentalAgreementId || ag.id,
               status: 'Active',
               isPaid: true,
               paidAt: timestamp,
@@ -1268,6 +1272,7 @@ export const TenantProfilePortal = () => {
             const terms = ag.termsAndConditions || ag.terms || '';
             return {
               ...ag,
+              id: newPayment.rentalAgreementId || ag.id,
               status: 'Active',
               isPaid: true,
               paidAt: timestamp,

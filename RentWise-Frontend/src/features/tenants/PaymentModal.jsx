@@ -106,34 +106,34 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
         paymentMethod: methodName
       };
 
-      // 1. Try sending to backend
-      try {
-        let finalAgreementId = agreement.id;
+      // Save the payment on the server before displaying success.
+      let finalAgreementId = agreement.id;
 
-        // If it's a mock agreement from the UI, we must persist it to the database first!
-        if (String(finalAgreementId).startsWith('agr_')) {
-          const createRes = await api.post('/agreements', {
-             propertyId: agreement.propertyId,
-             ownerId: agreement.ownerId || "00000000-0000-0000-0000-000000000000",
-             agreedMonthlyRent: Number(rentAmount),
-             securityDeposit: agreement.securityDeposit || Number(rentAmount) * 2,
-             termsAndConditions: agreement.termsAndConditions || agreement.terms || '',
-             status: 'Active'
-          });
-          if (createRes.data && createRes.data.id) {
-             finalAgreementId = createRes.data.id;
-          }
-        }
-
-        await api.post(`/agreements/${finalAgreementId}/payments`, {
-          amount: Number(rentAmount),
-          paymentDate: now.toISOString(),
-          paymentReference: txnRef,
-          isSuccessful: true
+      // If it's a mock agreement from the UI, we must persist it to the database first!
+      if (String(finalAgreementId).startsWith('agr_')) {
+        const createRes = await api.post('/agreements', {
+           propertyId: agreement.propertyId,
+           ownerId: agreement.ownerId || "00000000-0000-0000-0000-000000000000",
+           agreedMonthlyRent: Number(rentAmount),
+           securityDeposit: agreement.securityDeposit || Number(rentAmount) * 2,
+           termsAndConditions: agreement.termsAndConditions || agreement.terms || '',
+           status: 'Active'
         });
-      } catch (backendErr) {
-        console.warn('Backend payment note (persisting locally):', backendErr);
+        if (createRes.data && createRes.data.id) {
+           finalAgreementId = createRes.data.id;
+        }
       }
+
+      const paymentResponse = await api.post(`/agreements/${finalAgreementId}/payments`, {
+        amount: Number(rentAmount),
+        paymentDate: now.toISOString(),
+        paymentReference: txnRef,
+        isSuccessful: true,
+        paymentMethod: methodName
+      });
+      newPayment.id = paymentResponse.data.id;
+      newPayment.rentalAgreementId = finalAgreementId;
+      newPayment.confirmationEmailSent = paymentResponse.data.confirmationEmailSent;
 
       // 2. Persist in local storage
       try {
@@ -149,7 +149,7 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
       }
       onClose();
     } catch (err) {
-      setError('Payment failed. Please try again or check details.');
+      setError('Payment was not confirmed. Refresh payment history before retrying.');
     } finally {
       setIsLoading(false);
     }

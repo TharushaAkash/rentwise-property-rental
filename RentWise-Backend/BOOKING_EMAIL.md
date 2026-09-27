@@ -1,6 +1,6 @@
 # Booking and payment confirmation email
 
-The web and mobile booking flows call `POST /api/agreements/{id}/pay`. After this endpoint saves a successful payment and activates the lease, it emails the tenant registered on that agreement.
+Booking checkout uses `POST /api/agreements/{id}/pay`; the tenant portal uses `POST /api/agreements/{id}/payments`. Both routes email the registered tenant after saving a successful payment and activating the lease. Unsuccessful payment records do not send confirmation. The portal can supply `paymentMethod` and receives `confirmationEmailSent` in its payment response; these two fields are response/request metadata, not database columns.
 
 The email includes the property and address, owner name, booking reference, lease dates/status, monthly rent, security deposit, amount paid, payment reference, date (UTC), method and status. Both HTML and plain-text versions are included. No card details are emailed.
 
