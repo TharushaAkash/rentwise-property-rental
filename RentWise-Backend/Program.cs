@@ -89,6 +89,21 @@ builder.Services.AddScoped<ISavedPropertyService, SavedPropertyService>();
 builder.Services.AddScoped<IApplicationService, ApplicationService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton<PasswordResetStore>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
+builder.Services.AddScoped<PasswordResetService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("password-reset", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            }));
+});
 
 builder.Services.AddScoped<IRentalAgreementService, RentalAgreementService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -324,6 +339,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseMiddleware<RentWise_Backend.Common.Middleware.ApiKeyMiddleware>();
 app.UseAuthorization();
 
