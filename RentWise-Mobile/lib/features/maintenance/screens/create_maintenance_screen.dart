@@ -211,7 +211,7 @@ class _CreateMaintenanceScreenState
       appBar: AppBar(
         title: const Text(
           'New Maintenance Request',
-          style: TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.canvas,
         scrolledUnderElevation: 0,
@@ -240,7 +240,7 @@ class _CreateMaintenanceScreenState
                         'TARGET PROPERTY',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.muted,
                           letterSpacing: 0.5,
                         ),
@@ -351,7 +351,7 @@ class _CreateMaintenanceScreenState
                                 'CATEGORY',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                   color: AppColors.muted,
                                   letterSpacing: 0.5,
                                 ),
@@ -427,7 +427,7 @@ class _CreateMaintenanceScreenState
                             'URGENCY / PRIORITY',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.muted,
                               letterSpacing: 0.5,
                             ),
@@ -475,7 +475,7 @@ class _CreateMaintenanceScreenState
                                           ? Colors.white
                                           : AppColors.muted,
                                       fontWeight: isSelected
-                                          ? FontWeight.w900
+                                          ? FontWeight.w700
                                           : FontWeight.w600,
                                       fontSize: 11,
                                     ),
@@ -525,7 +525,7 @@ class _CreateMaintenanceScreenState
                                   style: TextStyle(
                                     color: Colors.blue[900],
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -567,7 +567,7 @@ class _CreateMaintenanceScreenState
                             'ISSUE DESCRIPTION',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.muted,
                               letterSpacing: 0.5,
                             ),
@@ -625,7 +625,7 @@ class _CreateMaintenanceScreenState
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -703,7 +703,7 @@ class _CreateMaintenanceScreenState
                           : const Text(
                               'Submit Request',
                               style: TextStyle(
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 16,
                               ),
                             ),

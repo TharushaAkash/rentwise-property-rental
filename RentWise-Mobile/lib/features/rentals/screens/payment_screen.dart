@@ -273,7 +273,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               : (widget.isMonthlyRent
                     ? 'Pay Monthly Rent'
                     : 'Complete Activation Payment'),
-          style: const TextStyle(fontWeight: FontWeight.w800),
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
@@ -297,11 +297,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                 width: 110,
                 height: 110,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF005C27), Color(0xFF008037)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFF293F35),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -323,7 +319,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               'Payment Successful!',
               style: TextStyle(
                 fontSize: 26,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 color: AppColors.ink,
               ),
             ),
@@ -341,7 +337,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFDCFCE7),
+                color: const Color(0xFFECF1EC),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -349,7 +345,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                 children: [
                   const Icon(
                     Icons.verified_rounded,
-                    color: Color(0xFF16a34a),
+                    color: Color(0xFF426253),
                     size: 18,
                   ),
                   const SizedBox(width: 6),
@@ -358,8 +354,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                         ? 'Paid for $_selectedMonth ✓'
                         : 'Active Lease ✓',
                     style: const TextStyle(
-                      color: Color(0xFF14532D),
-                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF293F35),
+                      fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
                   ),
@@ -384,7 +380,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                     borderRadius: BorderRadius.circular(16),
                   ),
                   textStyle: const TextStyle(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 15,
                   ),
                 ),
@@ -409,11 +405,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF005C27), Color(0xFF008037)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: const Color(0xFF293F35),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -442,7 +434,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 34,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: -1,
                   ),
                 ),
@@ -464,7 +456,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
+              border: Border.all(color: const Color(0xFFDFE7EA)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,14 +465,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                   children: [
                     Icon(
                       Icons.calendar_month_rounded,
-                      color: Color(0xFF2563eb),
+                      color: Color(0xFF526A78),
                       size: 18,
                     ),
                     SizedBox(width: 8),
                     Text(
                       'PAYING RENT FOR MONTH',
                       style: TextStyle(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.ink,
                         fontSize: 12,
                         letterSpacing: 0.5,
@@ -503,14 +495,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF2563eb)),
+                      borderSide: const BorderSide(color: Color(0xFF526A78)),
                     ),
                     fillColor: Colors.white,
                     filled: true,
                   ),
                   style: const TextStyle(
                     color: AppColors.ink,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                   items: _billingMonths.map((m) {
@@ -614,7 +606,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE6F5EC),
+                    color: const Color(0xFFECF1EC),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFF86EFAC)),
                   ),
@@ -744,7 +736,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                   const Text(
                     'Bank Transfer Details',
                     style: TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.ink,
                       fontSize: 14,
                     ),
@@ -767,7 +759,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                   Text(
                     'Reference: ${widget.agreement.id}',
                     style: const TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.teal,
                       fontSize: 13,
                     ),
@@ -814,12 +806,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(56),
-                backgroundColor: const Color(0xFF16a34a),
+                backgroundColor: const Color(0xFF426253),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
                 textStyle: const TextStyle(
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                   fontSize: 16,
                 ),
               ),
@@ -854,11 +846,7 @@ class _CardMockup extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: brand.colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFF293F35),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -879,9 +867,7 @@ class _CardMockup extends StatelessWidget {
                 width: 40,
                 height: 28,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFD4AF37), Color(0xFFF0C040)],
-                  ),
+                  color: const Color(0xFFD4C3A0),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -890,7 +876,7 @@ class _CardMockup extends StatelessWidget {
                 brand.name,
                 style: TextStyle(
                   color: brand.accent,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                   fontSize: 14,
                   letterSpacing: 2,
                 ),

@@ -1,6 +1,6 @@
 # Durable rental workflow
 
-The React **Rental concierge** page (`/rental-workflows`) adds a separate rental preparation flow. Existing search, document verification, agreement and maintenance endpoints remain compatible. Flutter is intentionally not changed.
+The React **Rental concierge** page (`/rental-workflows`) adds a separate rental preparation flow. Existing search, document verification, agreement and maintenance endpoints remain compatible. Flutter now provides a Requests tab using the same API; see [mobile setup](../RentWise-Mobile/README.md).
 
 ## Flow and ownership
 
@@ -89,4 +89,4 @@ Verification on 2026-09-27: 40 C# checks passed on SQLite and again on an isolat
 
 Demo: log in as a tenant, submit preferences with **Find my next home**, wait for the proposal, then open the same reference as its owner/admin, review the agent results, request a revision or approve, and return to the tenant's page and refresh. Show PostgreSQL state and the saved draft/history. Test rejection and a failed step as well.
 
-**Assignment gap intentionally left:** Section 10 requires starting in one client and approving in the other. This change provides the React flow and shared API, but does not complete the Flutter part. Draft creation is the defined approval-gated action; explain that scope clearly in the demo. Keep each contributor's AI usage log and verify their understanding of their role.
+**Cross-client workflow:** Section 10 requires starting in one client and approving in the other. React and Flutter now expose the shared flow. Validate both directions against the same running backend using the mobile README checklist; mocked mobile tests do not establish deployed connectivity. Draft creation is the defined approval-gated action; explain that scope clearly in the demo. Keep each contributor's AI usage log and verify their understanding of their role.

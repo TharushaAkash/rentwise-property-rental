@@ -121,8 +121,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         (_) => _updateCountdown(),
       );
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _step == ResetStep.code)
+        if (mounted && _step == ResetStep.code) {
           _digitFocus.first.requestFocus();
+        }
       });
     });
   }
@@ -235,8 +236,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             final email = value?.trim() ?? '';
             if (email.isEmpty) return 'Enter your account email.';
             if (email.length > 200 ||
-                !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email))
+                !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
               return 'Enter a valid email address.';
+            }
             return null;
           },
         ),
@@ -284,7 +286,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 22,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                   decoration: InputDecoration(
                     counterText: '',
@@ -376,10 +378,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         ),
       ),
       validator: (value) {
-        if (value == null || value.length < 8 || value.length > 64)
+        if (value == null || value.length < 8 || value.length > 64) {
           return 'Use 8–64 characters.';
-        if (confirm && value != _password.text)
+        }
+        if (confirm && value != _password.text) {
           return 'Passwords do not match.';
+        }
         return null;
       },
     );
@@ -443,7 +447,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                             'RentWise',
                             style: TextStyle(
                               fontSize: 22,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.teal,
                             ),
                           ),
@@ -509,7 +513,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 24,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
