@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../shared/theme/app_theme.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../home/models/property_model.dart';
-import '../../rentals/models/rental_model.dart';
 import '../../rentals/providers/rental_provider.dart';
 import '../property_service.dart';
 import 'property_form_screen.dart';
@@ -42,7 +40,7 @@ class _PropertiesDashboardScreenState
       appBar: AppBar(
         title: const Text(
           'My Properties',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
@@ -60,11 +58,11 @@ class _PropertiesDashboardScreenState
           context,
           MaterialPageRoute(builder: (_) => const PropertyFormScreen()),
         ),
-        backgroundColor: const Color(0xFF16a34a),
+        backgroundColor: const Color(0xFF426253),
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: const Text(
           'Add Property',
-          style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
         ),
       ),
       body: propertiesAsync.when(
@@ -111,11 +109,7 @@ class _PropertiesDashboardScreenState
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF005C27), Color(0xFF008037)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: const Color(0xFF293F35),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -133,7 +127,7 @@ class _PropertiesDashboardScreenState
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: 1.5,
                         ),
                       ),
@@ -143,7 +137,7 @@ class _PropertiesDashboardScreenState
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
@@ -188,7 +182,7 @@ class _PropertiesDashboardScreenState
                         selected: selected,
                         selectedColor: AppColors.softTeal,
                         labelStyle: TextStyle(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: selected ? AppColors.teal : AppColors.muted,
                         ),
                         onSelected: (_) => setState(() => _filter = s),
@@ -298,7 +292,7 @@ class _OwnerPropertyCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: active ? const Color(0xFF16a34a) : Colors.amber.shade700,
+                    color: active ? const Color(0xFF426253) : Colors.amber.shade700,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -315,7 +309,7 @@ class _OwnerPropertyCard extends StatelessWidget {
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -335,7 +329,7 @@ class _OwnerPropertyCard extends StatelessWidget {
                   property.title,
                   style: const TextStyle(
                     fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.ink,
                   ),
                   maxLines: 1,
@@ -369,7 +363,7 @@ class _OwnerPropertyCard extends StatelessWidget {
                     Text(
                       'LKR ${property.monthlyRent.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}/mo',
                       style: const TextStyle(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         fontSize: 16,
                         color: AppColors.teal,
                       ),
@@ -426,7 +420,7 @@ class _OwnerPropertyCard extends StatelessWidget {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           textStyle: const TextStyle(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
                         ),
@@ -481,7 +475,7 @@ class _PropertyInspectSheet extends StatelessWidget {
                       'Listing Inspection Preview',
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.ink,
                       ),
                     ),
@@ -512,7 +506,7 @@ class _PropertyInspectSheet extends StatelessWidget {
                   property.title,
                   style: const TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.ink,
                   ),
                 ),
@@ -538,7 +532,7 @@ class _PropertyInspectSheet extends StatelessWidget {
                       Text(
                         'LKR ${property.monthlyRent.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}',
                         style: const TextStyle(
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           fontSize: 18,
                           color: AppColors.teal,
                         ),
@@ -558,7 +552,7 @@ class _PropertyInspectSheet extends StatelessWidget {
                 const Divider(height: 30),
                 const Text('Description',
                     style:
-                        TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                 const SizedBox(height: 6),
                 Text(
                   property.description.isNotEmpty
@@ -569,7 +563,7 @@ class _PropertyInspectSheet extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Text('Facilities',
                     style:
-                        TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
@@ -630,7 +624,7 @@ class _InspectSpec extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             fontSize: 14,
             color: AppColors.ink,
           ),
@@ -738,7 +732,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
       appBar: AppBar(
         title: const Text(
           'Tenants & Applications',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
@@ -749,7 +743,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
           unselectedLabelColor: AppColors.muted,
           indicatorColor: AppColors.teal,
           indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           tabs: const [
             Tab(text: 'Inquiries & Applications'),
             Tab(text: 'Active Leases'),
@@ -826,7 +820,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                 child: Text(
                                   propTitle,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 15,
                                     color: AppColors.ink,
                                   ),
@@ -839,7 +833,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                     horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: isAccepted
-                                      ? const Color(0xFFDCFCE7)
+                                      ? const Color(0xFFECF1EC)
                                       : const Color(0xFFFEF9C3),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -847,9 +841,9 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                   status,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     color: isAccepted
-                                        ? const Color(0xFF166534)
+                                        ? const Color(0xFF385345)
                                         : const Color(0xFF854D0E),
                                   ),
                                 ),
@@ -915,7 +909,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                     onPressed: () => _handleAction(appId,
                                         'confirm', propTitle, tenantName, rent),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFF16a34a),
+                                      backgroundColor: const Color(0xFF426253),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
@@ -929,13 +923,13 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                             const Row(
                               children: [
                                 Icon(Icons.check_circle_rounded,
-                                    color: Color(0xFF16a34a), size: 16),
+                                    color: Color(0xFF426253), size: 16),
                                 SizedBox(width: 6),
                                 Text(
                                   'Accepted ✓ 6-Month Lease Issued',
                                   style: TextStyle(
-                                    color: Color(0xFF16a34a),
-                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF426253),
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -996,7 +990,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                 child: Text(
                                   ag.propertyTitle,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 15,
                                     color: AppColors.ink,
                                   ),
@@ -1009,7 +1003,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                     horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: ag.hasPaid
-                                      ? const Color(0xFFDCFCE7)
+                                      ? const Color(0xFFECF1EC)
                                       : const Color(0xFFFEF9C3),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -1019,9 +1013,9 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                       : 'Awaiting Payment',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     color: ag.hasPaid
-                                        ? const Color(0xFF166534)
+                                        ? const Color(0xFF385345)
                                         : const Color(0xFF854D0E),
                                   ),
                                 ),

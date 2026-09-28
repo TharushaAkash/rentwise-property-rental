@@ -17,12 +17,8 @@ class PageIntro extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF103D2C), Color(0xFF176B49)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(28),
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,19 +28,19 @@ class PageIntro extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(24),
+                color: AppColors.softTeal,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: const Color(0xFFCEF2CF), size: 22),
+              child: Icon(icon, color: AppColors.teal, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 eyebrow.toUpperCase(),
                 style: const TextStyle(
-                  color: Color(0xFFCEF2CF),
+                  color: AppColors.muted,
                   fontSize: 10,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 1.6,
                 ),
               ),
@@ -55,10 +51,10 @@ class PageIntro extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.ink,
             fontSize: 27,
             height: 1.12,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             letterSpacing: -.8,
           ),
         ),
@@ -66,7 +62,7 @@ class PageIntro extends StatelessWidget {
         Text(
           description,
           style: const TextStyle(
-            color: Color(0xFFD1E5DA),
+            color: AppColors.muted,
             fontSize: 13,
             height: 1.5,
           ),
@@ -109,7 +105,7 @@ class FormHeading extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 17,
                   color: AppColors.ink,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),

@@ -182,7 +182,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           Text(
                             'I am a Tenant',
                             style: TextStyle(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               fontSize: 13,
                               color: !_isOwner
                                   ? AppColors.teal
@@ -221,7 +221,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           Text(
                             'Property Owner',
                             style: TextStyle(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               fontSize: 13,
                               color: _isOwner
                                   ? AppColors.teal
@@ -371,7 +371,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     : const Text(
                         'Create Account',
                         style: TextStyle(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
                       ),

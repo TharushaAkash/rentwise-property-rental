@@ -1,3 +1,5 @@
+import '../../workflows/workflow_screens.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,7 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         property_access.isOwner(userState.value?.role) ||
         property_access.isAdmin(userState.value?.role);
 
-    final pages = isOwner
+    final List<Widget> pages = isOwner
         ? [
             const PropertiesDashboardScreen(),
             const PropertyBookingsScreen(),
@@ -42,143 +44,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const ProfileScreen(),
           ];
 
+    pages.insert(
+      2,
+      RentalRequestsScreen(canCreate: userState.value?.role == 'Tenant'),
+    );
     return Scaffold(
       body: pages[_tab],
-      bottomNavigationBar: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-        child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.line),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x1A008037),
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: (index) => setState(() => _tab = index),
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: isOwner ? 'Properties' : 'Explore',
           ),
-          child: Row(
-            children: isOwner
-                ? [
-                    _NavItem(
-                      icon: Icons.home_rounded,
-                      label: 'Properties',
-                      index: 0,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                    _NavItem(
-                      icon: Icons.people_alt_rounded,
-                      label: 'Tenants',
-                      index: 1,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                    _NavItem(
-                      icon: Icons.description_rounded,
-                      label: 'Rentals',
-                      index: 2,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                    _NavItem(
-                      icon: Icons.person_rounded,
-                      label: 'Profile',
-                      index: 3,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                  ]
-                : [
-                    _NavItem(
-                      icon: Icons.search_rounded,
-                      label: 'Discover',
-                      index: 0,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                    _NavItem(
-                      icon: Icons.calendar_today_rounded,
-                      label: 'Bookings',
-                      index: 1,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                    _NavItem(
-                      icon: Icons.key_rounded,
-                      label: 'Rentals',
-                      index: 2,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                    _NavItem(
-                      icon: Icons.person_rounded,
-                      label: 'Me',
-                      index: 3,
-                      selectedIndex: _tab,
-                      onTap: (idx) => setState(() => _tab = idx),
-                    ),
-                  ],
+          NavigationDestination(
+            icon: const Icon(Icons.calendar_today_outlined),
+            selectedIcon: const Icon(Icons.calendar_month),
+            label: isOwner ? 'Tenants' : 'Bookings',
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.index,
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final int index;
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = index == selectedIndex;
-    return Expanded(
-      child: InkWell(
-        onTap: () => onTap(index),
-        borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.darkGreen : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
+          const NavigationDestination(
+            icon: Icon(Icons.forum_outlined),
+            selectedIcon: Icon(Icons.forum),
+            label: 'Requests',
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: selected ? Colors.white : AppColors.muted,
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.muted,
-                ),
-              ),
-            ],
+          const NavigationDestination(
+            icon: Icon(Icons.key_outlined),
+            selectedIcon: Icon(Icons.key),
+            label: 'Rentals',
           ),
-        ),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
@@ -251,7 +152,7 @@ class _DiscoverPropertiesTabState
       appBar: AppBar(
         title: const Text(
           'Find your place',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: Colors.white,
         scrolledUnderElevation: 0,
@@ -298,7 +199,7 @@ class _DiscoverPropertiesTabState
                                 fontSize: 10,
                                 letterSpacing: 1.8,
                                 color: AppColors.teal,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             SizedBox(height: 4),
@@ -307,7 +208,7 @@ class _DiscoverPropertiesTabState
                               style: TextStyle(
                                 fontSize: 22,
                                 height: 1.15,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 color: AppColors.ink,
                                 letterSpacing: -.5,
                               ),
@@ -338,22 +239,12 @@ class _DiscoverPropertiesTabState
                         padding: const EdgeInsets.all(16),
                         margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF0F172A),
-                              Color(0xFF1E1B4B),
-                              Color(0xFF0284C7),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: const Color(0xFF293F35),
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: Colors.blue.withAlpha(80),
-                          ),
+                          border: Border.all(color: Colors.blue.withAlpha(80)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.indigo.withAlpha(60),
+                              color: AppColors.teal.withAlpha(60),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -391,7 +282,7 @@ class _DiscoverPropertiesTabState
                                           'Search by AI',
                                           style: TextStyle(
                                             color: Colors.white,
-                                            fontWeight: FontWeight.w900,
+                                            fontWeight: FontWeight.w700,
                                             fontSize: 16,
                                           ),
                                         ),
@@ -441,8 +332,7 @@ class _DiscoverPropertiesTabState
                                       _runAiSearch(properties);
                                     },
                                     decoration: InputDecoration(
-                                      hintText:
-                                          'e.g. 2 bed near SLIIT Malabe under 75k...',
+                                      hintText: 'e.g. 2 bed near SLIIT Malabe under 75k...',
                                       hintStyle: TextStyle(
                                         color: Colors.white.withAlpha(120),
                                         fontSize: 12,
@@ -451,9 +341,9 @@ class _DiscoverPropertiesTabState
                                       fillColor: Colors.white.withAlpha(30),
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(14),
                                         borderSide: BorderSide.none,
@@ -474,11 +364,13 @@ class _DiscoverPropertiesTabState
                                       vertical: 13,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0284C7),
+                                      color: const Color(0xFF426253),
                                       borderRadius: BorderRadius.circular(14),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.lightBlue.withAlpha(100),
+                                          color: Colors.lightBlue.withAlpha(
+                                            100,
+                                          ),
                                           blurRadius: 8,
                                         ),
                                       ],
@@ -603,16 +495,11 @@ class _DiscoverPropertiesTabState
                               child: Container(
                                 padding: const EdgeInsets.all(13),
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF1E1B4B),
-                                      Color(0xFF0284C7),
-                                    ],
-                                  ),
+                                  color: const Color(0xFF293F35),
                                   borderRadius: BorderRadius.circular(14),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.indigo.withAlpha(60),
+                                      color: AppColors.teal.withAlpha(60),
                                       blurRadius: 8,
                                     ),
                                   ],
@@ -639,7 +526,7 @@ class _DiscoverPropertiesTabState
                         const Icon(
                           Icons.auto_awesome,
                           size: 14,
-                          color: Color(0xFF0284C7),
+                          color: Color(0xFF426253),
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -647,7 +534,7 @@ class _DiscoverPropertiesTabState
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0369A1),
+                            color: Color(0xFF385345),
                           ),
                         ),
                       ],
@@ -682,7 +569,7 @@ class _DiscoverPropertiesTabState
                                       : 'No properties found',
                                   style: const TextStyle(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     color: AppColors.ink,
                                   ),
                                   textAlign: TextAlign.center,
@@ -706,7 +593,10 @@ class _DiscoverPropertiesTabState
                                       _aiSearchResult = null;
                                     });
                                   },
-                                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                                  icon: const Icon(
+                                    Icons.refresh_rounded,
+                                    size: 16,
+                                  ),
                                   label: const Text('Reset Search'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppColors.ink,
@@ -728,7 +618,8 @@ class _DiscoverPropertiesTabState
                           itemBuilder: (context, index) {
                             return _MobilePropertyCard(
                               property: displayedProperties[index],
-                              aiResult: aiMatchResults != null &&
+                              aiResult:
+                                  aiMatchResults != null &&
                                       index < aiMatchResults.length
                                   ? aiMatchResults[index]
                                   : null,
@@ -829,7 +720,7 @@ class _MobilePropertyCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16a34a),
+                            color: const Color(0xFF426253),
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
@@ -850,7 +741,7 @@ class _MobilePropertyCard extends StatelessWidget {
                               Text(
                                 '${aiResult!.matchScore}% Match',
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 12,
                                   color: Colors.white,
                                 ),
@@ -889,7 +780,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                 Text(
                                   '${aiResult!.distanceKm} km',
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 11,
                                     color: Colors.white,
                                   ),
@@ -924,7 +815,7 @@ class _MobilePropertyCard extends StatelessWidget {
                           const Text(
                             'Featured',
                             style: TextStyle(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               fontSize: 12,
                             ),
                           ),
@@ -960,7 +851,7 @@ class _MobilePropertyCard extends StatelessWidget {
                     property.title,
                     style: const TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.ink,
                     ),
                     maxLines: 1,
@@ -1014,8 +905,8 @@ class _MobilePropertyCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0F9FF),
-                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                        color: const Color(0xFFF1F4F1),
+                        border: Border.all(color: const Color(0xFFD8E3D7)),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(
@@ -1026,7 +917,7 @@ class _MobilePropertyCard extends StatelessWidget {
                               const Icon(
                                 Icons.explore_rounded,
                                 size: 15,
-                                color: Color(0xFF0284C7),
+                                color: Color(0xFF426253),
                               ),
                               const SizedBox(width: 6),
                               Expanded(
@@ -1034,8 +925,8 @@ class _MobilePropertyCard extends StatelessWidget {
                                   '${aiResult!.distanceKm} km • ~${aiResult!.travelTimeMins} mins commute to ${aiResult!.destinationLandmark}',
                                   style: const TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0369A1),
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF385345),
                                   ),
                                 ),
                               ),
@@ -1057,7 +948,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                       const Text(
                                         '•',
                                         style: TextStyle(
-                                          color: Color(0xFF0284C7),
+                                          color: Color(0xFF426253),
                                           fontSize: 14,
                                           height: 1.2,
                                         ),
@@ -1104,7 +995,7 @@ class _MobilePropertyCard extends StatelessWidget {
                             'LKR ${_fmtMoney(property.monthlyRent)}',
                             style: const TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.teal,
                             ),
                           ),

@@ -100,7 +100,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Maintenance Center', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+        title: const Text('Maintenance Center', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
         backgroundColor: Colors.white,
         scrolledUnderElevation: 0,
         centerTitle: true,
@@ -187,7 +187,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                             else
                               Icon(Icons.flag_rounded, size: 12, color: priorityColor),
                             const SizedBox(width: 4),
-                            Text('${model.priority.toUpperCase()} PRIORITY', style: TextStyle(color: priorityColor, fontSize: 11, fontWeight: FontWeight.w900)),
+                            Text('${model.priority.toUpperCase()} PRIORITY', style: TextStyle(color: priorityColor, fontSize: 11, fontWeight: FontWeight.w700)),
                           ],
                         ),
                       ),
@@ -204,7 +204,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                           children: [
                             Container(width: 6, height: 6, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
                             const SizedBox(width: 4),
-                            Text(model.status.toUpperCase(), style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w900)),
+                            Text(model.status.toUpperCase(), style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w700)),
                           ],
                         ),
                       ),
@@ -213,7 +213,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   
                   // Title
-                  const Text('Maintenance Ticket Details', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.ink, height: 1.2)),
+                  const Text('Maintenance Ticket Details', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.2)),
                   const SizedBox(height: 8),
 
                   // Ticket ID row
@@ -265,7 +265,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(model.propertyTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                              Text(model.propertyTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
                               const SizedBox(height: 2),
                               Row(
                                 children: [
@@ -284,7 +284,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   
                   // Description
-                  const Text('ISSUE DESCRIPTION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                  const Text('ISSUE DESCRIPTION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.muted, letterSpacing: 0.5)),
                   const SizedBox(height: 8),
                   Text(model.description, style: const TextStyle(fontSize: 14, color: AppColors.ink, height: 1.5)),
 
@@ -308,7 +308,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                   ],
 
                   const SizedBox(height: 32),
-                  const Text('PROGRESS TRACKING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                  const Text('PROGRESS TRACKING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.muted, letterSpacing: 0.5)),
                   const SizedBox(height: 16),
                   _buildProgressTrack(model.status),
                 ],
@@ -410,7 +410,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   'Status Update',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink),
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink),
                                 ),
                                 if (isLatest) ...[
                                   const SizedBox(width: 8),

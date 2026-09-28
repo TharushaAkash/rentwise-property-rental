@@ -186,7 +186,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Text(
                               'Sign In to Account',
                               style: TextStyle(
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 16,
                               ),
                             ),

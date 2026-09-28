@@ -31,11 +31,7 @@ class ProfileScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF103D2C), Color(0xFF176B49)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: const Color(0xFF293F35),
               borderRadius: BorderRadius.circular(28),
             ),
             child: Column(
@@ -48,7 +44,7 @@ class ProfileScreen extends ConsumerWidget {
                       height: 70,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD9EFC8),
+                        color: const Color(0xFFE4EBDF),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Text(
@@ -57,7 +53,7 @@ class ProfileScreen extends ConsumerWidget {
                             : user.name.characters.first.toUpperCase(),
                         style: const TextStyle(
                           fontSize: 30,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.darkGreen,
                         ),
                       ),
@@ -67,7 +63,7 @@ class ProfileScreen extends ConsumerWidget {
                       child: Text(
                         owner ? 'PROPERTY OWNER' : user.role.toUpperCase(),
                         style: const TextStyle(
-                          color: Color(0xFFD9EFC8),
+                          color: Color(0xFFE4EBDF),
                           fontSize: 11,
                           letterSpacing: 1.4,
                           fontWeight: FontWeight.w700,
@@ -81,7 +77,7 @@ class ProfileScreen extends ConsumerWidget {
                   user.name,
                   style: const TextStyle(
                     fontSize: 26,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: -.6,
                   ),
@@ -90,7 +86,7 @@ class ProfileScreen extends ConsumerWidget {
                 Text(
                   user.email,
                   style: const TextStyle(
-                    color: Color(0xFFD1E5DA),
+                    color: Color(0xFFE4EBDF),
                     fontSize: 13,
                   ),
                 ),
