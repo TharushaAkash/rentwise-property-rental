@@ -45,6 +45,9 @@ jobs:
         run: flutter analyze
         continue-on-error: true
 
+      - name: Run mobile tests
+        run: flutter test
+
       - name: Build Android APK
         run: flutter build apk --release
 

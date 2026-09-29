@@ -128,7 +128,15 @@ class _DiscoverPropertiesTabState
           _aiSearchResult = result;
         });
       }
-    } catch (_) {
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceFirst('Exception: ', '')),
+            duration: const Duration(seconds: 10),
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -752,7 +760,7 @@ class _MobilePropertyCard extends StatelessWidget {
                         const SizedBox(width: 6),
 
                         // Distance Badge
-                        if (aiResult!.distanceKm > 0)
+                        if (aiResult!.distanceKm != null)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -778,7 +786,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${aiResult!.distanceKm} km',
+                                  'AI estimate: ${aiResult!.distanceKm} km',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 11,
@@ -922,7 +930,9 @@ class _MobilePropertyCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  '${aiResult!.distanceKm} km • ~${aiResult!.travelTimeMins} mins commute to ${aiResult!.destinationLandmark}',
+                                  aiResult!.distanceKm == null
+                                      ? 'Commute estimate unavailable'
+                                      : 'AI estimate: ${aiResult!.distanceKm} km / ~${aiResult!.travelTimeMins ?? "?"} mins to ${aiResult!.destinationLandmark} (not live traffic)',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,

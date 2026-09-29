@@ -597,7 +597,9 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${widget.aiResult.distanceKm} km • ~${widget.aiResult.travelTimeMins} mins commute to ${widget.aiResult.destinationLandmark}',
+                                widget.aiResult.distanceKm == null
+                                    ? 'Commute estimate unavailable'
+                                    : 'AI estimate: ${widget.aiResult.distanceKm} km / ~${widget.aiResult.travelTimeMins ?? "?"} mins to ${widget.aiResult.destinationLandmark} (not live traffic)',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF385345),

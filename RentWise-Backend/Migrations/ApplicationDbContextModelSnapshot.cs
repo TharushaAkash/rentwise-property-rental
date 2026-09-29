@@ -470,6 +470,57 @@ namespace RentWise.API.Migrations
                     b.ToTable("Properties");
                 });
 
+            modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.PropertyApplication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DurationMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<decimal>("MonthlyRent")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId")
+                        .IsUnique()
+                        .HasFilter("\"Status\" IN ('Submitted', 'Accepted')");
+
+                    b.HasIndex("TenantId", "CreatedAt");
+
+                    b.ToTable("PropertyApplications");
+                });
+
             modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.PropertyDocument", b =>
                 {
                     b.Property<Guid>("Id")
@@ -844,6 +895,25 @@ namespace RentWise.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.PropertyApplication", b =>
+                {
+                    b.HasOne("RentWise.API.Modules.PropertyManagement.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RentWise.API.Modules.Users.User", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Property");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("RentWise.API.Modules.PropertyManagement.Entities.PropertyDocument", b =>

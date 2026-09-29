@@ -193,7 +193,10 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
-                var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
+                var workflowKey = Environment.GetEnvironmentVariable("AGENT_WORKFLOW_KEY") ?? _configuration["AgentWorkflowKey"];
+                    if (string.IsNullOrWhiteSpace(workflowKey)) throw new InvalidOperationException("AI service is not configured.");
+                    httpClient.DefaultRequestHeaders.Add("X-Workflow-Key", workflowKey);
+                    var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
                 var aiUrl = $"{agentUrl}/workflow/verify-property";
                 var payload = new { property_id = id.ToString(), document_url = doc.DocumentUrl };
                 var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");

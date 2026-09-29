@@ -102,17 +102,11 @@ export const BookingModal = ({ isOpen, onClose, property, onSuccess }) => {
         createdAt: new Date().toISOString()
       };
 
-      try {
-        const payload = { ...clientBooking };
-        delete payload.id; // Let the backend generate the ID
-
-        const res = await api.post('/property-applications', payload);
-        if (res.data?.id) {
-          clientBooking.id = res.data.id;
-        }
-      } catch (apiErr) {
-        console.warn('API booking sync note (saving locally as resilient cache):', apiErr);
-      }
+      const payload = { ...clientBooking };
+      delete payload.id;
+      const res = await api.post('/property-applications', payload);
+      if (!res.data?.id) throw new Error('The server did not confirm this booking. Please refresh.');
+      Object.assign(clientBooking, res.data);
 
       // Persist in localStorage for instant sync across tabs and role switches
       try {

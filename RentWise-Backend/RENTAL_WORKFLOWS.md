@@ -52,7 +52,7 @@ These are specialized implementations for rental preparation in `agents/rental_w
 1. Apply migration `20260927104551_AddDurableRentalWorkflows` to the intended application database using your normal deployment process. It only adds nullable references, state/audit columns and indexes; it removes no existing data. Existing backend startup also calls `MigrateAsync`.
 2. Set **the same randomly generated secret** as `AGENT_WORKFLOW_KEY` in the ASP.NET and Python service environments. Do not put it in React, source control or requests from a browser. ASP.NET also accepts configuration `AgentWorkflowKey`.
 3. Keep `AgenticServiceUrl` configured on ASP.NET. Python continues using its configured Google model credentials; optional `RENTAL_WORKFLOW_MODEL` defaults to the same model name currently used by existing agents.
-4. Deploy/restart Python first (new `/internal/rental-step` route), then the backend and frontend. Old features do not require the new key; the new workflow fails safely if the key/service is unavailable.
+4. Deploy/restart Python first (new `/internal/rental-step` route), then the backend and frontend. All Python workflow endpoints now require the shared key, including existing search, agreement analysis, maintenance, NIC and property verification. Deploy the updated ASP.NET callers and Python service together. Calls fail safely if the key/service is unavailable.
 
 No production database or deployed service is changed by adding this implementation. Configure production secrets separately even if local `.env` files are configured.
 

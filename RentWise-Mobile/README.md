@@ -46,3 +46,20 @@ flutter build apk --debug
 ```
 
 Workflow tests use mocked HTTP responses for authenticated routes, automatic preparation, review versions/confirmation, deletion, form validation and narrow-screen layouts. They do not prove deployed backend connectivity; perform the cross-client check with your running services.
+
+
+## AI service boundary
+
+All mobile AI HTTP calls use `API_BASE_URL` (ASP.NET Core), including property matching and agreement analysis.
+`AGENTIC_BASE_URL` is no longer used. Clients never receive the Python URL or internal key.
+ASP.NET forwards `X-Workflow-Key` to Python using the shared `AGENT_WORKFLOW_KEY` configuration.
+See [architecture review](../ARCHITECTURE_REVIEW.md) for remaining assignment gaps.
+
+
+## High-priority integration fixes
+
+Tokens now use platform secure storage. Existing SharedPreferences tokens are migrated on first access and the plaintext copy is removed only after a successful secure write. Logout clears both stores. Rebuild the app to install the native plugin; hot reload is insufficient. Verify login, app restart and logout on a real device. Android backup is disabled; Apple targets include Keychain entitlements and require a signed native build.
+
+The live property catalogue contains API records only. AI failures are shown instead of client-generated rankings or commute values. Unknown commute estimates remain unavailable.
+
+Booking requests now use the persisted ASP.NET `PropertyApplications` table. Deploy the backend migration before testing cross-device bookings. Existing memory-only bookings must be resubmitted; they are not migrated from browser caches.

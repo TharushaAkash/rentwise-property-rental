@@ -2,9 +2,9 @@ name: Rental workflow checks
 on:
   push:
     branches: [main, dev]
-    paths: ['RentWise-Backend/**', 'RentWise-AgenticService/**', 'tests/RentalWorkflows/**', '.github/workflows/ci-rental-workflows.yml']
+    paths: ['RentWise-Backend/**', 'RentWise-AgenticService/**', 'tests/RentalWorkflows/**', 'tests/AgenticBoundary/**', 'tests/PropertyBookings/**', '.github/workflows/ci-rental-workflows.yml']
   pull_request:
-    paths: ['RentWise-Backend/**', 'RentWise-AgenticService/**', 'tests/RentalWorkflows/**', '.github/workflows/ci-rental-workflows.yml']
+    paths: ['RentWise-Backend/**', 'RentWise-AgenticService/**', 'tests/RentalWorkflows/**', 'tests/AgenticBoundary/**', 'tests/PropertyBookings/**', '.github/workflows/ci-rental-workflows.yml']
 jobs:
   workflow:
     runs-on: ubuntu-latest
@@ -24,6 +24,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Booking authorization and persistence checks
+        run: dotnet run --project tests/PropertyBookings
+      - name: Create isolated booking test database
+        env:
+          PGPASSWORD: local_ci_fixture_only
+        run: createdb -h localhost -U workflow_test rentwise_booking_test_ci
+      - name: PostgreSQL booking migration and concurrency checks
+        env:
+          RENTWISE_BOOKING_TEST_DB: Host=localhost;Database=rentwise_booking_test_ci;Username=workflow_test;Password=local_ci_fixture_only
+        run: dotnet run --project tests/PropertyBookings --no-restore
+      - name: AI proxy boundary checks
+        run: dotnet run --project tests/AgenticBoundary
       - name: SQLite workflow checks
         run: dotnet run --project tests/RentalWorkflows
       - name: PostgreSQL migrations and workflow checks
@@ -38,3 +50,7 @@ jobs:
       - name: Agent contracts and safe-failure checks
         working-directory: RentWise-AgenticService
         run: python -m unittest discover -s tests -p test_rental_workflow.py -v
+
+      - name: AI service boundary and error checks
+        working-directory: RentWise-AgenticService
+        run: python -m unittest discover -s tests -p test_matching_location.py -v

@@ -24,6 +24,8 @@ export const SavedItems = () => {
     setIsLoading(true);
     try {
       let stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
+      if (!Array.isArray(stored)) stored = [];
+      const snapshots = new Map(stored.filter(p => p && typeof p === 'object').map(p => [p.id, p]));
       let allProps = [];
       try {
         const res = await api.get('/properties');
@@ -44,9 +46,11 @@ export const SavedItems = () => {
             const combinedIds = [...new Set([...localIds, ...dbIds])];
             
             // Update stored array
-            stored = combinedIds;
-            localStorage.setItem('rentwise_saved_properties', JSON.stringify(stored));
-            window.dispatchEvent(new Event('rentwise_saved_updated'));
+            stored = combinedIds.map(id => snapshots.get(id) || id);
+            const serialized = JSON.stringify(stored);
+            if (localStorage.getItem('rentwise_saved_properties') !== serialized) {
+              localStorage.setItem('rentwise_saved_properties', serialized);
+            }
           }
         } catch (err) {
           console.warn('Could not fetch saved properties from DB', err);
@@ -56,11 +60,18 @@ export const SavedItems = () => {
       if (Array.isArray(stored)) {
         // Enrich strings (IDs) with full property objects if possible
         const enriched = stored.map(p => {
-          if (typeof p === 'string') {
-            const matched = allProps.find(ap => ap.id === p);
-            return matched || p;
-          }
-          return p;
+          const id = typeof p === 'string' ? p : p.id;
+          const matched = allProps.find(ap => ap.id === id);
+          const property = matched || p;
+          if (typeof property === 'string') return property;
+          // Match Find Rentals: cover URL first, then the first uploaded photo.
+          const photos = property.photos || property.Photos || [];
+          const firstPhoto = photos.map(photo => typeof photo === 'string'
+            ? photo : photo?.photoUrl || photo?.PhotoUrl || photo?.url).find(Boolean);
+          return {
+            ...property,
+            photoUrl: property.photoUrl || property.PhotoUrl || firstPhoto || PROPERTY_PLACEHOLDER_IMAGE
+          };
         });
 
         // Filter out mock samples

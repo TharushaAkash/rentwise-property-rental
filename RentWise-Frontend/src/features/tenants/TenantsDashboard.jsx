@@ -67,7 +67,7 @@ export const TenantsDashboard = () => {
     setIsLoading(true);
     try {
       const [appsRes, agreementsRes, directoryRes, propsRes] = await Promise.all([
-        api.get('/property-applications').catch(() => ({ data: [] })),
+        api.get('/property-applications'),
         api.get('/agreements').catch(() => ({ data: [] })),
         api.get(isAdmin ? '/users' : '/tenant-profiles').catch(() => ({ data: [] })),
         api.get('/properties').catch(() => ({ data: [] }))
@@ -77,27 +77,9 @@ export const TenantsDashboard = () => {
       let apiAgreements = Array.isArray(agreementsRes.data) ? agreementsRes.data : [];
       let apiProps = Array.isArray(propsRes.data) ? propsRes.data : [];
 
-      // Merge with client-side cached bookings
-      let clientBookings = [];
-      try {
-        clientBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
-      } catch {}
-
-      const mergedAppsMap = new Map();
-      for (const b of clientBookings) {
-        if (b && b.id) mergedAppsMap.set(b.id, b);
-      }
-      for (const a of apiBookings) {
-        if (a && a.id) {
-          const local = mergedAppsMap.get(a.id);
-          if (local && local.status === 'Accepted') {
-            mergedAppsMap.set(a.id, { ...a, status: 'Accepted' });
-          } else {
-            mergedAppsMap.set(a.id, a);
-          }
-        }
-      }
-      const mergedApps = Array.from(mergedAppsMap.values());
+      // The server is authoritative; browser-only entries are not booking records.
+      const mergedApps = [...apiBookings];
+      localStorage.setItem('rentwise_client_bookings', JSON.stringify(apiBookings));
       mergedApps.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
       // Merge agreements
@@ -151,11 +133,7 @@ export const TenantsDashboard = () => {
 
       const targetApp = applications.find((a) => a.id === id);
 
-      try {
-        await api.post(`/property-applications/${id}/confirm`);
-      } catch (apiErr) {
-        console.warn('Backend approve call note (syncing locally):', apiErr);
-      }
+      await api.post(`/property-applications/${id}/confirm`);
 
       // Update local storage so it persists across page reloads and tenant profile
       try {
@@ -200,8 +178,7 @@ export const TenantsDashboard = () => {
       setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'Accepted' } : a)));
       await fetchData();
     } catch (err) {
-      setFeedbackMessage({ text: 'Booking approved & 6-month lease sent to tenant! Awaiting tenant agreement & payment.', type: 'success' });
-      setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'Accepted' } : a)));
+      setFeedbackMessage({ text: err.response?.data?.message || 'Could not approve this booking. Refresh and retry.', type: 'error' });
     } finally {
       setActionLoadingId(null);
     }
@@ -214,11 +191,7 @@ export const TenantsDashboard = () => {
       setActionLoadingId(id);
       setFeedbackMessage({ text: '', type: '' });
 
-      try {
-        await api.post(`/property-applications/${id}/reject`);
-      } catch (apiErr) {
-        console.warn('Backend reject call note (updating locally):', apiErr);
-      }
+      await api.post(`/property-applications/${id}/reject`);
 
       try {
         const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
@@ -230,7 +203,7 @@ export const TenantsDashboard = () => {
       setFeedbackMessage({ text: 'Booking request rejected.', type: 'info' });
       setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'Rejected' } : a)));
     } catch (err) {
-      setFeedbackMessage({ text: 'Booking request rejected.', type: 'info' });
+      setFeedbackMessage({ text: err.response?.data?.message || 'Could not reject this booking. Refresh and retry.', type: 'error' });
     } finally {
       setActionLoadingId(null);
     }

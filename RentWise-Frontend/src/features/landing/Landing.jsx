@@ -26,7 +26,7 @@ import {
 import { formatLankaPrice } from '../../data/lankaProperties';
 import { LankaPropertyCard } from '../../components/LankaPropertyCard';
 import { PROPERTY_PLACEHOLDER_IMAGE } from '../../utils/imagePlaceholder';
-import { matchPropertiesWithAi, AI_SUGGESTED_PROMPTS } from '../../utils/aiPropertyMatcher';
+import { AI_SUGGESTED_PROMPTS } from '../../utils/aiPropertyMatcher';
 import { getActiveBookingForProperty } from '../../utils/bookingStatus';
 
 
@@ -82,6 +82,7 @@ export const Landing = () => {
   const [searchMode, setSearchMode] = useState('standard'); // 'standard' | 'ai'
   const [aiPrompt, setAiPrompt] = useState('');
   const [activeAiPrompt, setActiveAiPrompt] = useState('');
+  const [aiError, setAiError] = useState('');
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [aiMatchedProperties, setAiMatchedProperties] = useState(null);
 
@@ -179,6 +180,9 @@ export const Landing = () => {
 
     setAiPrompt(target);
     setIsAiSearching(true);
+    setAiError('');
+    setAiMatchedProperties(null);
+    setActiveAiPrompt('');
 
     try {
       const res = await api.post('/agentic/workflow/match-location', {
@@ -202,13 +206,7 @@ export const Landing = () => {
       setAiMatchedProperties(results);
       setActiveAiPrompt(target);
     } catch (err) {
-      console.warn('AI matching unavailable, using local property matching:', err);
-      const candidates = realProperties.map((p) => ({
-        ...p,
-        facilities: properties.find((property) => property.id === p.id)?.facilities || ''
-      }));
-      setAiMatchedProperties(matchPropertiesWithAi(target, candidates));
-      setActiveAiPrompt(target);
+      setAiError(err.response?.data?.message || err.response?.data?.error || err.message || 'AI search is unavailable. Please retry.');
     } finally {
       setIsAiSearching(false);
       document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
@@ -217,6 +215,7 @@ export const Landing = () => {
 
   // Clear AI active search filter
   const handleClearAiSearch = () => {
+    setAiError('');
     setActiveAiPrompt('');
     setAiMatchedProperties(null);
     setAiPrompt('');
@@ -688,6 +687,7 @@ export const Landing = () => {
               </div>
             </div>
 
+            {aiError && <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{aiError}</div>}
             {/* Active AI Search Status Banner */}
             {activeAiPrompt && (
               <div className="rounded-xl bg-gradient-to-r from-violet-900 via-indigo-900 to-slate-900 text-white p-4 shadow-sm border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">

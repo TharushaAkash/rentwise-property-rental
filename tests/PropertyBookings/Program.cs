@@ -1,0 +1,71 @@
+using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using RentWise.API.Data;
+using RentWise.API.Modules.Users;
+using RentWise.API.Modules.PropertyManagement.Entities;
+using RentWise.API.Modules.PropertyManagement.Controllers;
+
+var pg = Environment.GetEnvironmentVariable("RENTWISE_BOOKING_TEST_DB");
+await using var sqlite = new SqliteConnection("Data Source=:memory:");
+await sqlite.OpenAsync();
+var options = string.IsNullOrEmpty(pg) ? new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(sqlite).Options
+    : new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(pg).Options;
+if (pg != null && !new Npgsql.NpgsqlConnectionStringBuilder(pg).Database!.StartsWith("rentwise_booking_test_"))
+    throw new Exception("Use an isolated rentwise_booking_test_* database only");
+ApplicationDbContext NewDb() => new(options);
+await using var setup = NewDb();
+if (pg == null) await setup.Database.EnsureCreatedAsync(); else await setup.Database.MigrateAsync();
+if (await setup.Users.AnyAsync()) throw new Exception("Test database must be empty");
+var owner = new User { Name="Owner", Email="owner@fixture.invalid", Role="PropertyOwner" };
+var tenant = new User { Name="Tenant", Email="tenant@fixture.invalid", Role="Tenant" };
+var stranger = new User { Name="Other", Email="other@fixture.invalid", Role="Tenant" };
+var listing = new Property { OwnerId=owner.Id, Title="Fixture", Address="Malabe", MonthlyRent=50000, Status=PropertyStatus.Active };
+setup.AddRange(owner, tenant, stranger, listing); await setup.SaveChangesAsync();
+var checks=0;
+void Check(bool result, string message) { if (!result) throw new Exception(message); checks++; }
+PropertyApplicationsController Controller(ApplicationDbContext db, Guid id, string role) => new(db) {
+ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext {
+ User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier,id.ToString()), new Claim(ClaimTypes.Role,role) }, "fixture")) } } };
+StartPropertyApplication Request() => new() { PropertyId=listing.Id, StartDate=DateTime.UtcNow.Date.AddDays(5), DurationMonths=6, Message="Fixture request" };
+Guid applicationId;
+await using (var db=NewDb()) {
+ var result=await Controller(db,tenant.Id,"Tenant").CreateApplication(Request());
+ Check(result is OkObjectResult,"Tenant can create booking");
+ var data=JsonSerializer.SerializeToElement(((OkObjectResult)result).Value);
+ applicationId=data.GetProperty("Id").GetGuid();
+ Check(data.GetProperty("TenantId").GetGuid()==tenant.Id,"Tenant identity comes from JWT");
+ Check(data.GetProperty("MonthlyRent").GetDecimal()==50000,"Price comes from listing");
+}
+await using (var db=NewDb()) {
+ Check(await db.PropertyApplications.AnyAsync(a=>a.Id==applicationId),"Booking survives a new DbContext");
+ var list=(OkObjectResult)await Controller(db,stranger.Id,"Tenant").GetApplications();
+ Check(JsonSerializer.SerializeToElement(list.Value).GetArrayLength()==0,"Other tenant cannot read booking");
+ Check(await Controller(db,stranger.Id,"PropertyOwner").ConfirmApplication(applicationId) is NotFoundResult,"Unrelated owner cannot approve");
+ Check(await Controller(db,tenant.Id,"Tenant").ConfirmApplication(applicationId) is ForbidResult,"Tenant cannot self approve");
+ Check(await Controller(db,owner.Id,"PropertyOwner").ConfirmApplication(Guid.NewGuid()) is NotFoundResult,"Unknown ID does not create a booking");
+}
+await using (var db=NewDb()) Check(await Controller(db,stranger.Id,"Tenant").CreateApplication(Request()) is ConflictObjectResult,"Duplicate active booking rejected");
+await using (var db=NewDb()) Check(await Controller(db,owner.Id,"PropertyOwner").RejectApplication(applicationId) is OkObjectResult,"Owner can reject");
+await using (var db=NewDb()) Check(await Controller(db,owner.Id,"PropertyOwner").ConfirmApplication(applicationId) is ConflictObjectResult,"Stale approval cannot overwrite rejection");
+if (pg != null) {
+ async Task<IActionResult> Race(Guid who) { await using var db=NewDb(); return await Controller(db,who,"Tenant").CreateApplication(Request()); }
+ var results=await Task.WhenAll(Task.Run(()=>Race(tenant.Id)), Task.Run(()=>Race(stranger.Id)));
+ Check(results.Count(r=>r is OkObjectResult)==1,"Concurrent requests create exactly one booking");
+ Check(results.Count(r=>r is ConflictObjectResult)==1,"Concurrent loser receives conflict");
+} else {
+ await using var db=NewDb();
+ Check(await Controller(db,tenant.Id,"Tenant").CreateApplication(Request()) is OkObjectResult,"Rejection releases listing");
+}
+await using (var db=NewDb()) {
+ var active=await db.PropertyApplications.AsNoTracking().SingleAsync(a=>a.Status=="Submitted");
+ Check(await Controller(db,owner.Id,"PropertyOwner").ConfirmApplication(active.Id) is OkObjectResult,"Owner approval persists");
+ Check(await Controller(db,owner.Id,"PropertyOwner").ConfirmApplication(active.Id) is OkObjectResult,"Repeated approval is idempotent");
+ Check(await Controller(db,owner.Id,"PropertyOwner").RejectApplication(active.Id) is ConflictObjectResult,"Reject cannot overwrite accepted booking");
+ var invalid=Request(); invalid.DurationMonths=0;
+ Check(await Controller(db,tenant.Id,"Tenant").CreateApplication(invalid) is BadRequestObjectResult,"Invalid duration rejected");
+}
+Console.WriteLine($"{checks} booking checks passed ({(pg == null ? "SQLite" : "PostgreSQL migrations + concurrent requests")}).");
