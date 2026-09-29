@@ -64,7 +64,17 @@ public class PropertyApplicationsController(ApplicationDbContext db) : Controlle
                 application.Message, application.CreatedAt, application.UpdatedAt });
         }
         catch (DbUpdateException) { return Conflict(new { message = "The listing changed while booking. Refresh before retrying." }); }
-        catch (PostgresException ex) when (ex.SqlState == "40001") { return Conflict(new { message = "Another booking changed this listing. Refresh before retrying." }); }
+        catch (Exception ex) when (IsSerializationFailure(ex)) { return Conflict(new { message = "Another booking changed this listing. Refresh before retrying." }); }
+    }
+
+    private static bool IsSerializationFailure(Exception exception)
+    {
+        // Npgsql's execution strategy can wrap a serialization failure in
+        // InvalidOperationException, with DbUpdateException nested inside it.
+        for (Exception? current = exception; current != null; current = current.InnerException)
+            if (current is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })
+                return true;
+        return false;
     }
 
     [HttpPost("{id:guid}/confirm")]
