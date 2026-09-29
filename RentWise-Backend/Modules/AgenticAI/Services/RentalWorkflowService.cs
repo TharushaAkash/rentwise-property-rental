@@ -45,7 +45,7 @@ public class RentalWorkflowService(ApplicationDbContext db, IRentalWorkflowAgent
     private async Task<Property> Selected(AgentWorkflowRun run, RentalWorkflowState state)
     {
         var property = await db.Properties.AsNoTracking().SingleOrDefaultAsync(p => p.Id == run.PropertyId);
-        if (property == null || property.Status != PropertyStatus.Active || property.MonthlyRent <= 0
+        if (property == null || property.Status != PropertyStatus.Active || !await db.VerificationRecords.AnyAsync(v => v.PropertyId == property.Id && v.Comments.StartsWith("[LISTING_FEE_PAID:")) || property.MonthlyRent <= 0
             || property.MonthlyRent > state.Request.MaxMonthlyRent || property.OwnerId == run.RequestedById
             || string.IsNullOrWhiteSpace(property.Address) || !await Available(property.Id, state.Request))
             throw new InvalidOperationException("The selected property is unavailable, unverified, or outside the approved budget. Start a new workflow.");
@@ -109,7 +109,7 @@ public class RentalWorkflowService(ApplicationDbContext db, IRentalWorkflowAgent
             object[] candidates = [];
             if (role == "MatchingLocation")
             {
-                var available = await db.Properties.AsNoTracking().Where(p => p.Status == PropertyStatus.Active
+                var available = await db.Properties.AsNoTracking().Where(p => p.Status == PropertyStatus.Active && p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:"))
                     && p.MonthlyRent > 0 && p.MonthlyRent <= state.Request.MaxMonthlyRent && p.OwnerId != run.RequestedById
                     && !db.RentalAgreements.Any(a => a.PropertyId == p.Id && a.Status != AgreementStatus.Ended
                         && a.StartDate < state.Request.EndDate && a.EndDate > state.Request.StartDate))

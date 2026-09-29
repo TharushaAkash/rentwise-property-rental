@@ -121,6 +121,7 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
         propertyId: agreement.propertyId,
         propertyTitle: propTitle,
         propertyAddress: propAddress,
+        purpose: 'MonthlyRent',
         amount: Number(rentAmount),
         paymentDate: now.toISOString(),
         paymentReference: txnRef,
@@ -148,6 +149,7 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
       }
 
       const paymentResponse = await api.post(`/agreements/${finalAgreementId}/payments`, {
+        purpose: 'MonthlyRent',
         amount: Number(rentAmount),
         paymentDate: now.toISOString(),
         paymentReference: txnRef,

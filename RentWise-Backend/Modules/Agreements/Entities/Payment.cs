@@ -8,6 +8,8 @@ namespace RentWise.API.Modules.Agreements.Entities
         public Guid RentalAgreementId { get; set; }
         public RentalAgreement RentalAgreement { get; set; } = null!;
 
+        public string Purpose { get; set; } = "Unspecified";
+
         public decimal Amount { get; set; }
         public DateTime PaymentDate { get; set; }
         

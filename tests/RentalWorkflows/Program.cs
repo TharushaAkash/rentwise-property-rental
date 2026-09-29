@@ -33,7 +33,7 @@ var owner = new User { Name = "Owner", Email = "owner@test.invalid", Role = "Pro
 var tenant = new User { Name = "Tenant", Email = "tenant@test.invalid", Role = "Tenant" };
 var stranger = new User { Name = "Other", Email = "other@test.invalid", Role = "PropertyOwner" };
 db.Users.AddRange(owner, tenant, stranger);
-var property = new Property { OwnerId = owner.Id, Title = "Malabe house", Address = "1 Test Road, Malabe", Status = PropertyStatus.Active, MonthlyRent = 50000 };
+var property = new Property { VerificationRecords = new List<VerificationRecord> { new() { Comments = "[LISTING_FEE_PAID: fixture]" } }, OwnerId = owner.Id, Title = "Malabe house", Address = "1 Test Road, Malabe", Status = PropertyStatus.Active, MonthlyRent = 50000 };
 db.Properties.Add(property);
 await db.SaveChangesAsync();
 var agent = new FakeAgent(property.Id);

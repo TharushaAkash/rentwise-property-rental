@@ -27,6 +27,7 @@ var owner = new User { Name="Owner", Email="owner@fixture.invalid", Role="Proper
 var tenant = new User { Name="Tenant", Email="tenant@fixture.invalid", Role="Tenant" };
 var stranger = new User { Name="Other", Email="other@fixture.invalid", Role="Tenant" };
 var listing = new Property { OwnerId=owner.Id, Title="Fixture", Address="Malabe", MonthlyRent=50000, Status=PropertyStatus.Active };
+listing.VerificationRecords.Add(new VerificationRecord { Comments = "[LISTING_FEE_PAID: fixture]" });
 setup.AddRange(owner, tenant, stranger, listing); await setup.SaveChangesAsync();
 var checks=0;
 void Check(bool result, string message) { if (!result) throw new Exception(message); checks++; }
@@ -88,13 +89,24 @@ await using (var db=NewDb()) {
  var invalid=Request(); invalid.DurationMonths=0;
  Check(await Controller(db,tenant.Id,"Tenant").CreateApplication(invalid) is BadRequestObjectResult,"Invalid duration rejected");
 }
+await using (var db = NewDb()) {
+ var request = new PropertyApplication { PropertyId = listing.Id, TenantId = tenant.Id, Status = "Rejected" };
+ db.PropertyApplications.Add(request); await db.SaveChangesAsync();
+ Check(await Controller(db,tenant.Id,"Tenant").DeleteRequest(request.Id) is ForbidResult, "Tenant cannot use admin request deletion");
+ Check(await Controller(db,owner.Id,"Administrator").DeleteRequest(request.Id) is NoContentResult, "Admin deletes rejected request");
+ Check(!await db.PropertyApplications.AnyAsync(a => a.Id == request.Id), "Deleted request stays removed");
+}
 // Browsing must paginate in the database and apply filters before the limit.
 await using (var db = NewDb()) {
  for (var i = 0; i < 25; i++) db.Properties.Add(new Property {
   OwnerId = owner.Id, Title = $"Browse fixture {i}", Address = "BrowseTest Colombo",
+  VerificationRecords = new List<VerificationRecord> { new() { Comments = "[LISTING_FEE_PAID: fixture]" } },
   MonthlyRent = 50000 + i * 1000, Bedrooms = 2, PropertyType = "Apartment",
   Status = i == 24 ? PropertyStatus.PendingVerification : PropertyStatus.Active
  });
+ await db.SaveChangesAsync();
+ db.Properties.Add(new Property { OwnerId = owner.Id, Title = "Unpaid listing", Address = "BrowseTest Colombo",
+  Status = PropertyStatus.Active, Bedrooms = 2, PropertyType = "Apartment", MonthlyRent = 51000 });
  await db.SaveChangesAsync();
  var controller = new PropertiesController(null!, db, null!);
  async Task<JsonElement> Page(string? cursor = null, decimal? budget = null) {
@@ -111,6 +123,12 @@ await using (var db = NewDb()) {
  var ids = first.GetProperty("items").EnumerateArray().Select(p => p.GetProperty("Id").GetGuid())
   .Concat(second.GetProperty("items").EnumerateArray().Select(p => p.GetProperty("Id").GetGuid()));
  Check(ids.Distinct().Count() == 24, "Pages do not repeat listings or include pending listings");
+ var unpaid = await db.Properties.SingleAsync(p => p.Title == "Unpaid listing");
+ var unpaidRequest = Request(); unpaidRequest.PropertyId = unpaid.Id;
+ Check(await Controller(db, tenant.Id, "Tenant").CreateApplication(unpaidRequest) is ConflictObjectResult,
+  "Verified but unpaid listing cannot be booked");
+ Check(await controller.ApprovePropertyListing(unpaid.Id, null) is ConflictObjectResult,
+  "Admin cannot publish before listing fee is paid");
  Check(await controller.Browse(null, null, null, null, cursor: "invalid") is BadRequestObjectResult,
   "Invalid cursor is rejected");
  if (pg != null) {

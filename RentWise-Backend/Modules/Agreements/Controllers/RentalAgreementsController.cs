@@ -215,6 +215,7 @@ namespace RentWise.API.Modules.Agreements.Controllers
             {
                 RentalAgreementId = id,
                 Amount = payAmount,
+                Purpose = agreement.SecurityDeposit > 0 ? "SecurityDeposit" : "MonthlyRent",
                 PaymentDate = DateTime.UtcNow,
                 PaymentReference = paymentRef,
                 IsSuccessful = true

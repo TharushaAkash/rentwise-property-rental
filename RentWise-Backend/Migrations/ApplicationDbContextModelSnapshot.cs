@@ -146,6 +146,10 @@ namespace RentWise.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<Guid>("RentalAgreementId")
                         .HasColumnType("uuid");
 

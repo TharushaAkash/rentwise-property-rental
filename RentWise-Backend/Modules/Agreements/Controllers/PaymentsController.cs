@@ -32,6 +32,7 @@ namespace RentWise.API.Modules.Agreements.Controllers
         public async Task<IActionResult> CreatePayment(Guid agreementId, [FromBody] Payment payment)
         {
             payment.RentalAgreementId = agreementId;
+            payment.Purpose = "MonthlyRent";
             try
             {
                 var created = await _service.CreatePaymentAsync(payment);
