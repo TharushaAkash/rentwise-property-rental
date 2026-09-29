@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using RentWise.API.Data;
 using RentWise.API.Modules.Users;
 using RentWise.API.Modules.PropertyManagement.Entities;
@@ -32,6 +33,23 @@ PropertyApplicationsController Controller(ApplicationDbContext db, Guid id, stri
  User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier,id.ToString()), new Claim(ClaimTypes.Role,role) }, "fixture")) } } };
 StartPropertyApplication Request() => new() { PropertyId=listing.Id, StartDate=DateTime.UtcNow.Date.AddDays(5), DurationMonths=6, Message="Fixture request" };
 Guid applicationId;
+// Reproduce the provider wrapper deterministically, regardless of race timing.
+var wrappedConflict = new InvalidOperationException("Transient failure",
+ new DbUpdateException("Save failed", new Npgsql.PostgresException("Serialization failure", "ERROR", "ERROR", "40001")));
+var unrelatedFailure = new InvalidOperationException("Unrelated failure");
+foreach (var failure in new[] { wrappedConflict, unrelatedFailure }) {
+ var failureOptions = new DbContextOptionsBuilder<ApplicationDbContext>(options)
+  .AddInterceptors(new FailingSaveInterceptor(failure)).Options;
+ await using var db = new ApplicationDbContext(failureOptions);
+ try {
+  var result = await Controller(db, tenant.Id, "Tenant").CreateApplication(Request());
+  Check(ReferenceEquals(failure, wrappedConflict) && result is ConflictObjectResult,
+   "Wrapped PostgreSQL serialization failure returns conflict");
+ } catch (InvalidOperationException ex) when (ReferenceEquals(ex, unrelatedFailure)) {
+  Check(true, "Unrelated exceptions are not hidden as booking conflicts");
+ }
+}
+Check(!await setup.PropertyApplications.AnyAsync(), "Failed saves do not persist bookings");
 await using (var db=NewDb()) {
  var result=await Controller(db,tenant.Id,"Tenant").CreateApplication(Request());
  Check(result is OkObjectResult,"Tenant can create booking");
@@ -69,3 +87,10 @@ await using (var db=NewDb()) {
  Check(await Controller(db,tenant.Id,"Tenant").CreateApplication(invalid) is BadRequestObjectResult,"Invalid duration rejected");
 }
 Console.WriteLine($"{checks} booking checks passed ({(pg == null ? "SQLite" : "PostgreSQL migrations + concurrent requests")}).");
+
+sealed class FailingSaveInterceptor(Exception failure) : SaveChangesInterceptor
+{
+ public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+  DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+  => throw failure;
+}
