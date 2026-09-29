@@ -29,5 +29,6 @@ namespace RentWise.API.Modules.PropertyManagement.DTOs
         public string PropertyType { get; set; } = string.Empty;
         public List<string> FeatureTags { get; set; } = new List<string>();
         public int PhotoCount { get; set; }
+        public List<string> PhotoUrls { get; set; } = new();
     }
 }

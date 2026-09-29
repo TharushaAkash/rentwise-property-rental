@@ -1,3 +1,5 @@
+using RentWise.API.Modules.PropertyManagement.DTOs;
+using RentWise.API.Modules.PropertyManagement.Interfaces;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -116,6 +118,31 @@ await using (var db = NewDb()) {
   Check(filtered.GetProperty("items").GetArrayLength() == 4, "Budget filter applies before pagination");
  }
 }
+// URL photos must survive saving and a new database context.
+Guid photoPropertyId;
+await using (var db = NewDb()) {
+ var controller = new PropertiesController(new PhotoTestPropertyService(db), db, null!) {
+  ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+ };
+ var result = (CreatedAtActionResult)await controller.CreateProperty(new CreatePropertyDto {
+  OwnerId = owner.Id, Title = "URL photo fixture", Description = "Fixture", Address = "Colombo",
+  PhotoUrls = new() { "https://example.com/house.jpg", "https://example.com/house.jpg" }
+ });
+ photoPropertyId = ((Property)result.Value!).Id;
+ Check(await db.PropertyPhotos.CountAsync(p => p.PropertyId == photoPropertyId) == 1, "Create saves URL photo once");
+ var update = new UpdatePropertyDto { Title = "URL photo fixture", Description = "Fixture", Address = "Colombo",
+  PhotoUrls = new() { "https://example.com/room.jpg" } };
+ await controller.UpdateProperty(photoPropertyId, update);
+ await controller.UpdateProperty(photoPropertyId, update);
+ Check(await db.PropertyPhotos.CountAsync(p => p.PropertyId == photoPropertyId) == 2, "Edit adds URL without duplicating existing photos");
+ Check(await controller.CreateProperty(new CreatePropertyDto { PhotoUrls = new() { "javascript:alert(1)" } }) is BadRequestObjectResult,
+  "Non HTTP photo URLs are rejected");
+}
+await using (var db = NewDb()) {
+ var photos = await db.PropertyPhotos.Where(p => p.PropertyId == photoPropertyId).ToListAsync();
+ Check(photos.Count == 2 && photos.Single(p => p.IsPrimary).PhotoUrl == "https://example.com/house.jpg",
+  "Saved photo URLs and primary photo survive reload");
+}
 Console.WriteLine($"{checks} booking checks passed ({(pg == null ? "SQLite" : "PostgreSQL migrations + concurrent requests")}).");
 
 sealed class FailingSaveInterceptor(Exception failure) : SaveChangesInterceptor
@@ -123,4 +150,18 @@ sealed class FailingSaveInterceptor(Exception failure) : SaveChangesInterceptor
  public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
   DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
   => throw failure;
+}
+
+sealed class PhotoTestPropertyService(ApplicationDbContext db) : IPropertyService
+{
+ public async Task<Property> CreatePropertyAsync(Property property) {
+  db.Properties.Add(property); await db.SaveChangesAsync(); return property;
+ }
+ public Task<Property?> GetPropertyByIdAsync(Guid id) => db.Properties.Include(p => p.Photos).SingleOrDefaultAsync(p => p.Id == id);
+ public async Task UpdatePropertyAsync(Property property) { db.Properties.Update(property); await db.SaveChangesAsync(); }
+ public Task<IEnumerable<Property>> GetAllPropertiesAsync() => throw new NotSupportedException();
+ public Task<IEnumerable<Property>> GetPropertiesByOwnerIdAsync(Guid id) => throw new NotSupportedException();
+ public Task DeletePropertyAsync(Guid id) => throw new NotSupportedException();
+ public Task<bool> UpdatePropertyStatusAsync(Guid id, PropertyStatus status) => throw new NotSupportedException();
+ public Task<MarketRentDto> GetMarketRentAsync(string location, string propertyType, int bedrooms) => throw new NotSupportedException();
 }

@@ -277,6 +277,7 @@ export const AdminDashboard = () => {
           propertyType: data.propertyType || 'House',
           featureTags: Array.isArray(data.featureTags) ? data.featureTags : [],
           photoCount: photoList.length || 1,
+          photoUrls: data.photoUrls || [],
           status: data.status === 'Active' ? 1 : data.status === 'Suspended' ? 2 : 0
         };
 
@@ -322,6 +323,7 @@ export const AdminDashboard = () => {
           propertyType: data.propertyType || 'House',
           featureTags: Array.isArray(data.featureTags) ? data.featureTags : [],
           photoCount: photoList.length || 1,
+          photoUrls: data.photoUrls || [],
           status: data.status === 'Active' ? 1 : 0
         };
 

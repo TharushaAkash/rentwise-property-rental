@@ -125,6 +125,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [Authorize(Roles = "Owner,Admin,PropertyOwner,Administrator,SystemAdmin")]
         public async Task<IActionResult> CreateProperty([FromBody] CreatePropertyDto dto)
         {
+            if (dto.PhotoUrls == null || dto.PhotoUrls.Any(url => !IsPhotoUrl(url)))
+                return BadRequest(new { message = "Photo links must be valid HTTP or HTTPS URLs." });
             var property = new Property
             {
                 OwnerId = dto.OwnerId,
@@ -142,6 +144,9 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                 Status = PropertyStatus.PendingVerification
             };
 
+            foreach (var url in dto.PhotoUrls.Select(url => url.Trim()).Distinct())
+                property.Photos.Add(new PropertyPhoto { PhotoUrl = url, IsPrimary = property.Photos.Count == 0 });
+            property.PhotoCount = property.Photos.Count;
             var createdProperty = await _propertyService.CreatePropertyAsync(property);
             
             // Explicitly load the Owner so it's included in the response
@@ -154,6 +159,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [Authorize(Roles = "Owner,Admin,PropertyOwner,Administrator,SystemAdmin")]
         public async Task<IActionResult> UpdateProperty(Guid id, [FromBody] UpdatePropertyDto dto)
         {
+            if (dto.PhotoUrls == null || dto.PhotoUrls.Any(url => !IsPhotoUrl(url)))
+                return BadRequest(new { message = "Photo links must be valid HTTP or HTTPS URLs." });
             var existingProperty = await _propertyService.GetPropertyByIdAsync(id);
             if (existingProperty == null) return NotFound();
 
@@ -179,9 +186,20 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             
             existingProperty.UpdatedAt = DateTime.UtcNow;
 
+            foreach (var url in dto.PhotoUrls.Select(url => url.Trim()).Distinct())
+            {
+                if (existingProperty.Photos.Any(photo => photo.PhotoUrl == url)) continue;
+                var photo = new PropertyPhoto { PropertyId = id, PhotoUrl = url, IsPrimary = existingProperty.Photos.Count == 0 };
+                existingProperty.Photos.Add(photo);
+                _context.PropertyPhotos.Add(photo);
+            }
+            existingProperty.PhotoCount = existingProperty.Photos.Count;
             await _propertyService.UpdatePropertyAsync(existingProperty);
             return NoContent();
         }
+
+        private static bool IsPhotoUrl(string? url) => Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
         [HttpPost("{id}/proof")]
         [Authorize(Roles = "Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]

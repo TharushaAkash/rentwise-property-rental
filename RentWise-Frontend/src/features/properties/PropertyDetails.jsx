@@ -225,6 +225,7 @@ export const PropertyDetails = () => {
         propertyType: formData.propertyType || 'House',
         featureTags: Array.isArray(formData.featureTags) ? formData.featureTags : [],
         photoCount: Number(formData.photoCount || 0),
+        photoUrls: formData.photoUrls || [],
         status: formData.status === 'Active' ? 1 : formData.status === 'Suspended' ? 2 : 0
       };
 

@@ -207,6 +207,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
       featureTags: selectedTags,
       photoCount: totalPhotos > 0 ? totalPhotos : 1,
       photoUrl: primaryUrl,
+      photoUrls: urlPhotos,
       photos: allAddedUrls.map((url, idx) => ({ id: `p_${idx}`, photoUrl: url, isPrimary: idx === 0 })),
       utilityBillUrl: billUrl
     };
