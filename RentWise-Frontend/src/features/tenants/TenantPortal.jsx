@@ -1,3 +1,4 @@
+import { paymentPurpose, paidRentMonths } from '../../utils/paymentPurpose';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Search, Sparkles, SlidersHorizontal, Home, CreditCard, Wrench, UserRound, CalendarDays, CheckCircle2, XCircle, Clock, MapPin, ArrowRight, Building2, Receipt, ShieldCheck, Plus, Mail, Phone, ChevronRight, ChevronDown, FileText, FileCheck, DollarSign, RotateCcw, User, Lock, Eye, EyeOff, Star, Camera, Share2, Bell, Bookmark, X, Sliders, ChevronLeft, Trash2, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
@@ -2852,13 +2853,17 @@ export const TenantProfilePortal = () => {
                 const hasPaidThisMonth = payments.some((p) => {
                   const matchesAgr = (p.rentalAgreementId === agreement.id || p.propertyId === agreement.propertyId);
                   const pDate = new Date(p.paymentDate);
-                  return matchesAgr && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear && p.isSuccessful;
+                  return matchesAgr && paymentPurpose(p) === 'MonthlyRent' && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear && p.isSuccessful;
                 });
                 const hasAgreed = isAgreementAgreed(agreement);
                 const photo = agreement.photoUrl || extractPropertyPhoto(agreement, idx);
                 const completedRentPayments = payments.filter((p) => {
-                  return (p.rentalAgreementId === agreement.id || p.propertyId === agreement.propertyId) && p.isSuccessful;
+                  return (p.rentalAgreementId === agreement.id || p.propertyId === agreement.propertyId) && p.isSuccessful && paymentPurpose(p) === 'MonthlyRent';
                 });
+
+                const paidMonths = paidRentMonths(completedRentPayments);
+                const depositPaid = payments.filter(p => p.rentalAgreementId === agreement.id && p.isSuccessful
+                  && paymentPurpose(p) === 'SecurityDeposit').reduce((sum, p) => sum + Number(p.amount), 0);
 
                 return (
                   <div
@@ -2924,6 +2929,9 @@ export const TenantProfilePortal = () => {
                       </div>
                     </div>
 
+                    <div className="px-5 pb-3 text-sm flex justify-between">
+                      <span>Security deposit paid</span><strong>{money(depositPaid)}</strong>
+                    </div>
                     {/* Rent Months Paid Summary */}
                     <div className="px-5 pb-4">
                       <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex flex-col gap-2">
@@ -2933,12 +2941,12 @@ export const TenantProfilePortal = () => {
                             <span>Rent Months Paid</span>
                           </div>
                           <span className="bg-emerald-200/50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            {completedRentPayments.length} Month{completedRentPayments.length !== 1 ? 's' : ''} Paid
+                            {paidMonths.length} Month{paidMonths.length !== 1 ? 's' : ''} Paid
                           </span>
                         </div>
-                        {completedRentPayments.length > 0 && (
+                        {paidMonths.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-1">
-                            {completedRentPayments.slice(0, 3).map(p => {
+                            {paidMonths.slice(0, 3).map(p => {
                               const pDate = new Date(p.paymentDate);
                               const monthYear = pDate.toLocaleString('default', { month: 'long', year: 'numeric' });
                               return (
@@ -2948,9 +2956,9 @@ export const TenantProfilePortal = () => {
                                 </span>
                               );
                             })}
-                            {completedRentPayments.length > 3 && (
+                            {paidMonths.length > 3 && (
                               <span className="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                                +{completedRentPayments.length - 3} more
+                                +{paidMonths.length - 3} more
                               </span>
                             )}
                           </div>
@@ -3045,6 +3053,8 @@ export const TenantProfilePortal = () => {
                       )}
                     </div>
 
+                    <p className="text-sm font-semibold">{paymentPurpose(payment) === 'SecurityDeposit' ? 'Security deposit'
+                      : paymentPurpose(payment) === 'MonthlyRent' ? 'Monthly rent' : 'Other payment'}</p>
                     {/* Payment Metadata */}
                     <div className="space-y-2 pt-2 border-t border-gray-100 text-xs text-gray-600">
                       <div className="flex justify-between items-center">

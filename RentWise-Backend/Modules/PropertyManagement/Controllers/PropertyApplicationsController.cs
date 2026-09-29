@@ -46,7 +46,7 @@ public class PropertyApplicationsController(ApplicationDbContext db) : Controlle
         {
             var property = await db.Properties.SingleOrDefaultAsync(p => p.Id == request.PropertyId);
             if (property == null) return NotFound();
-            if (property.Status != PropertyStatus.Active || property.OwnerId == Actor || property.MonthlyRent <= 0)
+            if (property.Status != PropertyStatus.Active || !await db.VerificationRecords.AnyAsync(v => v.PropertyId == property.Id && v.Comments.StartsWith("[LISTING_FEE_PAID:")) || property.OwnerId == Actor || property.MonthlyRent <= 0)
                 return Conflict(new { message = "This listing is not available for booking." });
             if (!await db.Users.AnyAsync(u => u.Id == Actor)) return Forbid();
             if (await db.PropertyApplications.AnyAsync(a => a.PropertyId == property.Id && (a.Status == "Submitted" || a.Status == "Accepted")) ||
@@ -77,6 +77,20 @@ public class PropertyApplicationsController(ApplicationDbContext db) : Controlle
         return false;
     }
 
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,Administrator,SystemAdmin")]
+    public async Task<IActionResult> DeleteRequest(Guid id)
+    {
+        if (!Admin) return Forbid();
+        var application = await db.PropertyApplications.FindAsync(id);
+        if (application == null) return NotFound();
+        if (application.Status == "Accepted")
+            return Conflict(new { message = "An accepted request cannot be deleted. Manage its agreement instead." });
+        var deleted = await db.PropertyApplications.Where(a => a.Id == id && a.Status != "Accepted").ExecuteDeleteAsync();
+        if (deleted != 1) return Conflict(new { message = "The request changed. Refresh before deleting." });
+        return NoContent();
+    }
+
     [HttpPost("{id:guid}/confirm")]
     public Task<IActionResult> ConfirmApplication(Guid id) => Decide(id, "Accepted");
     [HttpPost("{id:guid}/reject")]
@@ -91,7 +105,7 @@ public class PropertyApplicationsController(ApplicationDbContext db) : Controlle
         if (app == null) return NotFound();
         if (app.Status == status) return Ok(new { success = true, id, status });
         if (app.Status != "Submitted") return Conflict(new { message = "This booking has already been reviewed." });
-        if (status == "Accepted") query = query.Where(a => a.Property.Status == PropertyStatus.Active &&
+        if (status == "Accepted") query = query.Where(a => a.Property.Status == PropertyStatus.Active && a.Property.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")) &&
             !db.RentalAgreements.Any(r => r.PropertyId == a.PropertyId && r.Status != AgreementStatus.Ended && r.StartDate < a.EndDate && r.EndDate > a.StartDate));
         var changed = await query.Where(a => a.Status == "Submitted").ExecuteUpdateAsync(setters => setters
             .SetProperty(a => a.Status, status).SetProperty(a => a.UpdatedAt, DateTime.UtcNow));

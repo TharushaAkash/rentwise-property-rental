@@ -130,7 +130,7 @@ export const AdminDashboard = () => {
       } catch {}
 
       const appMap = new Map();
-      localBookings.forEach(b => b?.id && appMap.set(b.id, b));
+
       apiApps.forEach(b => b?.id && appMap.set(b.id, b));
       setApplications(Array.from(appMap.values()));
     } catch (err) {
@@ -536,12 +536,27 @@ export const AdminDashboard = () => {
   const [agreementFilter, setAgreementFilter] = useState('ALL');
   const [confirmingAppId, setConfirmingAppId] = useState(null);
 
+  const [deletingRequestId, setDeletingRequestId] = useState(null);
+  const handleDeleteAgreementRequest = async (app) => {
+    if (!window.confirm('Delete this agreement request? This cannot be undone.')) return;
+    setDeletingRequestId(app.id);
+    try {
+      await api.delete(`/property-applications/${app.id}`);
+      setApplications(current => current.filter(item => item.id !== app.id));
+      try {
+        const cached = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        localStorage.setItem('rentwise_client_bookings', JSON.stringify(cached.filter(item => item.id !== app.id)));
+      } catch { /* The server deletion already succeeded. */ }
+      setFeedback({ text: 'Agreement request deleted.', type: 'success' });
+    } catch (error) {
+      setFeedback({ text: error.response?.data?.message || 'Could not delete this request.', type: 'error' });
+    } finally { setDeletingRequestId(null); }
+  };
+
   const handleAdminConfirmAgreement = async (appId) => {
     try {
       setConfirmingAppId(appId);
-      try {
-        await api.post(`/property-applications/${appId}/confirm`);
-      } catch {}
+      await api.post(`/property-applications/${appId}/confirm`);
 
       setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'Accepted' } : a));
 
@@ -2194,6 +2209,9 @@ export const AdminDashboard = () => {
                     </div>
 
                     <div className="flex items-center lg:flex-col justify-end gap-2 border-t lg:border-t-0 pt-3 lg:pt-0 shrink-0">
+                      {app.status !== 'Accepted' && <Button size="sm" variant="outline"
+                        isLoading={deletingRequestId === app.id} onClick={() => handleDeleteAgreementRequest(app)}
+                        className="text-red-600 border-red-200">Delete request</Button>}
                       {isPending ? (
                         <Button
                           size="sm"

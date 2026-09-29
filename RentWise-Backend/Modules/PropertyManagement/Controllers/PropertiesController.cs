@@ -35,6 +35,9 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         public async Task<IActionResult> GetProperties()
         {
             var properties = await _propertyService.GetAllPropertiesAsync();
+            if (!(User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin")))
+                properties = properties.Where(p => p.Status == PropertyStatus.Active &&
+                    p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
             return Ok(properties);
         }
 
@@ -46,7 +49,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         {
             if (pageSize < 1 || pageSize > 48 || minBudget < 0 || maxBudget < 0 || bedrooms < 0)
                 return BadRequest(new { message = "Invalid search filters." });
-            var query = _context.Properties.AsNoTracking().Where(p => p.Status == PropertyStatus.Active);
+            var query = _context.Properties.AsNoTracking().Where(p => p.Status == PropertyStatus.Active && p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
             if (!string.IsNullOrWhiteSpace(location))
             {
                 var term = location.Trim().ToLower();
@@ -82,6 +85,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         public async Task<IActionResult> GetPropertiesByOwner(Guid ownerId)
         {
             var properties = await _propertyService.GetPropertiesByOwnerIdAsync(ownerId);
+            if (!CanManageListings(ownerId))
+                properties = properties.Where(p => p.Status == PropertyStatus.Active && p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
             return Ok(properties);
         }
 
@@ -111,12 +116,16 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             if (Guid.TryParse(id, out var guidId))
             {
                 var property = await _propertyService.GetPropertyByIdAsync(guidId);
-                if (property != null) return Ok(property);
+                if (property != null) {
+                    if (!CanManageListings(property.OwnerId) && (property.Status != PropertyStatus.Active || !await HasListingFee(property.Id))) return NotFound();
+                    return Ok(property);
+                }
             }
 
             var allProps = await _propertyService.GetAllPropertiesAsync();
             var matched = allProps.FirstOrDefault(p => p.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
-            if (matched != null) return Ok(matched);
+            if (matched != null && (CanManageListings(matched.OwnerId) ||
+                (matched.Status == PropertyStatus.Active && await HasListingFee(matched.Id)))) return Ok(matched);
 
             return NotFound(new { message = $"Property with ID '{id}' not found." });
         }
@@ -164,6 +173,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var existingProperty = await _propertyService.GetPropertyByIdAsync(id);
             if (existingProperty == null) return NotFound();
 
+            if (dto.Status == PropertyStatus.Active && !await HasListingFee(id))
+                return Conflict(new { message = "The listing fee must be paid before publication." });
             bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin");
 
             // Map fields from DTO
@@ -197,6 +208,12 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             await _propertyService.UpdatePropertyAsync(existingProperty);
             return NoContent();
         }
+
+        private bool CanManageListings(Guid ownerId) => User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin")
+            || (Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var actor) && actor == ownerId);
+
+        private Task<bool> HasListingFee(Guid id) => _context.VerificationRecords.AnyAsync(v =>
+            v.PropertyId == id && v.Comments.StartsWith("[LISTING_FEE_PAID:"));
 
         private static bool IsPhotoUrl(string? url) => Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri)
             && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
@@ -293,7 +310,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             // Recommendations needing review remain unpublished until an administrator decides.
             // Keep a pre-existing suspension when the agent cannot approve the new proof.
             var requiresAdminReview = reviewRequest != null || await _context.DocumentReviewRequests.AnyAsync(r => r.PropertyId == id && r.ResubmittedAt == null);
-            property.Status = recommendation == "Approve-ready" && !requiresAdminReview ? PropertyStatus.Active
+            property.Status = recommendation == "Approve-ready" && !requiresAdminReview && await HasListingFee(id) ? PropertyStatus.Active
                 : property.Status == PropertyStatus.Suspended ? PropertyStatus.Suspended : PropertyStatus.PendingVerification;
             property.UpdatedAt = DateTime.UtcNow;
             var report = new { recommendation, reasoning, propertyAddress = property.Address, documentUrl = doc.DocumentUrl };
@@ -320,6 +337,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var property = await _context.Properties.FindAsync(id);
             if (property == null) return NotFound(new { message = "Property not found" });
 
+            if (!CanManageListings(property.OwnerId)) return Forbid();
             decimal feeAmount = dto?.Amount ?? 0;
             if (feeAmount < 2500)
             {
@@ -380,6 +398,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var property = await _context.Properties.FindAsync(id);
             if (property == null) return NotFound(new { message = "Property not found" });
 
+            if (!await HasListingFee(id)) return Conflict(new { message = "The owner must pay the listing fee before this property can be published." });
             property.Status = PropertyStatus.Active;
             property.UpdatedAt = DateTime.UtcNow;
 
@@ -447,6 +466,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [Authorize(Roles = "Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdatePropertyStatusDto dto)
         {
+            if (dto.Status == PropertyStatus.Active && !await HasListingFee(id))
+                return Conflict(new { message = "The listing fee must be paid before publication." });
             var result = await _propertyService.UpdatePropertyStatusAsync(id, dto.Status);
             if (!result) return NotFound();
 
