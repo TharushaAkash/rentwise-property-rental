@@ -14,6 +14,7 @@ namespace RentWise.API.Data
 
         public DbSet<User> Users { get; set; }
         
+        public DbSet<PropertyApplication> PropertyApplications { get; set; }
         public DbSet<Property> Properties { get; set; }
         public DbSet<PropertyPhoto> PropertyPhotos { get; set; }
         public DbSet<PropertyDocument> PropertyDocuments { get; set; }
@@ -41,6 +42,15 @@ namespace RentWise.API.Data
             modelBuilder.Entity<AgentWorkflowRun>().HasIndex(r => new { r.RequestedById, r.CreatedAt });
             modelBuilder.Entity<AgentWorkflowRun>().HasIndex(r => new { r.ReviewerId, r.Status });
             
+            modelBuilder.Entity<PropertyApplication>().HasOne(a => a.Property).WithMany()
+                .HasForeignKey(a => a.PropertyId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<PropertyApplication>().HasOne(a => a.Tenant).WithMany()
+                .HasForeignKey(a => a.TenantId).OnDelete(DeleteBehavior.Restrict);
+            // A pending/accepted booking reserves the listing, matching the clients' booking rules.
+            modelBuilder.Entity<PropertyApplication>().HasIndex(a => a.PropertyId).IsUnique()
+                .HasFilter("\"Status\" IN ('Submitted', 'Accepted')");
+            modelBuilder.Entity<PropertyApplication>().HasIndex(a => new { a.TenantId, a.CreatedAt });
+
             // Delete behaviors and relationships config
             modelBuilder.Entity<Property>()
                 .HasOne(p => p.Owner)

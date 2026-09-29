@@ -318,6 +318,9 @@ namespace RentWise.API.Modules.Users.Controllers
                         image_url = imageUrl
                     };
                     
+                    var workflowKey = Environment.GetEnvironmentVariable("AGENT_WORKFLOW_KEY") ?? _configuration["AgentWorkflowKey"];
+                    if (string.IsNullOrWhiteSpace(workflowKey)) throw new InvalidOperationException("AI service is not configured.");
+                    httpClient.DefaultRequestHeaders.Add("X-Workflow-Key", workflowKey);
                     var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
                     var agentRes = await httpClient.PostAsJsonAsync($"{agentUrl}/workflow/verify-nic", requestPayload);
                     if (agentRes.IsSuccessStatusCode)

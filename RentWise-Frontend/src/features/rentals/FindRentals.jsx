@@ -125,88 +125,16 @@ export const FindRentals = () => {
     setAiError('');
 
     try {
-      const qLower = query.toLowerCase();
-
-      // 1. Natural Language Extraction (Student 2 Criteria Parsing)
-      let extractedDest = 'Central Colombo';
-      let destKey = 'colombo';
-      if (qLower.includes('sliit') || qLower.includes('malabe')) {
-        extractedDest = 'SLIIT Malabe';
-        destKey = 'sliit';
-      } else if (qLower.includes('orion')) {
-        extractedDest = 'Orion City IT Park';
-        destKey = 'orion';
-      } else if (qLower.includes('colombo 07') || qLower.includes('ward place') || qLower.includes('cinnamon')) {
-        extractedDest = 'Colombo 07';
-        destKey = 'colombo 07';
-      } else if (qLower.includes('colombo 03') || qLower.includes('kollupitiya') || qLower.includes('marine')) {
-        extractedDest = 'Colombo 03';
-        destKey = 'colombo 03';
-      } else if (qLower.includes('university') || qLower.includes('uoc')) {
-        extractedDest = 'University of Colombo';
-        destKey = 'university';
-      } else if (qLower.includes('battaramulla') || qLower.includes('thalangama')) {
-        extractedDest = 'Battaramulla';
-        destKey = 'battaramulla';
-      } else if (qLower.includes('pelawatte')) {
-        extractedDest = 'Pelawatte';
-        destKey = 'pelawatte';
-      } else if (qLower.includes('dehiwala') || qLower.includes('mount lavinia')) {
-        extractedDest = 'Dehiwala';
-        destKey = 'dehiwala';
-      } else if (qLower.includes('kandy') || qLower.includes('peradeniya')) {
-        extractedDest = 'Kandy';
-        destKey = 'kandy';
-      } else if (qLower.includes('fort')) {
-        extractedDest = 'Colombo Fort';
-        destKey = 'fort';
+      setAiSearchResult(null);
+      const res = await api.post('/agentic/workflow/match-location', {
+        objective: query,
+        tenant_profile: { role: user?.role || 'Tenant', preferredBudgetMax: maxBudget ? Number(maxBudget) : null }
+      });
+      const returnedProperties = res.data?.ranked_properties || res.data?.matching_results;
+      if (!Array.isArray(returnedProperties) || res.data?.status === 'failed') {
+        throw new Error(res.data?.message || 'AI returned an invalid response. Please retry.');
       }
-
-      // Budget extraction
-      let targetMaxBudget = 0;
-      const budgetMatch = qLower.match(/under\s+(?:lkr\s*|rs\.?\s*)?(\d+)(?:k|000)?/i) ||
-                          qLower.match(/(?:below|less than|max)\s+(\d+)(?:k|000)?/i) ||
-                          qLower.match(/(\d+)k/i);
-      if (budgetMatch) {
-        let num = parseInt(budgetMatch[1], 10);
-        if (num < 1000) num = num * 1000;
-        targetMaxBudget = num;
-      }
-
-      // Bedroom extraction
-      let targetBeds = 0;
-      if (qLower.includes('1-bed') || qLower.includes('1 bed') || qLower.includes('single') || qLower.includes('studio')) targetBeds = 1;
-      else if (qLower.includes('2-bed') || qLower.includes('2 bed')) targetBeds = 2;
-      else if (qLower.includes('3-bed') || qLower.includes('3 bed')) targetBeds = 3;
-      else if (qLower.includes('4-bed') || qLower.includes('4 bed')) targetBeds = 4;
-
-      // Desired facilities
-      const wantsAC = qLower.includes('ac') || qLower.includes('air condition');
-      const wantsParking = qLower.includes('park') || qLower.includes('garage');
-      const wantsPool = qLower.includes('pool');
-      const wantsFurnished = qLower.includes('furnish');
-      const wantsGarden = qLower.includes('garden');
-
-      // 2. Try Calling Backend Agentic Service (with fallback if 404 or offline)
-      let backendRanked = null;
-      try {
-        const res = await api.post('/agentic/workflow/match-location', {
-          objective: query,
-          tenant_profile: {
-            name: user?.name || 'Prospective Tenant',
-            role: user?.role || 'Tenant',
-            preferredBudgetMax: targetMaxBudget || (maxBudget ? Number(maxBudget) : null)
-          }
-        });
-        
-        const returnedProperties = res.data?.ranked_properties || res.data?.matching_results;
-        if (returnedProperties !== undefined) {
-          backendRanked = { ...res.data, ranked_properties: returnedProperties };
-        }
-      } catch (apiErr) {
-        console.warn('Agentic AI backend note, executing client-side Student 2 Matching & Location agent:', apiErr);
-      }
-
+      const backendRanked = { ...res.data, ranked_properties: returnedProperties };
       if (backendRanked) {
         const enriched = backendRanked.ranked_properties.map((p) => {
           const matchExisting = properties.find((ep) => String(ep.id) === String(p.property_id || p.id));
@@ -230,152 +158,9 @@ export const FindRentals = () => {
         return;
       }
 
-      // 3. Resilient Client-Side Student 2 Agent Engine
-      const allActive = properties.filter((p) => {
-        const s = p.status ?? p.Status ?? 'Active';
-        if (s !== 'Active' && s !== 1) return false;
-        
-        const bookingInfo = getActiveBookingForProperty(p.id);
-        if (bookingInfo.isBooked) return false;
-
-        return true;
-      });
-
-      const scoredList = allActive.map((p) => {
-        const rent = Number(p.monthlyRent || p.MonthlyRent || 0);
-        const beds = Number(p.bedrooms || p.Bedrooms || 1);
-        const facilities = (p.facilities || p.Facilities || '').toLowerCase();
-        const pAddress = (p.address || p.Address || '').toLowerCase();
-        const pCity = (p.city || p.City || '').toLowerCase();
-
-        // Calculate commute distance & travel time
-        let distanceKm = 3.5;
-        let travelMins = 10;
-        const targetTown = destKey;
-
-        // Strict location filtering for client-side engine
-        if (targetTown && targetTown !== 'any' && targetTown !== 'colombo') {
-          if (!pAddress.includes(targetTown) && !pCity.includes(targetTown)) {
-            return null; // Exclude properties not in the target town
-          }
-        }
-
-        if (pAddress.includes(targetTown) || pCity.includes(targetTown)) {
-          distanceKm = 1.6;
-          travelMins = 5;
-        } else if (targetTown === 'sliit' && (pAddress.includes('malabe') || pCity.includes('malabe'))) {
-          distanceKm = 1.8;
-          travelMins = 6;
-        } else if (targetTown === 'sliit' && (pAddress.includes('battaramulla') || pAddress.includes('pelawatte'))) {
-          distanceKm = 4.2;
-          travelMins = 12;
-        } else if (targetTown === 'colombo 07' && (pAddress.includes('colombo') || pAddress.includes('ward'))) {
-          distanceKm = 1.2;
-          travelMins = 4;
-        } else if (targetTown === 'dehiwala' && (pAddress.includes('dehiwala') || pAddress.includes('marine'))) {
-          distanceKm = 1.4;
-          travelMins = 5;
-        } else {
-          distanceKm = 6.8;
-          travelMins = 20;
-        }
-
-        // Compute Match Score (0 - 100%)
-        let score = 70;
-        const reasons = [];
-
-        // Budget evaluation (30 pts)
-        if (targetMaxBudget > 0) {
-          if (rent <= targetMaxBudget) {
-            score += 15;
-            reasons.push(`Monthly rent of LKR ${rent.toLocaleString()} fits within your LKR ${targetMaxBudget.toLocaleString()} budget`);
-          } else if (rent <= targetMaxBudget * 1.1) {
-            score += 8;
-            reasons.push(`Rent of LKR ${rent.toLocaleString()} is very close to your budget`);
-          } else {
-            score -= 10;
-          }
-        } else {
-          score += 10;
-          reasons.push(`Competitively priced at LKR ${rent.toLocaleString()} per month`);
-        }
-
-        // Distance & Commute evaluation (30 pts)
-        if (distanceKm <= 2.5) {
-          score += 15;
-          reasons.push(`Excellent proximity: only ${distanceKm} km (~${travelMins} mins commute) to ${extractedDest}`);
-        } else if (distanceKm <= 5.0) {
-          score += 8;
-          reasons.push(`Reasonable commute: ${distanceKm} km (~${travelMins} mins) to ${extractedDest}`);
-        } else {
-          score -= 5;
-        }
-
-        // Bedroom evaluation (20 pts)
-        if (targetBeds > 0) {
-          if (beds === targetBeds) {
-            score += 10;
-            reasons.push(`Exactly matches your ${targetBeds}-bedroom preference`);
-          } else if (beds > targetBeds) {
-            score += 6;
-            reasons.push(`Offers ${beds} bedrooms (extra space for your needs)`);
-          } else {
-            score -= 8;
-          }
-        } else {
-          score += 5;
-        }
-
-        // Facility matches (20 pts)
-        const facilityMatches = [];
-        if (wantsAC && (facilities.includes('air') || facilities.includes('ac'))) facilityMatches.push('Air Conditioning');
-        if (wantsParking && (facilities.includes('park') || facilities.includes('garage'))) facilityMatches.push('Parking');
-        if (wantsPool && facilities.includes('pool')) facilityMatches.push('Swimming Pool');
-        if (wantsFurnished && facilities.includes('furnish')) facilityMatches.push('Furnished');
-        if (wantsGarden && facilities.includes('garden')) facilityMatches.push('Garden');
-
-        if (facilityMatches.length > 0) {
-          score += Math.min(10, facilityMatches.length * 5);
-          reasons.push(`Equipped with requested ${facilityMatches.join(' and ')}`);
-        } else {
-          score += 3;
-        }
-
-        const finalScore = Math.min(98, Math.max(68, score));
-
-        return {
-          ...p,
-          id: p.id,
-          match_score: finalScore,
-          distance_km: distanceKm,
-          travel_time_mins: travelMins,
-          match_reasons: reasons
-        };
-      }).filter(Boolean); // Remove excluded properties
-
-      // Sort candidates descending by match score
-      scoredList.sort((a, b) => b.match_score - a.match_score);
-
-      const topPick = scoredList[0];
-      const summaryText = topPick
-        ? `Found ${scoredList.length} candidate properties. Top recommendation is "${topPick.title}" (${topPick.match_score}% match), located only ${topPick.distance_km} km (~${topPick.travel_time_mins} mins) from ${extractedDest} with rent of LKR ${Number(topPick.monthlyRent || 0).toLocaleString()}/month.`
-        : `Evaluated properties against criteria for ${extractedDest}.`;
-
-      setAiSearchResult({
-        status: 'completed',
-        destination_landmark: extractedDest,
-        extracted_filters: {
-          destination: extractedDest,
-          budget_max: targetMaxBudget || null,
-          bedrooms: targetBeds || null
-        },
-        ranked_properties: scoredList,
-        summary_recommendation: summaryText
-      });
-
     } catch (err) {
       console.error('Error in Student 2 AI search execution:', err);
-      setAiError('Failed to process AI search. Please adjust your prompt.');
+      setAiError(err.response?.data?.message || err.response?.data?.error || err.message || 'AI service is unavailable. Please retry.');
     } finally {
       setIsAiSearching(false);
     }
@@ -919,10 +704,10 @@ export const FindRentals = () => {
                               <Sparkles className="w-3 h-3 text-amber-300" />
                               <span>{property.match_score}% Match</span>
                             </span>
-                            {property.distance_km !== undefined && (
+                            {property.distance_km != null && (
                               <span className="inline-flex items-center gap-1 bg-slate-900/90 text-white text-[10.5px] font-bold px-2 py-1 rounded-md backdrop-blur-xs shadow-sm">
                                 <Navigation className="w-3 h-3 text-blue-300" />
-                                <span>{property.distance_km} km</span>
+                                <span>AI estimate: {property.distance_km} km</span>
                               </span>
                             )}
                           </>
@@ -1002,7 +787,7 @@ export const FindRentals = () => {
                           <div className="mt-3 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-[11.5px] space-y-1.5">
                             <div className="flex items-center gap-1.5 font-bold text-indigo-950">
                               <Compass className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                              <span>{property.distance_km} km • ~{property.travel_time_mins} mins commute to {aiSearchResult?.destination_landmark || 'destination'}</span>
+                              <span>{property.distance_km == null ? 'AI could not estimate this commute.' : `AI estimate: ${property.distance_km} km / ~${property.travel_time_mins} mins driving to ${aiSearchResult?.destination_landmark || 'destination'} (not live traffic)`}</span>
                             </div>
                             {Array.isArray(property.match_reasons) && property.match_reasons.length > 0 && (
                               <ul className="text-gray-600 space-y-1 pl-3.5 list-disc text-[11px] leading-relaxed">

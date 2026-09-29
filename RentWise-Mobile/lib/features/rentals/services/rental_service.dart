@@ -4,21 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../shared/utils/api_constants.dart';
+import '../../../shared/services/token_store.dart';
 import '../models/rental_model.dart';
 
 class RentalService {
   final http.Client _client;
   RentalService({http.Client? client}) : _client = client ?? http.Client();
 
-  static const _agenticBaseUrl = String.fromEnvironment(
-    'AGENTIC_BASE_URL',
-    defaultValue: 'https://rentwise-ai-service.onrender.com',
-  );
-
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
-  }
+  Future<String?> _getToken() => TokenStore.instance.read();
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await _getToken();
@@ -435,8 +428,8 @@ class RentalService {
   // Agentic AI – Agreement & Pricing Agent
   // ──────────────────────────────────────────────
 
-  /// Calls the hosted Agentic AI service to audit an agreement.
-  /// Returns parsed JSON map on success, or null if all endpoints fail.
+  /// Calls ASP.NET Core, which invokes the internal AI service.
+  /// Returns parsed JSON map on success, or null if the API cannot complete the audit.
   Future<Map<String, dynamic>?> auditAgreementWithAi({
     required String propertyId,
     required String agreementId,
@@ -458,15 +451,16 @@ class RentalService {
       'document': document,
     });
 
-    final client = http.Client();
     try {
-      final res = await client
+      final res = await _client
           .post(
-            Uri.parse('$_agenticBaseUrl/workflow/draft-agreement'),
-            headers: {'Content-Type': 'application/json'},
+            Uri.parse(
+              '${ApiConstants.baseUrl}/agentic/workflow/draft-agreement',
+            ),
+            headers: await _authHeaders(),
             body: payload,
           )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 120));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data is Map) {
@@ -482,8 +476,6 @@ class RentalService {
       }
     } catch (_) {
       // The caller offers a clearly labelled local estimate and retry.
-    } finally {
-      client.close();
     }
     return null;
   }

@@ -40,3 +40,17 @@ Existing properties without persisted verification evidence show pending status
 instead of demo verification. Resubmit their proof or use the existing admin
 approval action. Live Gemini, storage, and database integration still require
 an end-to-end check with the deployed service configuration.
+
+
+### AI search commute and errors
+
+Run `python -m unittest discover -s tests -p test_matching_location.py` from the agent service directory.
+These mocked tests cover model-supplied commute values, unavailable/invalid estimates, no silent quota fallback,
+HTTP 429 propagation and retaining destination metadata. No live model accuracy is asserted.
+
+Web AI search now displays approximate AI driving estimates, not measured routes or live traffic.
+The landing page and Find Rentals show provider quota/service errors instead of substituting local rankings.
+Restart/redeploy both the Python service and ASP.NET proxy, then rebuild the web client.
+Mobile matching now routes through ASP.NET only and surfaces failures without local scoring/commute fallbacks.
+
+All `/workflow/*` HTTP tests must use a fixture `X-Workflow-Key`; direct clients receive 403. Deploy the shared server key on both services.

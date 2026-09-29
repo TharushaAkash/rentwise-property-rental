@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -33,6 +35,31 @@ class RentalTestService extends RentalService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  test('Agreement AI uses the authenticated ASP.NET proxy', () async {
+    SharedPreferences.setMockInitialValues({'auth_token': 'fixture-token'});
+    var called = false;
+    final api = RentalService(
+      client: MockClient((request) async {
+        called = true;
+        expect(request.url.path, '/api/agentic/workflow/draft-agreement');
+        expect(request.headers['Authorization'], 'Bearer fixture-token');
+        return http.Response('{"draft":{"plain_language_summary":{}}}', 200);
+      }),
+    );
+    final result = await api.auditAgreementWithAi(
+      propertyId: 'p1',
+      agreementId: 'a1',
+      rent: 50000,
+      location: 'Malabe',
+      propertyType: 'House',
+      bedrooms: 2,
+      document: 'Draft terms',
+    );
+    expect(called, isTrue);
+    expect(result, isNotNull);
+  });
+
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('payment form fits a narrow mobile viewport', (tester) async {

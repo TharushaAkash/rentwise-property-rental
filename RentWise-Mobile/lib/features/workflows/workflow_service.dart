@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../shared/services/token_store.dart';
 
 import '../../shared/utils/api_constants.dart';
 
@@ -26,7 +27,7 @@ class WorkflowService {
   ]) async {
     final token = tokenLoader != null
         ? await tokenLoader!()
-        : (await SharedPreferences.getInstance()).getString('auth_token');
+        : await TokenStore.instance.read();
     if (token == null || token.isEmpty) {
       throw const WorkflowException(
         'Please sign in again to view rental requests.',
