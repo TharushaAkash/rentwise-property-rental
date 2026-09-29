@@ -110,6 +110,7 @@ export const FindRentals = () => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [aiSearchResult, setAiSearchResult] = useState(null);
+  const commuteDestination = aiSearchResult?.destination_landmark?.trim() || '';
   const [aiError, setAiError] = useState('');
 
   // Search by AI - Student 2 Matching & Location Intelligence Agent (matching RequestForm triage pattern)
@@ -488,7 +489,7 @@ export const FindRentals = () => {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 font-bold text-amber-300">
                   <Navigation className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Ranked by commute to: {aiSearchResult.destination_landmark || 'Target Area'}</span>
+                  <span>{commuteDestination ? `Ranked by commute to: ${commuteDestination}` : 'Matched to your search preferences'}</span>
                 </div>
                 <span className="text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2.5 py-0.5 rounded-full">
                   {aiSearchResult.ranked_properties?.length || 0} AI Scored Matches
@@ -643,7 +644,7 @@ export const FindRentals = () => {
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {aiSearchResult
-                ? `Ranked by match score & proximity to ${aiSearchResult.destination_landmark || 'destination'}`
+                ? (commuteDestination ? `Ranked by match score & proximity to ${commuteDestination}` : 'Ranked by match score for your search preferences')
                 : `Showing ${filteredProperties.length} verified active rentals across Sri Lanka`}
             </p>
           </div>
@@ -787,7 +788,11 @@ export const FindRentals = () => {
                           <div className="mt-3 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-[11.5px] space-y-1.5">
                             <div className="flex items-center gap-1.5 font-bold text-indigo-950">
                               <Compass className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                              <span>{property.distance_km == null ? 'AI could not estimate this commute.' : `AI estimate: ${property.distance_km} km / ~${property.travel_time_mins} mins driving to ${aiSearchResult?.destination_landmark || 'destination'} (not live traffic)`}</span>
+                              <span>{!commuteDestination
+                                ? 'Add a destination to your search to see estimated distance and travel time.'
+                                : property.distance_km == null || property.travel_time_mins == null
+                                  ? 'AI could not estimate this commute. Try a more specific destination or landmark.'
+                                  : `AI estimate: ${property.distance_km} km / ~${property.travel_time_mins} mins driving to ${commuteDestination} (not live traffic)`}</span>
                             </div>
                             {Array.isArray(property.match_reasons) && property.match_reasons.length > 0 && (
                               <ul className="text-gray-600 space-y-1 pl-3.5 list-disc text-[11px] leading-relaxed">
