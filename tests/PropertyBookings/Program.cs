@@ -86,6 +86,36 @@ await using (var db=NewDb()) {
  var invalid=Request(); invalid.DurationMonths=0;
  Check(await Controller(db,tenant.Id,"Tenant").CreateApplication(invalid) is BadRequestObjectResult,"Invalid duration rejected");
 }
+// Browsing must paginate in the database and apply filters before the limit.
+await using (var db = NewDb()) {
+ for (var i = 0; i < 25; i++) db.Properties.Add(new Property {
+  OwnerId = owner.Id, Title = $"Browse fixture {i}", Address = "BrowseTest Colombo",
+  MonthlyRent = 50000 + i * 1000, Bedrooms = 2, PropertyType = "Apartment",
+  Status = i == 24 ? PropertyStatus.PendingVerification : PropertyStatus.Active
+ });
+ await db.SaveChangesAsync();
+ var controller = new PropertiesController(null!, db, null!);
+ async Task<JsonElement> Page(string? cursor = null, decimal? budget = null) {
+  var result = (OkObjectResult)await controller.Browse("BrowseTest", null, budget, 2,
+   propertyType: "Apartment", cursor: cursor);
+  return JsonSerializer.SerializeToElement(result.Value);
+ }
+ var first = await Page();
+ Check(first.GetProperty("items").GetArrayLength() == 12, "Browse returns only twelve listings");
+ Check(first.GetProperty("hasMore").GetBoolean(), "Browse exposes next page");
+ var second = await Page(first.GetProperty("nextCursor").GetString());
+ Check(second.GetProperty("items").GetArrayLength() == 12, "Cursor returns remaining active listings");
+ Check(!second.GetProperty("hasMore").GetBoolean(), "Final page has no next cursor");
+ var ids = first.GetProperty("items").EnumerateArray().Select(p => p.GetProperty("Id").GetGuid())
+  .Concat(second.GetProperty("items").EnumerateArray().Select(p => p.GetProperty("Id").GetGuid()));
+ Check(ids.Distinct().Count() == 24, "Pages do not repeat listings or include pending listings");
+ Check(await controller.Browse(null, null, null, null, cursor: "invalid") is BadRequestObjectResult,
+  "Invalid cursor is rejected");
+ if (pg != null) {
+  var filtered = await Page(budget: 53000);
+  Check(filtered.GetProperty("items").GetArrayLength() == 4, "Budget filter applies before pagination");
+ }
+}
 Console.WriteLine($"{checks} booking checks passed ({(pg == null ? "SQLite" : "PostgreSQL migrations + concurrent requests")}).");
 
 sealed class FailingSaveInterceptor(Exception failure) : SaveChangesInterceptor

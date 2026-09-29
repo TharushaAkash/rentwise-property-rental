@@ -1,3 +1,5 @@
+import { usePropertyBrowse } from '../../hooks/usePropertyBrowse';
+import { BrowseMore } from '../../components/BrowseMore';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Heart, SlidersHorizontal, MapPin, Building2, Home, Bed, Bath, Maximize, CheckCircle2, AlertCircle, ArrowRight, Sparkles, RotateCcw, Clock, Lock, Eye, Navigation, Bot, Zap, Compass, Check, X } from 'lucide-react';
@@ -175,8 +177,13 @@ export const FindRentals = () => {
   };
 
   // Properties & Saved state
-  const [properties, setProperties] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const browse = usePropertyBrowse({
+    location: locationInput, minBudget: minBudget || undefined, maxBudget: maxBudget || undefined,
+    bedrooms: bedroomsFilter === 'Any' ? undefined : parseInt(bedroomsFilter, 10),
+    minimumBedrooms: bedroomsFilter.includes('+'),
+  });
+  const isLoading = browse.loading;
+  const properties = useMemo(() => browse.items.map(normalizeProperty), [browse.items]);
   const [savedPropertyIds, setSavedPropertyIds] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]');
@@ -194,57 +201,36 @@ export const FindRentals = () => {
   // Property Inspection Modal State (matching My Properties inspection modal)
   const [inspectingProperty, setInspectingProperty] = useState(null);
 
-  const fetchRentals = async () => {
-    setIsLoading(true);
-    try {
-      const res = await api.get('/properties').catch(() => ({ data: [] }));
-      const apiData = Array.isArray(res.data) ? res.data : [];
-
-      // Normalize API properties retaining all detailed fields (photos, utility bills, etc.)
-      const normalizedApi = apiData.map((p) => {
-        let photoUrl = p.photoUrl || p.PhotoUrl;
-        let photos = [];
-        if (Array.isArray(p.photos) && p.photos.length > 0) {
-          photos = p.photos.map(ph => typeof ph === 'string' ? ph : (ph?.photoUrl || ph?.PhotoUrl || ph?.url)).filter(Boolean);
-          if (!photoUrl) photoUrl = photos[0];
-        } else if (photoUrl) {
-          photos = [photoUrl];
-        }
-        return {
-          ...p,
-          id: p.id || p.Id,
-          title: p.title || p.Title,
-          description: p.description || p.Description,
-          address: p.address || p.Address,
-          city: p.city || p.City || p.address?.split(',')?.pop()?.trim() || 'Sri Lanka',
-          monthlyRent: Number(p.monthlyRent || p.MonthlyRent || 0),
-          bedrooms: Number(p.bedrooms || p.Bedrooms || 1),
-          bathrooms: Number(p.bathrooms || p.Bathrooms || 1),
-          sqft: Number(p.sqft || p.Sqft || 1200),
-          propertyType: p.propertyType || p.PropertyType || 'House',
-          photoUrl: photoUrl || PROPERTY_PLACEHOLDER_IMAGE,
-          photos: photos,
-          featureTags: p.featureTags || p.FeatureTags || [],
-          facilities: p.facilities || p.Facilities || '',
-          status: p.status ?? p.Status ?? 'Active',
-          ownerId: p.ownerId || p.OwnerId,
-          utilityBillUrl: p.utilityBillUrl || (Array.isArray(p.documents) ? p.documents.find(d => d?.documentType === 'UtilityBill' || d?.documentType === 'OwnershipProof')?.documentUrl : '')
-        };
-      });
-
-      setProperties(normalizedApi);
-    } catch (err) {
-      console.error('Failed to load rentals:', err);
-      setProperties([]);
-    } finally {
-      setIsLoading(false);
+  function normalizeProperty(p) {
+    let photoUrl = p.photoUrl || p.PhotoUrl;
+    let photos = [];
+    if (Array.isArray(p.photos) && p.photos.length > 0) {
+      photos = p.photos.map(ph => typeof ph === 'string' ? ph : (ph?.photoUrl || ph?.PhotoUrl || ph?.url)).filter(Boolean);
+      if (!photoUrl) photoUrl = photos[0];
+    } else if (photoUrl) {
+      photos = [photoUrl];
     }
-  };
-
-  // Fetch real properties from API and merge with aesthetic sample collection
-  useEffect(() => {
-    fetchRentals();
-  }, []);
+    return {
+      ...p,
+      id: p.id || p.Id,
+      title: p.title || p.Title,
+      description: p.description || p.Description,
+      address: p.address || p.Address,
+      city: p.city || p.City || p.address?.split(',')?.pop()?.trim() || 'Sri Lanka',
+      monthlyRent: Number(p.monthlyRent || p.MonthlyRent || 0),
+      bedrooms: Number(p.bedrooms || p.Bedrooms || 1),
+      bathrooms: Number(p.bathrooms || p.Bathrooms || 1),
+      sqft: Number(p.sqft || p.Sqft || 1200),
+      propertyType: p.propertyType || p.PropertyType || 'House',
+      photoUrl: photoUrl || PROPERTY_PLACEHOLDER_IMAGE,
+      photos: photos,
+      featureTags: p.featureTags || p.FeatureTags || [],
+      facilities: p.facilities || p.Facilities || '',
+      status: p.status ?? p.Status ?? 'Active',
+      ownerId: p.ownerId || p.OwnerId,
+      utilityBillUrl: p.utilityBillUrl || (Array.isArray(p.documents) ? p.documents.find(d => d?.documentType === 'UtilityBill' || d?.documentType === 'OwnershipProof')?.documentUrl : '')
+    };
+  }
 
   // Listen for storage events so saved status stays synchronized across tabs/components
   useEffect(() => {
@@ -280,35 +266,6 @@ export const FindRentals = () => {
       // Must not be leased/booked
       const bookingInfo = getActiveBookingForProperty(p.id);
       if (bookingInfo.isBooked) return false;
-
-      // Location
-      if (locationInput.trim()) {
-        const loc = locationInput.toLowerCase();
-        const matchesAddress = p.address?.toLowerCase().includes(loc);
-        const matchesCity = p.city?.toLowerCase().includes(loc);
-        const matchesTitle = p.title?.toLowerCase().includes(loc);
-        if (!matchesAddress && !matchesCity && !matchesTitle) return false;
-      }
-
-      // Min Budget
-      if (minBudget && Number(minBudget) > 0) {
-        if (p.monthlyRent < Number(minBudget)) return false;
-      }
-
-      // Max Budget
-      if (maxBudget && Number(maxBudget) > 0) {
-        if (p.monthlyRent > Number(maxBudget)) return false;
-      }
-
-      // Bedrooms
-      if (bedroomsFilter !== 'Any') {
-        const requiredBeds = parseInt(bedroomsFilter, 10);
-        if (bedroomsFilter.includes('+')) {
-          if (p.bedrooms < requiredBeds) return false;
-        } else {
-          if (p.bedrooms !== requiredBeds) return false;
-        }
-      }
 
       return true;
     });
@@ -645,7 +602,7 @@ export const FindRentals = () => {
             <p className="text-xs text-gray-500 mt-0.5">
               {aiSearchResult
                 ? (commuteDestination ? `Ranked by match score & proximity to ${commuteDestination}` : 'Ranked by match score for your search preferences')
-                : `Showing ${filteredProperties.length} verified active rentals across Sri Lanka`}
+                : `Showing ${filteredProperties.length} loaded, verified active rentals across Sri Lanka`}
             </p>
           </div>
           <span className="text-xs sm:text-sm font-medium text-gray-400">
@@ -849,6 +806,8 @@ export const FindRentals = () => {
           </div>
         )}
       </div>
+
+      {!aiSearchResult && !isAiSearching && <BrowseMore browse={browse} />}
 
       {/* Booking Modal */}
       {bookingProperty && (

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { usePropertyBrowse } from '../../hooks/usePropertyBrowse';
+import { BrowseMore } from '../../components/BrowseMore';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { 
@@ -69,14 +71,16 @@ const formatMoney = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
 export const Landing = () => {
   const navigate = useNavigate();
-  const [properties, setProperties] = useState([]);
-  const [loadingProperties, setLoadingProperties] = useState(true);
 
   // Search & Filter States
   const [searchLocation, setSearchLocation] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [bedrooms, setBedrooms] = useState('');
+  const browse = usePropertyBrowse({ location: searchLocation, maxBudget: minPrice || undefined,
+    propertyType, bedrooms: bedrooms || undefined, minimumBedrooms: true });
+  const properties = browse.items;
+  const loadingProperties = browse.loading;
 
   // AI Matching States
   const [searchMode, setSearchMode] = useState('standard'); // 'standard' | 'ai'
@@ -107,22 +111,6 @@ export const Landing = () => {
       return next;
     });
   };
-
-  // Fetch real properties added to the system
-  useEffect(() => {
-    setLoadingProperties(true);
-    api.get('/properties')
-      .then((res) => {
-        setProperties(res.data || []);
-      })
-      .catch((err) => {
-        console.error('Failed to load properties', err);
-        setProperties([]);
-      })
-      .finally(() => {
-        setLoadingProperties(false);
-      });
-  }, []);
 
   // Map ONLY real added properties from the system
   const realProperties = useMemo(() => {
@@ -161,17 +149,7 @@ export const Landing = () => {
     });
   }, [properties]);
 
-  // Filter ONLY real properties dynamically by standard filters
-  const filteredProperties = useMemo(() => {
-    return realProperties.filter((p) => {
-      const text = `${p.title || ''} ${p.address || ''} ${p.city || ''} ${p.facilities || ''} ${p.description || ''}`.toLowerCase();
-      const matchesQuery = !searchLocation || text.includes(searchLocation.toLowerCase());
-      const matchesPrice = !minPrice || Number(p.monthlyRent || 0) <= Number(minPrice);
-      const matchesBeds = !bedrooms || Number(p.bedrooms || 0) >= Number(bedrooms);
-      const matchesType = !propertyType || (p.propertyType && p.propertyType.toLowerCase() === propertyType.toLowerCase()) || text.includes(propertyType.toLowerCase());
-      return matchesQuery && matchesPrice && matchesBeds && matchesType;
-    });
-  }, [realProperties, searchLocation, minPrice, propertyType, bedrooms]);
+  const filteredProperties = realProperties;
 
   // Execute AI semantic matching search
   const handleAiSearch = async (promptOverride) => {
@@ -262,7 +240,7 @@ export const Landing = () => {
               Home
             </button>
             <button onClick={() => navigate('/properties')} className="hover:text-white transition-colors">
-              Properties ({properties.length})
+              Properties
             </button>
             <a href="#about" className="hover:text-white transition-colors">
               About
@@ -364,7 +342,7 @@ export const Landing = () => {
                   RENT
                 </span>
                 <span className="text-xs text-slate-400 font-medium">
-                  {properties.length > 0 ? `${properties.length} listings available` : 'MLS Catalog'}
+                  {properties.length > 0 ? `${properties.length} listings loaded` : 'MLS Catalog'}
                 </span>
               </div>
             </div>
@@ -978,6 +956,7 @@ export const Landing = () => {
                   })}
                 </div>
               )}
+              {!activeAiPrompt && <BrowseMore browse={browse} />}
             </div>
 
             {/* Right Sidebar: Featured Projects, Other Top Cities, Ad Banner, Top Searches */}

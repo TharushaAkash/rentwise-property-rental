@@ -39,6 +39,45 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet("browse")]
+        public async Task<IActionResult> Browse([FromQuery] string? location, [FromQuery] decimal? minBudget,
+            [FromQuery] decimal? maxBudget, [FromQuery] int? bedrooms, [FromQuery] bool minimumBedrooms = false,
+            [FromQuery] string? propertyType = null, [FromQuery] string? cursor = null, [FromQuery] int pageSize = 12)
+        {
+            if (pageSize < 1 || pageSize > 48 || minBudget < 0 || maxBudget < 0 || bedrooms < 0)
+                return BadRequest(new { message = "Invalid search filters." });
+            var query = _context.Properties.AsNoTracking().Where(p => p.Status == PropertyStatus.Active);
+            if (!string.IsNullOrWhiteSpace(location))
+            {
+                var term = location.Trim().ToLower();
+                query = query.Where(p => p.Address.ToLower().Contains(term) || p.Title.ToLower().Contains(term)
+                    || p.Description.ToLower().Contains(term) || p.Facilities.ToLower().Contains(term));
+            }
+            if (minBudget.HasValue) query = query.Where(p => p.MonthlyRent >= minBudget.Value);
+            if (maxBudget.HasValue) query = query.Where(p => p.MonthlyRent <= maxBudget.Value);
+            if (bedrooms.HasValue) query = minimumBedrooms
+                ? query.Where(p => p.Bedrooms >= bedrooms.Value) : query.Where(p => p.Bedrooms == bedrooms.Value);
+            if (!string.IsNullOrWhiteSpace(propertyType))
+                query = query.Where(p => p.PropertyType.ToLower() == propertyType.Trim().ToLower());
+            if (!string.IsNullOrWhiteSpace(cursor))
+            {
+                if (!Guid.TryParse(cursor, out var after)) return BadRequest(new { message = "Invalid page cursor." });
+                query = query.Where(p => p.Id.CompareTo(after) > 0);
+            }
+            // A unique, stable order keeps pages consistent when listings are removed.
+            var items = await query.OrderBy(p => p.Id).Take(pageSize + 1).Select(p => new {
+                p.Id, p.OwnerId, p.Title, p.Description, p.Address, p.MonthlyRent, p.Bedrooms,
+                p.Bathrooms, p.Sqft, p.PropertyType, p.Facilities, p.FeatureTags, p.Status,
+                documents = p.Documents.Select(document => new { document.DocumentType, document.DocumentUrl }).ToList(),
+                photos = p.Photos.OrderByDescending(photo => photo.IsPrimary).ThenBy(photo => photo.Id)
+                    .Select(photo => new { photo.PhotoUrl, photo.IsPrimary }).ToList()
+            }).ToListAsync();
+            var hasMore = items.Count > pageSize;
+            if (hasMore) items.RemoveAt(pageSize);
+            return Ok(new { items, hasMore, nextCursor = hasMore ? items[^1].Id.ToString() : null });
+        }
+
+        [AllowAnonymous]
         [HttpGet("owner/{ownerId}")]
         public async Task<IActionResult> GetPropertiesByOwner(Guid ownerId)
         {
