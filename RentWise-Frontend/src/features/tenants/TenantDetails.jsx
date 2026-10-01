@@ -7,7 +7,7 @@ import { DataTable } from '../../components/ui/DataTable';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { ArrowLeft, Check, X, Building2, Calendar, FileText, User, Mail, Phone, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { parseBookingDetails } from './TenantPortal';
+import { parseBookingDetails } from './tenantHelpers';
 
 const formatMoney = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 

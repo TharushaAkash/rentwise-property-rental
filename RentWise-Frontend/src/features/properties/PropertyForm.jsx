@@ -78,6 +78,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
     resolver: zodResolver(propertySchema),
+    mode: 'onBlur',
     defaultValues: {
       title: initialData?.title || initialData?.Title || '',
       description: initialData?.description || initialData?.Description || '',

@@ -1,3 +1,4 @@
+import { validateCard } from '../../utils/paymentValidation';
 import React, { useEffect, useState } from 'react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
@@ -92,17 +93,9 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
     }
 
     if (paymentMethod === 'card') {
-      const cleanNum = cardNumber.replace(/\s/g, '');
-      if (cleanNum.length < 15) {
-        setError('Please enter a valid 16-digit card number.');
-        return;
-      }
-      if (cardExpiry.length < 5) {
-        setError('Please enter a valid expiry date (MM/YY).');
-        return;
-      }
-      if (cardCvc.length < 3) {
-        setError('Please enter a valid 3 or 4-digit CVV/CVC.');
+      const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+      if (cardError) {
+        setError(cardError);
         return;
       }
     }

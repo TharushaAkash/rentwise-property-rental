@@ -49,6 +49,7 @@ export function RequestForm({
   const [assignedProvider, setAssignedProvider] = useState(initialData?.assignedServiceProvider || null);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     resolver: zodResolver(requestSchema),
     defaultValues: {
       propertyId: defaultPropId || '',

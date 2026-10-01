@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { loginSchema } from './schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import { Home, Mail, Lock, Eye, EyeOff, ArrowLeft, ShieldCheck, Sparkles, Building2 } from 'lucide-react';
-
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required')
-});
 
 const VILLA_BG = 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=2160&q=85';
 
@@ -23,6 +18,7 @@ export const Login = () => {
   const [rememberMe, setRememberMe] = useState(true);
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
+    mode: 'onBlur',
     resolver: zodResolver(loginSchema)
   });
 

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { queryClient } from './queryClient';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -21,19 +22,17 @@ api.interceptors.request.use(
 
 // Interceptor to handle 401s (e.g., token expired) without infinite loops
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Invalidate cached reads after writes, including calls outside useMutation.
+    if (['post', 'put', 'patch', 'delete'].includes(response.config.method?.toLowerCase())) {
+      void queryClient.invalidateQueries({ queryKey: ['api'] });
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      const pathname = window.location.pathname;
-      const isPublicPath = 
-        pathname === '/' || 
-        pathname.startsWith('/properties') ||
-        pathname.startsWith('/login') ||
-        pathname.startsWith('/register');
-
-      if (!isPublicPath) {
-        window.location.href = '/login';
+      if (error.config?.headers?.Authorization === `Bearer ${localStorage.getItem('token')}`) {
+        window.dispatchEvent(new Event('rentwise:session-expired'));
       }
     }
     return Promise.reject(error);

@@ -1,32 +1,29 @@
-import React from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { RouteErrorBoundary } from '../components/RouteErrorBoundary';
+import { RouteMessage } from '../components/RouteMessage';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { ProtectedRoute } from './ProtectedRoute';
 import { Layout } from '../components/Layout';
-import { Landing } from '../features/landing/Landing';
-import { Login } from '../features/auth/Login';
-import { ForgotPassword } from '../features/auth/ForgotPassword';
-import { Register } from '../features/auth/Register';
-import { PropertiesDashboard } from '../features/properties/PropertiesDashboard';
-import { PropertyDetails } from '../features/properties/PropertyDetails';
-import { TenantsDashboard } from '../features/tenants/TenantsDashboard';
-import { TenantDetails } from '../features/tenants/TenantDetails';
-import { AgreementsDashboard } from '../features/agreements/AgreementsDashboard';
-import { AgreementDetails } from '../features/agreements/AgreementDetails';
-import { MaintenanceDashboard } from '../features/maintenance/MaintenanceDashboard';
-import { RequestDetails } from '../features/maintenance/RequestDetails';
-import { TenantPropertyPortal, TenantProfilePortal } from '../features/tenants/TenantPortal';
-import { OwnerProfileSection } from '../features/properties/OwnerProfileSection';
-import { AdminDashboard } from '../features/admin/AdminDashboard';
-import { FindRentals } from '../features/rentals/FindRentals';
-import { SavedItems } from '../features/rentals/SavedItems';
-import { RentalWorkflows } from '../features/workflows/RentalWorkflows';
-
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return children ? <>{children}</> : <Outlet />;
-};
+const Landing = lazy(() => import('../features/landing/Landing').then(module => ({ default: module.Landing })));
+const Login = lazy(() => import('../features/auth/Login').then(module => ({ default: module.Login })));
+const ForgotPassword = lazy(() => import('../features/auth/ForgotPassword').then(module => ({ default: module.ForgotPassword })));
+const Register = lazy(() => import('../features/auth/Register').then(module => ({ default: module.Register })));
+const PropertiesDashboard = lazy(() => import('../features/properties/PropertiesDashboard').then(module => ({ default: module.PropertiesDashboard })));
+const PropertyDetails = lazy(() => import('../features/properties/PropertyDetails').then(module => ({ default: module.PropertyDetails })));
+const TenantsDashboard = lazy(() => import('../features/tenants/TenantsDashboard').then(module => ({ default: module.TenantsDashboard })));
+const TenantDetails = lazy(() => import('../features/tenants/TenantDetails').then(module => ({ default: module.TenantDetails })));
+const AgreementsDashboard = lazy(() => import('../features/agreements/AgreementsDashboard').then(module => ({ default: module.AgreementsDashboard })));
+const AgreementDetails = lazy(() => import('../features/agreements/AgreementDetails').then(module => ({ default: module.AgreementDetails })));
+const MaintenanceDashboard = lazy(() => import('../features/maintenance/MaintenanceDashboard').then(module => ({ default: module.MaintenanceDashboard })));
+const RequestDetails = lazy(() => import('../features/maintenance/RequestDetails').then(module => ({ default: module.RequestDetails })));
+const TenantPropertyPortal = lazy(() => import('../features/tenants/TenantPropertyPortal').then(module => ({ default: module.TenantPropertyPortal })));
+const TenantProfilePortal = lazy(() => import('../features/tenants/TenantProfilePortal').then(module => ({ default: module.TenantProfilePortal })));
+const OwnerProfileSection = lazy(() => import('../features/properties/OwnerProfileSection').then(module => ({ default: module.OwnerProfileSection })));
+const AdminDashboard = lazy(() => import('../features/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const FindRentals = lazy(() => import('../features/rentals/FindRentals').then(module => ({ default: module.FindRentals })));
+const SavedItems = lazy(() => import('../features/rentals/SavedItems').then(module => ({ default: module.SavedItems })));
+const RentalWorkflows = lazy(() => import('../features/workflows/RentalWorkflows').then(module => ({ default: module.RentalWorkflows })));
 
 const RoleRoute = ({ tenant, other, admin }) => {
   const { user } = useAuth();
@@ -50,7 +47,10 @@ const RoleBasedRedirect = () => {
 };
 
 export const AppRouter = () => {
+  const location = useLocation();
   return (
+    <RouteErrorBoundary key={location.pathname}>
+    <Suspense fallback={<div role="status" className="p-12 text-center">Loading page...</div>}>
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Landing />} />
@@ -69,7 +69,7 @@ export const AppRouter = () => {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<RoleBasedRedirect />} />
           <Route path="/rental-workflows" element={<RentalWorkflows />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<ProtectedRoute roles={['Administrator', 'Admin', 'SystemAdmin']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/properties" element={<RoleRoute tenant={<TenantPropertyPortal />} other={<PropertiesDashboard />} admin={<Navigate to="/admin?tab=properties" replace />} />} />
           <Route path="/profile" element={<RoleRoute tenant={<TenantProfilePortal />} other={<OwnerProfileSection />} />} />
           <Route path="/tenants" element={<RoleRoute tenant={<TenantProfilePortal />} other={<TenantsDashboard />} />} />
@@ -82,7 +82,9 @@ export const AppRouter = () => {
       </Route>
       
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<RouteMessage title="Page not found" message="Check the address or return to the home page." />} />
     </Routes>
+    </Suspense>
+    </RouteErrorBoundary>
   );
 };
