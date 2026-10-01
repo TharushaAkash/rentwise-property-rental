@@ -1,4 +1,8 @@
+import '../../auth/providers/auth_provider.dart';
+import 'listing_status_screen.dart';
+
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,8 +77,11 @@ class _PropertiesDashboardScreenState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off_rounded,
-                  size: 48, color: AppColors.muted),
+              const Icon(
+                Icons.cloud_off_rounded,
+                size: 48,
+                color: AppColors.muted,
+              ),
               const SizedBox(height: 12),
               Text('Failed to load properties: $e'),
               const SizedBox(height: 12),
@@ -87,14 +94,20 @@ class _PropertiesDashboardScreenState
         ),
         data: (properties) {
           final filtered = properties.where((p) {
-            final matchesSearch =
-                ('${p.title} ${p.address}').toLowerCase().contains(_search.toLowerCase());
-            final matchesFilter = _filter == 'All' ||
-                (_filter == 'Active' ? p.status == 'Active' : p.status != 'Active');
+            final matchesSearch = ('${p.title} ${p.address}')
+                .toLowerCase()
+                .contains(_search.toLowerCase());
+            final matchesFilter =
+                _filter == 'All' ||
+                (_filter == 'Active'
+                    ? p.status == 'Active'
+                    : p.status != 'Active');
             return matchesSearch && matchesFilter;
           }).toList();
 
-          final activeCount = properties.where((p) => p.status == 'Active').length;
+          final activeCount = properties
+              .where((p) => p.status == 'Active')
+              .length;
 
           return RefreshIndicator(
             color: AppColors.teal,
@@ -143,7 +156,9 @@ class _PropertiesDashboardScreenState
                       Text(
                         '$activeCount Active on Marketplace',
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 13),
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -155,8 +170,10 @@ class _PropertiesDashboardScreenState
                   onChanged: (s) => setState(() => _search = s),
                   decoration: InputDecoration(
                     hintText: 'Search title or address...',
-                    prefixIcon:
-                        const Icon(Icons.search_rounded, color: AppColors.muted),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.muted,
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -205,16 +222,24 @@ class _PropertiesDashboardScreenState
                   ),
 
                 // Property Cards
-                ...filtered.map((p) => _OwnerPropertyCard(
-                      property: p,
-                      onInspect: () => _inspectProperty(p),
-                      onEdit: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PropertyFormScreen(property: p),
-                        ),
-                      ).then((_) => ref.invalidate(managedPropertiesProvider)),
-                    )),
+                ...filtered.map(
+                  (p) => _OwnerPropertyCard(
+                    property: p,
+                    onInspect: () => _inspectProperty(p),
+                    onListingStatus: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ListingStatusScreen(propertyId: p.id),
+                      ),
+                    ),
+                    onEdit: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PropertyFormScreen(property: p),
+                      ),
+                    ).then((_) => ref.invalidate(managedPropertiesProvider)),
+                  ),
+                ),
               ],
             ),
           );
@@ -231,11 +256,13 @@ class _OwnerPropertyCard extends StatelessWidget {
   final PropertyModel property;
   final VoidCallback onInspect;
   final VoidCallback onEdit;
+  final VoidCallback onListingStatus;
 
   const _OwnerPropertyCard({
     required this.property,
     required this.onInspect,
     required this.onEdit,
+    required this.onListingStatus,
   });
 
   @override
@@ -263,8 +290,9 @@ class _OwnerPropertyCard extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: property.photoUrl.isNotEmpty
                     ? Image.network(
                         property.photoUrl,
@@ -274,32 +302,44 @@ class _OwnerPropertyCard extends StatelessWidget {
                         errorBuilder: (_, _, _) => Container(
                           height: 160,
                           color: Colors.grey.shade200,
-                          child: const Icon(Icons.apartment_rounded,
-                              size: 48, color: AppColors.muted),
+                          child: const Icon(
+                            Icons.apartment_rounded,
+                            size: 48,
+                            color: AppColors.muted,
+                          ),
                         ),
                       )
                     : Container(
                         height: 160,
                         color: Colors.grey.shade200,
-                        child: const Icon(Icons.apartment_rounded,
-                            size: 48, color: AppColors.muted),
+                        child: const Icon(
+                          Icons.apartment_rounded,
+                          size: 48,
+                          color: AppColors.muted,
+                        ),
                       ),
               ),
               Positioned(
                 top: 12,
                 left: 12,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: active ? const Color(0xFF426253) : Colors.amber.shade700,
+                    color: active
+                        ? const Color(0xFF426253)
+                        : Colors.amber.shade700,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        active ? Icons.check_circle_rounded : Icons.schedule_rounded,
+                        active
+                            ? Icons.check_circle_rounded
+                            : Icons.schedule_rounded,
                         color: Colors.white,
                         size: 13,
                       ),
@@ -338,8 +378,11 @@ class _OwnerPropertyCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_rounded,
-                        size: 14, color: AppColors.muted),
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 14,
+                      color: AppColors.muted,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -382,6 +425,11 @@ class _OwnerPropertyCard extends StatelessWidget {
                 const Divider(height: 1, color: AppColors.line),
                 const SizedBox(height: 12),
 
+                TextButton.icon(
+                  onPressed: onListingStatus,
+                  icon: const Icon(Icons.verified_outlined),
+                  label: const Text('Verification & listing fee'),
+                ),
                 // Distinct Action Buttons: Inspect Listing vs Edit Details
                 Row(
                   children: [
@@ -527,7 +575,9 @@ class _PropertyInspectSheet extends StatelessWidget {
                       const Text(
                         'Monthly Rent Value',
                         style: TextStyle(
-                            fontWeight: FontWeight.w700, color: AppColors.teal),
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.teal,
+                        ),
                       ),
                       Text(
                         'LKR ${property.monthlyRent.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}',
@@ -550,9 +600,10 @@ class _PropertyInspectSheet extends StatelessWidget {
                   ],
                 ),
                 const Divider(height: 30),
-                const Text('Description',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                const Text(
+                  'Description',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   property.description.isNotEmpty
@@ -561,17 +612,20 @@ class _PropertyInspectSheet extends StatelessWidget {
                   style: const TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
-                const Text('Facilities',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                const Text(
+                  'Facilities',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   children: property.facilities
-                      .map((f) => Chip(
-                            avatar: const Icon(Icons.check, size: 14),
-                            label: Text(f, style: const TextStyle(fontSize: 11)),
-                          ))
+                      .map(
+                        (f) => Chip(
+                          avatar: const Icon(Icons.check, size: 14),
+                          label: Text(f, style: const TextStyle(fontSize: 11)),
+                        ),
+                      )
                       .toList(),
                 ),
                 const SizedBox(height: 20),
@@ -618,8 +672,10 @@ class _InspectSpec extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label,
-            style: const TextStyle(color: AppColors.muted, fontSize: 11)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+        ),
         const SizedBox(height: 2),
         Text(
           value,
@@ -661,7 +717,45 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
     super.dispose();
   }
 
-  Future<void> _handleAction(String appId, String action, String propTitle, String tenantName, double rent) async {
+  Future<void> _deleteRequest(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Delete agreement request?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    try {
+      await ref
+          .read(propertyServiceProvider)
+          .request('DELETE', '/property-applications/$id');
+      ref.invalidate(applicationsProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _handleAction(
+    String appId,
+    String action,
+    String propTitle,
+    String tenantName,
+    double rent,
+  ) async {
     final api = ref.read(propertyServiceProvider);
     try {
       await api.request('POST', '/property-applications/$appId/$action');
@@ -706,18 +800,21 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(action == 'confirm'
-                ? 'Booking accepted! 6-month lease issued to $tenantName.'
-                : 'Booking request declined.'),
-            backgroundColor: action == 'confirm' ? AppColors.teal : Colors.red.shade700,
+            content: Text(
+              action == 'confirm'
+                  ? 'Booking accepted! 6-month lease issued to $tenantName.'
+                  : 'Booking request declined.',
+            ),
+            backgroundColor: action == 'confirm'
+                ? AppColors.teal
+                : Colors.red.shade700,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Action failed: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Action failed: $e')));
       }
     }
   }
@@ -743,7 +840,10 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
           unselectedLabelColor: AppColors.muted,
           indicatorColor: AppColors.teal,
           indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
           tabs: const [
             Tab(text: 'Inquiries & Applications'),
             Tab(text: 'Active Leases'),
@@ -756,7 +856,8 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
           // TAB 1: Inquiries & Applications
           appsAsync.when(
             loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.teal)),
+              child: CircularProgressIndicator(color: AppColors.teal),
+            ),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (apps) {
               if (apps.isEmpty) {
@@ -830,7 +931,9 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isAccepted
                                       ? const Color(0xFFECF1EC)
@@ -853,21 +956,27 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Icon(Icons.person_rounded,
-                                  size: 16, color: AppColors.teal),
+                              const Icon(
+                                Icons.person_rounded,
+                                size: 16,
+                                color: AppColors.teal,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 tenantName,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
                               ),
                               if (tenantEmail.isNotEmpty) ...[
                                 const SizedBox(width: 8),
                                 Text(
                                   '($tenantEmail)',
                                   style: const TextStyle(
-                                      color: AppColors.muted, fontSize: 11),
+                                    color: AppColors.muted,
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ],
                             ],
@@ -877,22 +986,35 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                             Text(
                               message,
                               style: const TextStyle(
-                                  color: AppColors.muted,
-                                  fontSize: 12,
-                                  height: 1.4),
+                                color: AppColors.muted,
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
                           const SizedBox(height: 12),
 
+                          if (!isAccepted &&
+                              isAdmin(ref.watch(authStateProvider).value?.role))
+                            TextButton.icon(
+                              onPressed: () => _deleteRequest(appId),
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text('Delete request'),
+                            ),
                           if (!isAccepted)
                             Row(
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: () => _handleAction(appId,
-                                        'decline', propTitle, tenantName, rent),
+                                    onPressed: () => _handleAction(
+                                      appId,
+                                      'reject',
+                                      propTitle,
+                                      tenantName,
+                                      rent,
+                                    ),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: Colors.red,
                                       side: const BorderSide(color: Colors.red),
@@ -906,8 +1028,13 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: FilledButton(
-                                    onPressed: () => _handleAction(appId,
-                                        'confirm', propTitle, tenantName, rent),
+                                    onPressed: () => _handleAction(
+                                      appId,
+                                      'confirm',
+                                      propTitle,
+                                      tenantName,
+                                      rent,
+                                    ),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: const Color(0xFF426253),
                                       shape: RoundedRectangleBorder(
@@ -922,8 +1049,11 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                           else
                             const Row(
                               children: [
-                                Icon(Icons.check_circle_rounded,
-                                    color: Color(0xFF426253), size: 16),
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Color(0xFF426253),
+                                  size: 16,
+                                ),
                                 SizedBox(width: 6),
                                 Text(
                                   'Accepted ✓ 6-Month Lease Issued',
@@ -947,7 +1077,8 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
           // TAB 2: Active Leases & Tenant Directory
           agreementsAsync.when(
             loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.teal)),
+              child: CircularProgressIndicator(color: AppColors.teal),
+            ),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (agreements) {
               if (agreements.isEmpty) {
@@ -1000,7 +1131,9 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: ag.hasPaid
                                       ? const Color(0xFFECF1EC)
@@ -1035,7 +1168,9 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                           Text(
                             'Monthly Rent: LKR ${ag.agreedMonthlyRent.toStringAsFixed(0)} | Deposit: LKR ${ag.securityDeposit.toStringAsFixed(0)}',
                             style: const TextStyle(
-                                color: AppColors.muted, fontSize: 11),
+                              color: AppColors.muted,
+                              fontSize: 11,
+                            ),
                           ),
                         ],
                       ),

@@ -1,3 +1,4 @@
+import '../../../shared/validation/input_validators.dart';
 import '../../shared/widgets/modern_ui.dart';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _obscured = true;
@@ -30,10 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _signIn() {
-    if (_email.text.trim().isEmpty || _password.text.isEmpty) {
-      setState(() => _error = 'Enter your email and password to continue.');
-      return;
-    }
+    if (!_form.currentState!.validate()) return;
     setState(() => _error = null);
     ref
         .read(authStateProvider.notifier)
@@ -62,152 +61,168 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const PageIntro(
-                    eyebrow: 'RentWise',
-                    title: 'Welcome home.',
-                    description: 'Your home, your plans, your next chapter. All in one place.',
-                    icon: Icons.cottage_outlined,
-                  ),
-                  const SizedBox(height: 28),
-                  const FormHeading(
-                    'Sign in',
-                    'Pick up where you left off.',
-                    icon: Icons.lock_outline_rounded,
-                  ),
-                  TextField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email Address',
-                      hintText: 'e.g. resident@rentwise.lk',
-                      prefixIcon: Icon(
-                        Icons.mail_outline_rounded,
-                        color: AppColors.teal,
-                      ),
+      body: Form(
+        key: _form,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const PageIntro(
+                      eyebrow: 'RentWise',
+                      title: 'Welcome home.',
+                      description: 'Your home, your plans, your next chapter. All in one place.',
+                      icon: Icons.cottage_outlined,
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _password,
-                    obscureText: _obscured,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      hintText: 'Enter your password',
-                      prefixIcon: const Icon(
-                        Icons.lock_outline_rounded,
-                        color: AppColors.teal,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscured
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: AppColors.muted,
+                    const SizedBox(height: 28),
+                    const FormHeading(
+                      'Sign in',
+                      'Pick up where you left off.',
+                      icon: Icons.lock_outline_rounded,
+                    ),
+                    TextFormField(
+                      validator: InputValidators.email,
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email Address',
+                        hintText: 'e.g. resident@rentwise.lk',
+                        prefixIcon: Icon(
+                          Icons.mail_outline_rounded,
+                          color: AppColors.teal,
                         ),
-                        onPressed: () => setState(() => _obscured = !_obscured),
                       ),
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: authState.isLoading ? null : () {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => ForgotPasswordScreen(initialEmail: _email.text.trim()),
-                        ));
-                      },
-                      child: const Text('Forgot password?'),
-                    ),
-                  ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFFCA5A5)),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      validator: (v) =>
+                          InputValidators.password(v, signingIn: true),
+                      controller: _password,
+                      obscureText: _obscured,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'Enter your password',
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          color: AppColors.teal,
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              color: Color(0xFFB91C1C),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _error!,
-                                style: const TextStyle(
-                                  color: Color(0xFFB91C1C),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscured
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: AppColors.muted,
+                          ),
+                          onPressed: () =>
+                              setState(() => _obscured = !_obscured),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: authState.isLoading
+                            ? null
+                            : () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ForgotPasswordScreen(
+                                      initialEmail: _email.text.trim(),
+                                    ),
+                                  ),
+                                );
+                              },
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: Color(0xFFB91C1C),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _error!,
+                                  style: const TextStyle(
+                                    color: Color(0xFFB91C1C),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  const SizedBox(height: 22),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: FilledButton(
-                      onPressed: authState.isLoading ? null : _signIn,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.teal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: FilledButton(
+                        onPressed: authState.isLoading ? null : _signIn,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.teal,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          shadowColor: AppColors.teal.withValues(alpha: 0.3),
+                          elevation: 4,
                         ),
-                        shadowColor: AppColors.teal.withValues(alpha: 0.3),
-                        elevation: 4,
-                      ),
-                      child: authState.isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
+                        child: authState.isLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Sign In to Account',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
                               ),
-                            )
-                          : const Text(
-                              'Sign In to Account',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Center(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const SignupScreen()),
                       ),
-                      child: const Text(
-                        'New to RentWise? Create an account',
-                        style: TextStyle(
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w700,
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const SignupScreen(),
+                          ),
+                        ),
+                        child: const Text(
+                          'New to RentWise? Create an account',
+                          style: TextStyle(
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

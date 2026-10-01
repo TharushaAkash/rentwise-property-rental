@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { TenantProfileForm } from './TenantProfileForm';
-import { parseBookingDetails } from './TenantPortal';
+import { parseBookingDetails } from './tenantHelpers';
 import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
 import { dispatchBookingsUpdated } from '../../utils/bookingStatus';
 import { Users, Home, Calendar, CheckCircle2, XCircle, Clock, Plus, Search, Check, X, FileText, Mail, Phone, AlertCircle, Building2, DollarSign, LayoutGrid, List, ArrowRight, ExternalLink, ShieldCheck, Sparkles, FileCheck } from 'lucide-react';

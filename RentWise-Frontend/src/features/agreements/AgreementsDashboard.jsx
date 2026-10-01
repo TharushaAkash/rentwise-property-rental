@@ -1,3 +1,4 @@
+import { validateCard } from '../../utils/paymentValidation';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -1408,17 +1409,9 @@ const TenantPaymentModal = ({ isOpen, onClose, agreement, onPaymentSuccess }) =>
     setPayError('');
 
     if (paymentMethod === 'Card') {
-      const cleanNum = cardNumber.replace(/\s/g, '');
-      if (cleanNum.length < 15) {
-        setPayError('Please enter a valid 16-digit card number.');
-        return;
-      }
-      if (cardExpiry.length < 5) {
-        setPayError('Please enter a valid expiry date (MM/YY).');
-        return;
-      }
-      if (cardCvc.length < 3) {
-        setPayError('Please enter a valid 3 or 4-digit CVV/CVC.');
+      const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+      if (cardError) {
+        setPayError(cardError);
         return;
       }
     }

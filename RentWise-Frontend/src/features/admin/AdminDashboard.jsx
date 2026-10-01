@@ -1,3 +1,4 @@
+import { useAdminData } from './useAdminData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -42,109 +43,15 @@ export const AdminDashboard = () => {
   // ========================================================
   // 1. DATA STATES
   // ========================================================
-  const [properties, setProperties] = useState([]);
-  const [isLoadingProps, setIsLoadingProps] = useState(true);
   const [inspectingProperty, setInspectingProperty] = useState(null);
-
-  const [usersList, setUsersList] = useState([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-
-  const [agreements, setAgreements] = useState([]);
-  const [applications, setApplications] = useState([]);
-  const [isLoadingAgreements, setIsLoadingAgreements] = useState(true);
-
-  // ========================================================
-  // 2. FETCH ALL DATA
-  // ========================================================
-  const fetchAllProperties = async () => {
-    try {
-      setIsLoadingProps(true);
-      const res = await api.get('/properties');
-      let list = Array.isArray(res.data) ? res.data : [];
-      setProperties(list);
-    } catch (err) {
-      console.error('Failed to fetch properties:', err);
-      setProperties([]);
-    } finally {
-      setIsLoadingProps(false);
-    }
-  };
-
-  const fetchAllUsers = async () => {
-    try {
-      setIsLoadingUsers(true);
-      const res = await api.get('/auth/users');
-      const list = Array.isArray(res.data) ? res.data : [];
-      setUsersList(list);
-      try {
-        localStorage.setItem('rentwise_client_users', JSON.stringify(list));
-      } catch {}
-    } catch (err) {
-      console.warn('API /auth/users not available, falling back to local list:', err);
-      // Fallback: build list from current user and stored records
-      const cached = JSON.parse(localStorage.getItem('rentwise_client_users') || '[]');
-      if (user && !cached.some(u => u.email === user.email)) {
-        cached.unshift({
-          id: user.id,
-          name: user.fullName || user.name || 'System Administrator',
-          email: user.email,
-          role: user.role || 'Administrator',
-          phoneNumber: user.phoneNumber || '0771234567',
-          nicNumber: user.nicNumber || '198512345678',
-          isBlocked: false,
-          createdAt: new Date().toISOString()
-        });
-      }
-      setUsersList(cached);
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  };
-
-  const fetchAgreementsAndApplications = async () => {
-    try {
-      setIsLoadingAgreements(true);
-      const [agrRes, appRes] = await Promise.all([
-        api.get('/agreements').catch(() => ({ data: [] })),
-        api.get('/property-applications').catch(() => ({ data: [] }))
-      ]);
-
-      let apiAgreements = Array.isArray(agrRes.data) ? agrRes.data : [];
-      let apiApps = Array.isArray(appRes.data) ? appRes.data : [];
-
-      // Merge cached agreements
-      let localAgreements = [];
-      try {
-        localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
-      } catch {}
-
-      const agrMap = new Map();
-      localAgreements.forEach(a => a?.id && agrMap.set(a.id, a));
-      apiAgreements.forEach(a => a?.id && agrMap.set(a.id, a));
-      setAgreements(Array.from(agrMap.values()));
-
-      // Merge cached bookings
-      let localBookings = [];
-      try {
-        localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
-      } catch {}
-
-      const appMap = new Map();
-
-      apiApps.forEach(b => b?.id && appMap.set(b.id, b));
-      setApplications(Array.from(appMap.values()));
-    } catch (err) {
-      console.error('Failed to load agreements/applications:', err);
-    } finally {
-      setIsLoadingAgreements(false);
-    }
-  };
-
+  const {
+    properties, setProperties, usersList, setUsersList, agreements, applications, setApplications,
+    isLoadingProps, isLoadingUsers, isLoadingAgreements, fetchAllProperties, fetchAllUsers,
+    fetchAgreementsAndApplications, error: loadError,
+  } = useAdminData();
   useEffect(() => {
-    fetchAllProperties();
-    fetchAllUsers();
-    fetchAgreementsAndApplications();
-  }, []);
+    if (loadError) setFeedback({ text: `Could not load dashboard data. ${loadError}`, type: 'error' });
+  }, [loadError]);
 
   // ========================================================
   // 3. PROPERTY MANAGEMENT ACTIONS

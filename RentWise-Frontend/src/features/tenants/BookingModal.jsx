@@ -8,8 +8,12 @@ import { getActiveBookingForProperty, dispatchBookingsUpdated } from '../../util
 
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
-export const BookingModal = ({ isOpen, onClose, property, onSuccess }) => {
-  if (!isOpen || !property) return null;
+export const BookingModal = (props) => {
+  if (!props.isOpen || !props.property) return null;
+  return <BookingForm key={props.property.id} {...props} />;
+};
+
+const BookingForm = ({ onClose, property, onSuccess }) => {
 
   const navigate = useNavigate();
   const { user } = useAuth();

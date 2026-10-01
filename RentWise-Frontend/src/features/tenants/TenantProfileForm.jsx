@@ -13,6 +13,7 @@ import { tenantProfileSchema } from './types';
 
 export function TenantProfileForm({ initialData, onSubmit, isLoading }) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     resolver: zodResolver(tenantProfileSchema),
     defaultValues: {
       income: initialData?.income || 0,

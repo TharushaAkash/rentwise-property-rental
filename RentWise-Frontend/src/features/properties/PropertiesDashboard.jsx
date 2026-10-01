@@ -4,7 +4,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { useMutation } from '../../hooks/useMutation';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
-import { parseBookingDetails } from '../tenants/TenantPortal';
+import { parseBookingDetails } from '../tenants/tenantHelpers';
 
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';

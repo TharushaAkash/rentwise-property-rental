@@ -1,60 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import api from '../services/api';
 
 export function usePropertyBrowse(filters) {
   const filterKey = JSON.stringify(filters);
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState('');
-  const [cursor, setCursor] = useState(null);
-  const [hasMore, setHasMore] = useState(false);
-  const request = useRef(null);
-  const busy = useRef(false);
-
-  async function fetchPage(after, signal) {
-    busy.current = true;
-    setError('');
-    if (after) setLoadingMore(true);
-    else setLoading(true);
-    try {
-      const { data } = await api.get('/properties/browse', {
-        params: { ...JSON.parse(filterKey), pageSize: 12, cursor: after || undefined }, signal,
-      });
-      if (signal.aborted) return;
-      setItems(previous => after
-        ? [...previous, ...data.items.filter(item => !previous.some(p => p.id === item.id))]
-        : data.items);
-      setCursor(data.nextCursor);
-      setHasMore(data.hasMore);
-    } catch {
-      if (!signal.aborted) setError('Could not load properties. Please try again.');
-    } finally {
-      if (!signal.aborted) {
-        busy.current = false;
-        setLoading(false);
-        setLoadingMore(false);
-      }
-    }
-  }
-
+  const [debouncedKey, setDebouncedKey] = useState(filterKey);
   useEffect(() => {
-    const controller = new AbortController();
-    request.current = controller;
-    busy.current = true;
-    setItems([]);
-    setCursor(null);
-    setHasMore(false);
-    setError('');
-    setLoading(true);
-    setLoadingMore(false);
-    const timer = setTimeout(() => fetchPage(null, controller.signal), 300);
-    return () => { clearTimeout(timer); controller.abort(); };
+    const timer = setTimeout(() => setDebouncedKey(filterKey), 300);
+    return () => clearTimeout(timer);
   }, [filterKey]);
-
-  function loadMore() {
-    if (!busy.current && request.current) fetchPage(cursor, request.current.signal);
-  }
-
-  return { items, loading, loadingMore, error, hasMore, loadMore };
+  const waitingForFilters = filterKey !== debouncedKey;
+  const query = useInfiniteQuery({
+    queryKey: ['api', 'property-browse', debouncedKey],
+    enabled: !waitingForFilters,
+    initialPageParam: null,
+    queryFn: async ({ pageParam, signal }) => (await api.get('/properties/browse', {
+      params: { ...JSON.parse(debouncedKey), pageSize: 12, cursor: pageParam || undefined }, signal,
+    })).data,
+    getNextPageParam: page => page.hasMore ? page.nextCursor || undefined : undefined,
+  });
+  const items = useMemo(() => {
+    if (waitingForFilters) return [];
+    const unique = new Map();
+    for (const page of query.data?.pages || []) {
+      for (const property of page.items) unique.set(property.id, property);
+    }
+    return [...unique.values()];
+  }, [query.data, waitingForFilters]);
+  const loadMore = () => {
+    if (waitingForFilters || query.isFetching) return;
+    if (query.hasNextPage) void query.fetchNextPage({ cancelRefetch: false });
+    else if (query.isError) void query.refetch();
+  };
+  return {
+    items,
+    loading: waitingForFilters || query.isPending,
+    loadingMore: query.isFetchingNextPage,
+    error: !waitingForFilters && query.isError ? 'Could not load properties. Please try again.' : '',
+    hasMore: !waitingForFilters && Boolean(query.hasNextPage),
+    loadMore,
+  };
 }

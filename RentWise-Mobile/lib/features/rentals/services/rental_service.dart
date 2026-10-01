@@ -21,6 +21,21 @@ class RentalService {
     };
   }
 
+  Future<Map<String, dynamic>> bankDetails(String agreementId) async {
+    final response = await _client
+        .get(
+          Uri.parse(
+            '${ApiConstants.baseUrl}/bank-details/agreements/$agreementId',
+          ),
+          headers: await _authHeaders(),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) {
+      throw Exception('Could not load owner bank details.');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   // ──────────────────────────────────────────────
   // Local SharedPreferences Storage Helpers
   // ──────────────────────────────────────────────
@@ -368,30 +383,48 @@ class RentalService {
     String method,
     String reference, {
     AgreementModel? localAgreement,
+    bool isMonthlyRent = false,
   }) async {
     final headers = await _authHeaders();
     final body = jsonEncode({
       'amount': amount,
+      'isSuccessful': true,
+      'paymentDate': DateTime.now().toUtc().toIso8601String(),
       'paymentMethod': method,
       'paymentReference': reference,
     });
     bool success = false;
+    Map<String, dynamic>? savedPayment;
 
     try {
       final res = await _client
           .post(
-            Uri.parse('${ApiConstants.baseUrl}/agreements/$agreementId/pay'),
+            Uri.parse(
+              '${ApiConstants.baseUrl}/agreements/$agreementId/${isMonthlyRent ? 'payments' : 'pay'}',
+            ),
             headers: headers,
             body: body,
           )
           .timeout(const Duration(seconds: 15));
       success = res.statusCode == 200 || res.statusCode == 201;
-    } catch (_) {}
+      if (success) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        savedPayment = isMonthlyRent
+            ? data
+            : data['payment'] as Map<String, dynamic>?;
+        success = savedPayment?['id']?.toString().isNotEmpty == true;
+      }
+    } catch (_) {
+      success = false;
+    }
 
     if (!success) return false;
 
     final payment = PaymentModel(
-      id: 'pay_${DateTime.now().millisecondsSinceEpoch}',
+      id: savedPayment?['id']?.toString() ?? reference,
+      purpose:
+          savedPayment?['purpose']?.toString() ??
+          (isMonthlyRent ? 'MonthlyRent' : 'SecurityDeposit'),
       agreementId: agreementId,
       amount: amount,
       paymentMethod: method,
