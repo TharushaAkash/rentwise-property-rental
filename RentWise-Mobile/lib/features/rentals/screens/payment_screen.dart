@@ -1,3 +1,6 @@
+import '../../../shared/validation/payment_validators.dart';
+import '../widgets/payment_widgets.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,6 +27,27 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
     with TickerProviderStateMixin {
   // Payment method: 'card' | 'bank'
   String _method = 'card';
+  Map<String, dynamic>? _bank;
+  String? _bankError;
+  Future<void> _loadBank() async {
+    try {
+      final details = await ref
+          .read(rentalServiceProvider)
+          .bankDetails(widget.agreement.id);
+      if (mounted) {
+        setState(() {
+          _bank = details;
+          _bankError = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _bankError = 'Could not load bank details. Please retry.',
+        );
+      }
+    }
+  }
 
   // Billing Month State
   late String _selectedMonth;
@@ -38,6 +62,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
   bool _isProcessing = false;
   bool _paymentSuccess = false;
   String _error = '';
+  Map<String, String> _cardErrors = {};
 
   late final AnimationController _successController;
   late final Animation<double> _successScale;
@@ -45,11 +70,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
   @override
   void initState() {
     super.initState();
+    _loadBank();
     final user = ref.read(authStateProvider).value;
     _holderCtrl.text = user?.name ?? widget.agreement.tenantName;
 
-    // Generate upcoming 6 calendar months
-    _billingMonths = List.generate(6, (i) {
+    // The API records the current payment month.
+    _billingMonths = List.generate(1, (i) {
       final now = DateTime.now();
       final dt = DateTime(now.year, now.month + i, 1);
       final monthName = _monthName(dt.month);
@@ -164,11 +190,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
     if (widget.isMonthlyRent) {
       return widget.agreement.agreedMonthlyRent > 0
           ? widget.agreement.agreedMonthlyRent
-          : 65000;
+          : 0;
     }
     final deposit = widget.agreement.securityDeposit;
     final rent = widget.agreement.agreedMonthlyRent;
-    return deposit > 0 ? deposit : rent * 2;
+    return deposit > 0 ? deposit : rent;
   }
 
   // ── Pay ───────────────────────────────────────────────────────────────────
@@ -180,25 +206,17 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
     });
 
     if (_method == 'card') {
-      final num = _numberCtrl.text.replaceAll(' ', '');
-      if (num.length < 15) {
+      final errors = PaymentValidators.validate(
+        holder: _holderCtrl.text,
+        number: _numberCtrl.text,
+        date: _expiryCtrl.text,
+        code: _cvvCtrl.text,
+      );
+      setState(() => _cardErrors = errors);
+      if (errors.isNotEmpty) {
         setState(() {
-          _error = 'Please enter a valid 15 or 16-digit card number.';
           _isProcessing = false;
-        });
-        return;
-      }
-      if (_expiryCtrl.text.length < 5) {
-        setState(() {
-          _error = 'Please enter a valid expiry date (MM/YY).';
-          _isProcessing = false;
-        });
-        return;
-      }
-      if (_cvvCtrl.text.length < 3) {
-        setState(() {
-          _error = 'Please enter a valid 3 or 4-digit CVV.';
-          _isProcessing = false;
+          _error = 'Check the highlighted payment details.';
         });
         return;
       }
@@ -229,6 +247,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
       });
       return;
     }
+    if (_method == 'bank' && _bank?['configured'] != true) {
+      setState(() {
+        _isProcessing = false;
+        _error =
+            'Owner bank details are unavailable. Please contact the owner.';
+      });
+      return;
+    }
     final svc = ref.read(rentalServiceProvider);
     bool success;
     try {
@@ -238,6 +264,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
         methodName,
         ref_,
         localAgreement: widget.agreement,
+        isMonthlyRent: widget.isMonthlyRent,
       );
     } catch (_) {
       success = false;
@@ -325,7 +352,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Your payment of LKR ${_fmtMoney(_totalPayable)} for $_selectedMonth has been processed.\n${widget.isMonthlyRent ? "Monthly rent receipt recorded!" : "Your lease is now active!"}',
+              'Your payment of LKR ${_fmtMoney(_totalPayable)} for ${widget.isMonthlyRent ? _selectedMonth : 'your security deposit'} has been processed.\n${widget.isMonthlyRent ? "Monthly rent receipt recorded!" : "Your lease is now active!"}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.muted,
@@ -451,78 +478,79 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
           const SizedBox(height: 20),
 
           // Billing Month Selector
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFDFE7EA)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_month_rounded,
-                      color: Color(0xFF526A78),
-                      size: 18,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'PAYING RENT FOR MONTH',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.ink,
-                        fontSize: 12,
-                        letterSpacing: 0.5,
+          if (widget.isMonthlyRent)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFDFE7EA)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        color: Color(0xFF526A78),
+                        size: 18,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedMonth,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.line),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF526A78)),
-                    ),
-                    fillColor: Colors.white,
-                    filled: true,
+                      SizedBox(width: 8),
+                      Text(
+                        'PAYING RENT FOR MONTH',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
+                          fontSize: 12,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedMonth,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF526A78)),
+                      ),
+                      fillColor: Colors.white,
+                      filled: true,
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                    items: _billingMonths.map((m) {
+                      return DropdownMenuItem<String>(
+                        value: m,
+                        child: Text(m, overflow: TextOverflow.ellipsis),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _selectedMonth = val);
+                    },
                   ),
-                  items: _billingMonths.map((m) {
-                    return DropdownMenuItem<String>(
-                      value: m,
-                      child: Text(m, overflow: TextOverflow.ellipsis),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedMonth = val);
-                  },
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Select which calendar month this payment applies to.',
-                  style: TextStyle(color: AppColors.muted, fontSize: 11),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Select which calendar month this payment applies to.',
+                    style: TextStyle(color: AppColors.muted, fontSize: 11),
+                  ),
+                ],
+              ),
             ),
-          ),
 
           const SizedBox(height: 20),
 
@@ -559,12 +587,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
             ),
 
           // Method Selector
-          const _Label('Payment Method'),
+          const PaymentFieldLabel('Payment Method'),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: _MethodChip(
+                child: PaymentMethodChip(
                   icon: Icons.credit_card_rounded,
                   label: 'Card',
                   selected: _method == 'card',
@@ -573,7 +601,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _MethodChip(
+                child: PaymentMethodChip(
                   icon: Icons.account_balance_rounded,
                   label: 'Bank Transfer',
                   selected: _method == 'bank',
@@ -587,7 +615,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
 
           if (_method == 'card') ...[
             // Visual Card Mockup
-            _CardMockup(
+            PaymentCardPreview(
               brand: brand,
               number: _numberCtrl.text,
               holder: _holderCtrl.text,
@@ -631,13 +659,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
             const SizedBox(height: 16),
 
             // Cardholder Name
-            const _Label('Cardholder Name'),
+            const PaymentFieldLabel('Cardholder Name'),
             const SizedBox(height: 6),
             TextField(
               controller: _holderCtrl,
               textCapitalization: TextCapitalization.words,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
+                errorText: _cardErrors['holder'],
                 hintText: 'Full name as on card',
                 prefixIcon: Icon(Icons.person_outline_rounded, size: 18),
               ),
@@ -645,7 +674,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
             const SizedBox(height: 12),
 
             // Card Number
-            const _Label('Card Number'),
+            const PaymentFieldLabel('Card Number'),
             const SizedBox(height: 6),
             TextField(
               controller: _numberCtrl,
@@ -655,7 +684,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                 _formatCardNumber(v);
                 setState(() {});
               },
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
+                errorText: _cardErrors['number'],
                 hintText: '4242 4242 4242 4242',
                 prefixIcon: Icon(Icons.credit_card_rounded, size: 18),
                 counterText: '',
@@ -671,7 +701,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _Label('Expiry Date'),
+                      const PaymentFieldLabel('Expiry Date'),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _expiryCtrl,
@@ -681,7 +711,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                           _formatExpiry(v);
                           setState(() {});
                         },
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
+                          errorText: _cardErrors['expiry'],
                           hintText: 'MM/YY',
                           prefixIcon: Icon(
                             Icons.calendar_today_rounded,
@@ -698,7 +729,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _Label('CVV / CVC'),
+                      const PaymentFieldLabel('CVV / CVC'),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _cvvCtrl,
@@ -706,7 +737,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                         maxLength: 4,
                         obscureText: true,
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
+                          errorText: _cardErrors['cvv'],
                           hintText: '•••',
                           prefixIcon: Icon(
                             Icons.lock_outline_rounded,
@@ -742,10 +774,24 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _BankRow('Bank', 'Commercial Bank of Ceylon'),
-                  _BankRow('Account Name', 'RentWise Escrow Account'),
-                  _BankRow('Account No.', '8002 4567 8901 2345'),
-                  _BankRow('Branch', 'Malabe Branch (Code: 104)'),
+                  if (_bank == null && _bankError == null)
+                    const LinearProgressIndicator(),
+                  if (_bankError != null)
+                    TextButton(onPressed: _loadBank, child: Text(_bankError!)),
+                  if (_bank != null && _bank!['configured'] != true)
+                    const Text('The owner has not saved bank details yet.'),
+                  if (_bank?['configured'] == true) ...[
+                    BankDetailRow('Bank', _bank!['bankName'].toString()),
+                    BankDetailRow(
+                      'Account Name',
+                      _bank!['accountName'].toString(),
+                    ),
+                    BankDetailRow(
+                      'Account No.',
+                      _bank!['accountNumber'].toString(),
+                    ),
+                    BankDetailRow('Branch', _bank!['branch'].toString()),
+                  ],
                   const Divider(height: 20),
                   Text(
                     'Please include your Agreement ID and billing month ($_selectedMonth) in the transfer reference.',
@@ -826,235 +872,6 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 // Visual Credit Card Mockup
 // ─────────────────────────────────────────────────────────────────────────────
-class _CardMockup extends StatelessWidget {
-  final ({String name, List<Color> colors, Color accent}) brand;
-  final String number;
-  final String holder;
-  final String expiry;
-
-  const _CardMockup({
-    required this.brand,
-    required this.number,
-    required this.holder,
-    required this.expiry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 190,
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF293F35),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: brand.colors.last.withAlpha(100),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Chip
-              Container(
-                width: 40,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD4C3A0),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              // Brand name
-              Text(
-                brand.name,
-                style: TextStyle(
-                  color: brand.accent,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // Card number
-          Text(
-            number.isNotEmpty ? number : '•••• •••• •••• ••••',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 3,
-              fontFamily: 'monospace',
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'CARDHOLDER',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 9,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    (holder.isNotEmpty ? holder : 'FULL NAME').toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text(
-                    'EXPIRES',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 9,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    expiry.isNotEmpty ? expiry : 'MM/YY',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-class _Label extends StatelessWidget {
-  final String text;
-
-  const _Label(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontWeight: FontWeight.w700,
-        color: AppColors.ink,
-        fontSize: 13,
-      ),
-    );
-  }
-}
-
-class _MethodChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _MethodChip({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.softTeal : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.teal : AppColors.line,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: selected ? AppColors.teal : AppColors.muted,
-              size: 24,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-                color: selected ? AppColors.teal : AppColors.muted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BankRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _BankRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 String _fmtMoney(double v) => v
     .toStringAsFixed(0)
     .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');

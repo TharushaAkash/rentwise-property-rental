@@ -1,3 +1,4 @@
+import '../../../shared/validation/input_validators.dart';
 import '../../shared/widgets/modern_ui.dart';
 
 import 'dart:typed_data';
@@ -156,6 +157,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
         'propertyType': _type,
         'featureTags': _tags.toList(),
         'photoCount': _uploadedPhotoCount + _photos.length + _urls.length,
+        'photoUrls': _urls.toList(),
       };
       for (final key in ['bedrooms', 'bathrooms', 'sqft']) {
         body[key] = int.parse(_fields[key]!.text);
@@ -179,6 +181,8 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
       } else {
         await api.request('PUT', '/properties/$_savedId', body);
       }
+      _uploadedPhotoCount += _urls.length;
+      _urls.clear();
       var primary = _uploadedPhotoCount == 0;
       while (_photos.isNotEmpty) {
         final photo = _photos.first;
@@ -191,18 +195,6 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
         primary = false;
         _uploadedPhotoCount++;
         _photos.removeAt(0);
-      }
-      while (_urls.isNotEmpty) {
-        final bytes = await api.downloadPhoto(_urls.first);
-        await api.upload(
-          '/properties/$_savedId/photos',
-          bytes,
-          'property-photo.jpg',
-          {'isPrimary': '$primary'},
-        );
-        primary = false;
-        _uploadedPhotoCount++;
-        _urls.removeAt(0);
       }
       if (_bill != null) {
         final document = await api.upload(
@@ -254,20 +246,9 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
       decoration: InputDecoration(labelText: label),
-      validator: (v) {
-        if (number) {
-          final n = num.tryParse(v ?? '');
-          if (n == null ||
-              !n.isFinite ||
-              n < min ||
-              (key != 'monthlyRent' && int.tryParse(v ?? '') == null)) {
-            return 'Enter ${key == 'monthlyRent' ? 'a number' : 'a whole number'} of at least $min';
-          }
-        } else if ((v ?? '').trim().length < min) {
-          return 'Enter at least $min characters';
-        }
-        return null;
-      },
+      validator: (v) => number
+          ? InputValidators.number(v, min: min, integer: key != 'monthlyRent')
+          : InputValidators.text(v, label: label, min: min),
     ),
   );
   @override

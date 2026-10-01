@@ -63,3 +63,14 @@ Tokens now use platform secure storage. Existing SharedPreferences tokens are mi
 The live property catalogue contains API records only. AI failures are shown instead of client-generated rankings or commute values. Unknown commute estimates remain unavailable.
 
 Booking requests now use the persisted ASP.NET `PropertyApplications` table. Deploy the backend migration before testing cross-device bookings. Existing memory-only bookings must be resubmitted; they are not migrated from browser caches.
+
+
+## Web feature alignment (September 2026)
+
+- Explore uses `/properties/browse` with 12-item cursor pages and server-side normal search. AI search still loads its independent candidate catalogue on demand.
+- Rental payments use `/agreements/{id}/payments` for monthly rent and `/agreements/{id}/pay` for the initial lease payment. Receipts retain the server ID and payment purpose; the overview separates rent and deposits. The month selector currently supports the current calendar month because the API has no separate billing-period field.
+- Bank transfer details come from the agreement owner's account. Owners can update their account from Profile > Bank details. Transfers cannot be submitted when the account is unconfigured.
+- Property image links use `photoUrls`; file uploads still use the upload endpoint.
+- Owners can inspect verification and submit a listing-fee reference from Verification & listing fee. This uses the existing fee-recording endpoint, not a new payment gateway. Admins can approve after proof and fee checks, and delete unaccepted agreement requests from Bookings.
+
+Deploy the backend browse endpoint and `AddPaymentPurpose` migration before using these screens. Run `flutter test`, `flutter analyze`, and a device smoke test for bank details, both payment types, photo-link persistence, pagination, and admin deletion. Mocked tests and a successful APK build do not verify hosted payments or device navigation.

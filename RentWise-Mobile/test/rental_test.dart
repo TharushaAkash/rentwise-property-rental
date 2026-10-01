@@ -30,6 +30,10 @@ class RentalTestAuth extends AuthNotifier {
 
 class RentalTestService extends RentalService {
   @override
+  Future<Map<String, dynamic>> bankDetails(String agreementId) async => {
+    'configured': false,
+  };
+  @override
   Future<List<AgreementModel>> fetchAgreements() async => [];
 }
 
@@ -184,12 +188,54 @@ void main() {
     expect(prefs.getString('rentwise_client_payments'), isNull);
   });
 
+  test('monthly rent uses the monthly endpoint and preserves the server receipt ID', () async {
+    SharedPreferences.setMockInitialValues({});
+    final service = RentalService(
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/agreements/lease/payments');
+        return http.Response(
+          '{"id":"server-payment","purpose":"MonthlyRent"}',
+          201,
+        );
+      }),
+    );
+    expect(
+      await service.payAgreement(
+        'lease',
+        50000,
+        'Card',
+        'RENT-test',
+        isMonthlyRent: true,
+      ),
+      true,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    final saved =
+        jsonDecode(prefs.getString('rentwise_client_payments')!) as List;
+    expect(saved.single['id'], 'server-payment');
+    expect(saved.single['purpose'], 'MonthlyRent');
+  });
+  test('payment purpose survives a cache round trip', () {
+    final payment = PaymentModel.fromJson({
+      'id': 'p',
+      'purpose': 'SecurityDeposit',
+      'paymentReference': 'RENT-old',
+    });
+    expect(
+      PaymentModel.fromJson(payment.toJson()).purposeLabel,
+      'Security deposit',
+    );
+  });
+
   test('successful payment is submitted exactly once', () async {
     final paths = <String>[];
     final service = RentalService(
       client: MockClient((request) async {
         paths.add(request.url.path);
-        return http.Response('{}', 200);
+        return http.Response(
+          '{"success":true,"payment":{"id":"saved-deposit","purpose":"SecurityDeposit"}}',
+          200,
+        );
       }),
     );
     expect(await service.payAgreement('lease', 50000, 'Card', 'ref'), true);

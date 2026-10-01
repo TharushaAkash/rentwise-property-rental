@@ -212,7 +212,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
     await tester.pumpAndSettle();
-    expect(find.text('Enter at least 3 characters'), findsOneWidget);
+    expect(find.text('Enter Property Title.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

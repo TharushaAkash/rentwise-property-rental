@@ -1,3 +1,5 @@
+import 'bank_details_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -128,6 +130,13 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
                 children: [
+                  if (owner)
+                    _ProfileLink(
+                      icon: Icons.account_balance_outlined,
+                      title: 'Bank details',
+                      subtitle: 'Your account for tenant transfers',
+                      onTap: () => open(const BankDetailsScreen()),
+                    ),
                   _ProfileLink(
                     icon: Icons.key_outlined,
                     title: 'Rentals & payments',

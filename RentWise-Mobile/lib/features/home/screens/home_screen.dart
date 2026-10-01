@@ -1,3 +1,6 @@
+import '../controllers/property_browse_controller.dart';
+
+import '../models/property_model.dart';
 import '../../workflows/workflow_screens.dart';
 
 import 'package:flutter/material.dart';
@@ -95,6 +98,29 @@ class _DiscoverPropertiesTab extends ConsumerStatefulWidget {
 
 class _DiscoverPropertiesTabState
     extends ConsumerState<_DiscoverPropertiesTab> {
+  late final PropertyBrowseController _catalog;
+  AsyncValue<List<PropertyModel>> get _browse => _catalog.data;
+  bool get _hasMore => _catalog.hasMore;
+  bool get _loadingMore => _catalog.loadingMore;
+  String? get _browseError => _catalog.error;
+  @override
+  void initState() {
+    super.initState();
+    _catalog = PropertyBrowseController(
+      ref.read(property_access.propertyServiceProvider),
+    );
+    _catalog.addListener(_catalogChanged);
+    _catalog.load();
+  }
+
+  void _catalogChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadBrowse({bool more = false}) => _catalog.load(more: more);
+  void _normalSearchChanged() =>
+      _catalog.search(_isAiSearch ? '' : _searchQuery);
+
   bool _isAiSearch = false;
   bool _isAiSearching = false;
   String _searchQuery = '';
@@ -110,6 +136,8 @@ class _DiscoverPropertiesTabState
 
   @override
   void dispose() {
+    _catalog.removeListener(_catalogChanged);
+    _catalog.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -122,7 +150,8 @@ class _DiscoverPropertiesTabState
     });
 
     try {
-      final result = await matchPropertiesWithAi(_searchQuery, allProperties);
+      final allCandidates = await ref.read(propertiesProvider.future);
+      final result = await matchPropertiesWithAi(_searchQuery, allCandidates);
       if (mounted) {
         setState(() {
           _aiSearchResult = result;
@@ -154,7 +183,7 @@ class _DiscoverPropertiesTabState
 
   @override
   Widget build(BuildContext context) {
-    final propertiesAsync = ref.watch(propertiesProvider);
+    final propertiesAsync = _browse;
 
     return Scaffold(
       appBar: AppBar(
@@ -167,10 +196,6 @@ class _DiscoverPropertiesTabState
       ),
       body: propertiesAsync.when(
         data: (properties) {
-          if (properties.isEmpty) {
-            return const Center(child: Text('No properties found.'));
-          }
-
           List<dynamic> displayedProperties = properties;
           List<AiPropertyMatchResult>? aiMatchResults;
 
@@ -180,16 +205,11 @@ class _DiscoverPropertiesTabState
               displayedProperties = aiMatchResults
                   .map((r) => r.property)
                   .toList();
-            } else if (!_isAiSearch) {
-              displayedProperties = properties.where((p) {
-                final text = '${p.title} ${p.address}'.toLowerCase();
-                return text.contains(_searchQuery.toLowerCase());
-              }).toList();
             }
           }
 
           return RefreshIndicator(
-            onRefresh: () => ref.refresh(propertiesProvider.future),
+            onRefresh: () => _loadBrowse(),
             child: Column(
               children: [
                 Padding(
@@ -309,6 +329,7 @@ class _DiscoverPropertiesTabState
                                   onPressed: () {
                                     setState(() {
                                       _isAiSearch = false;
+                                      _normalSearchChanged();
                                       _searchController.clear();
                                       _searchQuery = '';
                                       _aiSearchResult = null;
@@ -337,6 +358,7 @@ class _DiscoverPropertiesTabState
                                     ),
                                     onSubmitted: (val) {
                                       _searchQuery = val;
+                                      _normalSearchChanged();
                                       _runAiSearch(properties);
                                     },
                                     decoration: InputDecoration(
@@ -453,6 +475,7 @@ class _DiscoverPropertiesTabState
                                 onChanged: (val) {
                                   setState(() {
                                     _searchQuery = val;
+                                    _normalSearchChanged();
                                   });
                                 },
                                 decoration: InputDecoration(
@@ -471,6 +494,7 @@ class _DiscoverPropertiesTabState
                                             _searchController.clear();
                                             setState(() {
                                               _searchQuery = '';
+                                              _normalSearchChanged();
                                             });
                                           },
                                         )
@@ -596,6 +620,7 @@ class _DiscoverPropertiesTabState
                                   onPressed: () {
                                     setState(() {
                                       _isAiSearch = false;
+                                      _normalSearchChanged();
                                       _searchController.clear();
                                       _searchQuery = '';
                                       _aiSearchResult = null;
@@ -622,8 +647,36 @@ class _DiscoverPropertiesTabState
                             horizontal: 20,
                             vertical: 8,
                           ),
-                          itemCount: displayedProperties.length,
+                          itemCount:
+                              displayedProperties.length +
+                              (!_isAiSearch &&
+                                      (_hasMore || _browseError != null)
+                                  ? 1
+                                  : 0),
                           itemBuilder: (context, index) {
+                            if (index == displayedProperties.length) {
+                              return Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    if (_browseError != null)
+                                      Text(_browseError!),
+                                    OutlinedButton(
+                                      onPressed: _loadingMore
+                                          ? null
+                                          : () => _loadBrowse(more: true),
+                                      child: Text(
+                                        _loadingMore
+                                            ? 'Loading...'
+                                            : _browseError != null
+                                            ? 'Retry'
+                                            : 'Load more',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
                             return _MobilePropertyCard(
                               property: displayedProperties[index],
                               aiResult:
@@ -650,7 +703,7 @@ class _DiscoverPropertiesTabState
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: () => ref.refresh(propertiesProvider.future),
+                onPressed: () => _loadBrowse(),
                 child: const Text('Retry'),
               ),
             ],
@@ -930,8 +983,10 @@ class _MobilePropertyCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  aiResult!.distanceKm == null
-                                      ? 'Commute estimate unavailable'
+                                  aiResult!.destinationLandmark.trim().isEmpty
+                                      ? 'Add a destination to see distance and travel time.'
+                                      : aiResult!.distanceKm == null
+                                      ? 'AI could not estimate this commute. Try a clearer landmark.'
                                       : 'AI estimate: ${aiResult!.distanceKm} km / ~${aiResult!.travelTimeMins ?? "?"} mins to ${aiResult!.destinationLandmark} (not live traffic)',
                                   style: const TextStyle(
                                     fontSize: 12,

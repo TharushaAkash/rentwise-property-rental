@@ -1136,19 +1136,18 @@ class _PaymentSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalPaid = agreements.where((a) => a.hasPaid).fold<double>(0, (
-      sum,
-      a,
-    ) {
-      final depositPaid = a.securityDeposit > 0
-          ? a.securityDeposit
-          : a.agreedMonthlyRent * 2;
-      return sum +
-          a.payments.fold<double>(
-            depositPaid > 0 && a.payments.isEmpty ? depositPaid : 0,
-            (s, p) => s + p.amount,
-          );
-    });
+    final receipts = {
+      for (final p
+          in agreements.expand((a) => a.payments).where((p) => p.isSuccessful))
+        p.id: p,
+    }.values;
+    final totalPaid = receipts.fold<double>(0, (sum, p) => sum + p.amount);
+    final deposits = receipts
+        .where((p) => p.purpose == 'SecurityDeposit')
+        .fold<double>(0, (sum, p) => sum + p.amount);
+    final rentPaid = receipts
+        .where((p) => p.purpose == 'MonthlyRent')
+        .fold<double>(0, (sum, p) => sum + p.amount);
 
     final activeLeases = agreements.where((a) => a.lifecycleStep == 3).length;
     final pendingPayment = agreements.where((a) => a.lifecycleStep == 2).length;
@@ -1186,6 +1185,14 @@ class _PaymentSummaryCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
             ),
+          ),
+          Text(
+            'Security deposits: LKR ${_fmtMoney(deposits)}',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          Text(
+            'Monthly rent: LKR ${_fmtMoney(rentPaid)}',
+            style: const TextStyle(color: Colors.white70),
           ),
           const Text(
             'Total amount paid',
@@ -1301,9 +1308,7 @@ class _PaymentTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  payment.paymentMethod.isNotEmpty
-                      ? payment.paymentMethod
-                      : 'Lease Payment',
+                  payment.purposeLabel,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,

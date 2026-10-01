@@ -1,3 +1,5 @@
+import '../../../shared/validation/input_validators.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -232,15 +234,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             hintText: 'you@example.com',
             prefixIcon: Icon(Icons.mail_outline),
           ),
-          validator: (value) {
-            final email = value?.trim() ?? '';
-            if (email.isEmpty) return 'Enter your account email.';
-            if (email.length > 200 ||
-                !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
-              return 'Enter a valid email address.';
-            }
-            return null;
-          },
+          validator: InputValidators.email,
         ),
         const SizedBox(height: 24),
         _button('Send verification code', _sendCode),
@@ -377,15 +371,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           ),
         ),
       ),
-      validator: (value) {
-        if (value == null || value.length < 8 || value.length > 64) {
-          return 'Use 8–64 characters.';
-        }
-        if (confirm && value != _password.text) {
-          return 'Passwords do not match.';
-        }
-        return null;
-      },
+      validator: (value) =>
+          InputValidators.password(value) ??
+          (confirm
+              ? InputValidators.confirmation(value, _password.text)
+              : null),
     );
   }
 
