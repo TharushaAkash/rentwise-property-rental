@@ -122,11 +122,11 @@ class _PropertiesDashboardScreenState
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.darkGreen,
+                    color: AppColors.softTeal,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.teal.withAlpha(60),
+                        color: AppColors.line.withAlpha(80),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -138,7 +138,7 @@ class _PropertiesDashboardScreenState
                       const Text(
                         'OWNER WORKSPACE',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: AppColors.muted,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.5,
@@ -148,7 +148,7 @@ class _PropertiesDashboardScreenState
                       Text(
                         '${properties.length} Properties Listed',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                         ),
@@ -156,7 +156,7 @@ class _PropertiesDashboardScreenState
                       Text(
                         '$activeCount Active on Marketplace',
                         style: const TextStyle(
-                          color: Colors.white70,
+                          color: AppColors.muted,
                           fontSize: 13,
                         ),
                       ),

@@ -1,3 +1,4 @@
+import { PageLoading } from '../components/PageLoading';
 import React, { lazy, Suspense } from 'react';
 import { RouteErrorBoundary } from '../components/RouteErrorBoundary';
 import { RouteMessage } from '../components/RouteMessage';
@@ -49,8 +50,8 @@ const RoleBasedRedirect = () => {
 export const AppRouter = () => {
   const location = useLocation();
   return (
-    <RouteErrorBoundary key={location.pathname}>
-    <Suspense fallback={<div role="status" className="p-12 text-center">Loading page...</div>}>
+    <RouteErrorBoundary resetKey={location.pathname}>
+    <Suspense fallback={<PageLoading fullPage />}>
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Landing />} />

@@ -1,3 +1,6 @@
+import { Suspense } from 'react';
+import { PageLoading } from './PageLoading';
+import { RouteErrorBoundary } from './RouteErrorBoundary';
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Home, Users, FileText, Wrench, LogOut, Building2, User, Star, HelpCircle, ChevronDown, Heart, Search } from 'lucide-react';
@@ -367,7 +370,9 @@ export const Layout = () => {
         {/* Subtle background gradient for depth */}
         <div className="absolute top-0 inset-x-0 h-[300px] bg-gradient-to-b from-slate-50 to-[#FDFDFD] pointer-events-none" />
         <div className={`${isTenant ? 'mx-auto max-w-[1440px] px-4 py-0 sm:px-8 lg:px-12' : 'p-8 sm:p-10 lg:p-12 max-w-7xl mx-auto'} relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500`}>
-          <Outlet />
+          <RouteErrorBoundary key={location.pathname}>
+            <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
+          </RouteErrorBoundary>
         </div>
       </main>
     </div>
