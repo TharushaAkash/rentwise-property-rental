@@ -33,7 +33,7 @@ class ProfileScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF293F35),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(28),
             ),
             child: Column(
@@ -56,7 +56,7 @@ class ProfileScreen extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.darkGreen,
+                          color: AppColors.teal,
                         ),
                       ),
                     ),
@@ -65,7 +65,7 @@ class ProfileScreen extends ConsumerWidget {
                       child: Text(
                         owner ? 'PROPERTY OWNER' : user.role.toUpperCase(),
                         style: const TextStyle(
-                          color: Color(0xFFE4EBDF),
+                          color: AppColors.muted,
                           fontSize: 11,
                           letterSpacing: 1.4,
                           fontWeight: FontWeight.w700,
@@ -80,17 +80,14 @@ class ProfileScreen extends ConsumerWidget {
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.ink,
                     letterSpacing: -.6,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   user.email,
-                  style: const TextStyle(
-                    color: Color(0xFFE4EBDF),
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
               ],
             ),

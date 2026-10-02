@@ -267,12 +267,12 @@ class _DiscoverPropertiesTabState
                         padding: const EdgeInsets.all(16),
                         margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF293F35),
+                          color: AppColors.softTeal,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.blue.withAlpha(80)),
+                          border: Border.all(color: AppColors.line),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.teal.withAlpha(60),
+                              color: AppColors.line.withAlpha(100),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -289,15 +289,15 @@ class _DiscoverPropertiesTabState
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: Colors.blue.withAlpha(50),
+                                        color: AppColors.surface,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: Colors.blue.withAlpha(80),
+                                          color: AppColors.line,
                                         ),
                                       ),
                                       child: const Icon(
                                         Icons.auto_awesome,
-                                        color: Colors.amberAccent,
+                                        color: AppColors.teal,
                                         size: 20,
                                       ),
                                     ),
@@ -309,7 +309,7 @@ class _DiscoverPropertiesTabState
                                         const Text(
                                           'Search by AI',
                                           style: TextStyle(
-                                            color: Colors.white,
+                                            color: AppColors.ink,
                                             fontWeight: FontWeight.w700,
                                             fontSize: 16,
                                           ),
@@ -317,7 +317,7 @@ class _DiscoverPropertiesTabState
                                         Text(
                                           'Matching & Location Intelligence',
                                           style: TextStyle(
-                                            color: Colors.blue.shade200,
+                                            color: AppColors.muted,
                                             fontSize: 11,
                                           ),
                                         ),
@@ -337,7 +337,7 @@ class _DiscoverPropertiesTabState
                                   },
                                   icon: const Icon(
                                     Icons.close,
-                                    color: Colors.white70,
+                                    color: AppColors.muted,
                                     size: 20,
                                   ),
                                 ),
@@ -352,7 +352,7 @@ class _DiscoverPropertiesTabState
                                   child: TextField(
                                     controller: _searchController,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.ink,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -364,11 +364,11 @@ class _DiscoverPropertiesTabState
                                     decoration: InputDecoration(
                                       hintText: 'e.g. 2 bed near SLIIT Malabe under 75k...',
                                       hintStyle: TextStyle(
-                                        color: Colors.white.withAlpha(120),
+                                        color: AppColors.muted,
                                         fontSize: 12,
                                       ),
                                       filled: true,
-                                      fillColor: Colors.white.withAlpha(30),
+                                      fillColor: AppColors.surface,
                                       contentPadding:
                                           const EdgeInsets.symmetric(
                                             horizontal: 16,
@@ -394,13 +394,11 @@ class _DiscoverPropertiesTabState
                                       vertical: 13,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF426253),
+                                      color: AppColors.teal,
                                       borderRadius: BorderRadius.circular(14),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.lightBlue.withAlpha(
-                                            100,
-                                          ),
+                                          color: AppColors.line,
                                           blurRadius: 8,
                                         ),
                                       ],
@@ -411,12 +409,12 @@ class _DiscoverPropertiesTabState
                                             height: 18,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2.5,
-                                              color: Colors.white,
+                                              color: AppColors.onDark,
                                             ),
                                           )
                                         : const Icon(
                                             Icons.auto_awesome,
-                                            color: Colors.amberAccent,
+                                            color: AppColors.onDark,
                                             size: 20,
                                           ),
                                   ),
@@ -443,16 +441,16 @@ class _DiscoverPropertiesTabState
                                         vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withAlpha(20),
+                                        color: AppColors.surface,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: Colors.white.withAlpha(40),
+                                          color: AppColors.line,
                                         ),
                                       ),
                                       child: Text(
                                         p,
                                         style: const TextStyle(
-                                          color: Colors.white,
+                                          color: AppColors.ink,
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -527,7 +525,7 @@ class _DiscoverPropertiesTabState
                               child: Container(
                                 padding: const EdgeInsets.all(13),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF293F35),
+                                  color: AppColors.darkGreen,
                                   borderRadius: BorderRadius.circular(14),
                                   boxShadow: [
                                     BoxShadow(
@@ -558,7 +556,7 @@ class _DiscoverPropertiesTabState
                         const Icon(
                           Icons.auto_awesome,
                           size: 14,
-                          color: Color(0xFF426253),
+                          color: AppColors.teal,
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -781,7 +779,7 @@ class _MobilePropertyCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF426253),
+                            color: AppColors.teal,
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
@@ -978,7 +976,7 @@ class _MobilePropertyCard extends StatelessWidget {
                               const Icon(
                                 Icons.explore_rounded,
                                 size: 15,
-                                color: Color(0xFF426253),
+                                color: AppColors.teal,
                               ),
                               const SizedBox(width: 6),
                               Expanded(
@@ -1013,7 +1011,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                       const Text(
                                         '•',
                                         style: TextStyle(
-                                          color: Color(0xFF426253),
+                                          color: AppColors.teal,
                                           fontSize: 14,
                                           height: 1.2,
                                         ),

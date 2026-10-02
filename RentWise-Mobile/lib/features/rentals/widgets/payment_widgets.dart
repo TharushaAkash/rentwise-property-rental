@@ -23,11 +23,11 @@ class PaymentCardPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF293F35),
+        color: AppColors.darkGreen,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: brand.colors.last.withAlpha(100),
+            color: AppColors.ink.withAlpha(30),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -52,7 +52,7 @@ class PaymentCardPreview extends StatelessWidget {
               Text(
                 brand.name,
                 style: TextStyle(
-                  color: brand.accent,
+                  color: AppColors.onDarkMuted,
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
                   letterSpacing: 2,
@@ -82,8 +82,8 @@ class PaymentCardPreview extends StatelessWidget {
                   const Text(
                     'CARDHOLDER',
                     style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 9,
+                      color: AppColors.onDarkMuted,
+                      fontSize: 11,
                       letterSpacing: 1,
                     ),
                   ),
@@ -105,8 +105,8 @@ class PaymentCardPreview extends StatelessWidget {
                   const Text(
                     'EXPIRES',
                     style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 9,
+                      color: AppColors.onDarkMuted,
+                      fontSize: 11,
                       letterSpacing: 1,
                     ),
                   ),

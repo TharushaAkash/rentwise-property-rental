@@ -62,7 +62,7 @@ class _PropertiesDashboardScreenState
           context,
           MaterialPageRoute(builder: (_) => const PropertyFormScreen()),
         ),
-        backgroundColor: const Color(0xFF426253),
+        backgroundColor: AppColors.teal,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: const Text(
           'Add Property',
@@ -122,7 +122,7 @@ class _PropertiesDashboardScreenState
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF293F35),
+                    color: AppColors.darkGreen,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -328,9 +328,7 @@ class _OwnerPropertyCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: active
-                        ? const Color(0xFF426253)
-                        : Colors.amber.shade700,
+                    color: active ? AppColors.teal : Colors.amber.shade700,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -936,7 +934,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                 ),
                                 decoration: BoxDecoration(
                                   color: isAccepted
-                                      ? const Color(0xFFECF1EC)
+                                      ? AppColors.softTeal
                                       : const Color(0xFFFEF9C3),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -1036,7 +1034,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                       rent,
                                     ),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFF426253),
+                                      backgroundColor: AppColors.teal,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
@@ -1051,14 +1049,14 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                               children: [
                                 Icon(
                                   Icons.check_circle_rounded,
-                                  color: Color(0xFF426253),
+                                  color: AppColors.teal,
                                   size: 16,
                                 ),
                                 SizedBox(width: 6),
                                 Text(
                                   'Accepted ✓ 6-Month Lease Issued',
                                   style: TextStyle(
-                                    color: Color(0xFF426253),
+                                    color: AppColors.teal,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -1136,7 +1134,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                 ),
                                 decoration: BoxDecoration(
                                   color: ag.hasPaid
-                                      ? const Color(0xFFECF1EC)
+                                      ? AppColors.softTeal
                                       : const Color(0xFFFEF9C3),
                                   borderRadius: BorderRadius.circular(8),
                                 ),

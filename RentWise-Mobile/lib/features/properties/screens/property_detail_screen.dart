@@ -323,7 +323,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               child: const Icon(
                                 Icons.apartment_rounded,
                                 size: 80,
-                                color: Colors.white38,
+                                color: AppColors.onDarkMuted,
                               ),
                             ),
                           ),
@@ -333,7 +333,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           child: const Icon(
                             Icons.apartment_rounded,
                             size: 80,
-                            color: Colors.white38,
+                            color: AppColors.onDarkMuted,
                           ),
                         ),
                   Positioned.fill(
@@ -453,7 +453,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF293F35),
+                      color: AppColors.softTeal,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Wrap(
@@ -467,14 +467,14 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                             const Text(
                               'Monthly Rent',
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.muted,
                                 fontSize: 11,
                               ),
                             ),
                             Text(
                               'LKR ${p.monthlyRent.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.ink,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -493,7 +493,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           child: Text(
                             p.propertyType,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
                             ),
@@ -783,7 +783,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                   ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(54),
-                    backgroundColor: const Color(0xFF426253),
+                    backgroundColor: AppColors.teal,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
