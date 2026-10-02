@@ -86,7 +86,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
               background: Stack(
                 children: [
                   Container(
-                    decoration: const BoxDecoration(color: Color(0xFF293F35)),
+                    decoration: const BoxDecoration(color: AppColors.darkGreen),
                   ),
                   Positioned(
                     right: -30,
@@ -211,7 +211,7 @@ class _OwnerLeasesTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF293F35),
+              color: AppColors.darkGreen,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
@@ -340,7 +340,7 @@ class _ListingApprovalsTab extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             color: active
-                                ? const Color(0xFFECF1EC)
+                                ? AppColors.softTeal
                                 : const Color(0xFFFEF9C3),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -486,7 +486,7 @@ class _ListingApprovalsTab extends ConsumerWidget {
                           icon: const Icon(Icons.verified_rounded, size: 16),
                           label: const Text('Approve & Publish Listing'),
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF426253),
+                            backgroundColor: AppColors.teal,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -639,12 +639,12 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
                 width: 42,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFECF1EC),
+                  color: AppColors.softTeal,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.home_work_rounded,
-                  color: Color(0xFF426253),
+                  color: AppColors.teal,
                   size: 22,
                 ),
               ),
@@ -666,7 +666,7 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
                     Text(
                       'Monthly Rent: LKR ${_fmtMoney(rent)}/month',
                       style: const TextStyle(
-                        color: Color(0xFF426253),
+                        color: AppColors.teal,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -694,7 +694,7 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
               icon: const Icon(Icons.payment_rounded, size: 16),
               label: const Text('Pay Monthly Rent'),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF426253),
+                backgroundColor: AppColors.teal,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -737,7 +737,7 @@ class _AgreementCard extends ConsumerWidget {
 
     switch (step) {
       case 3:
-        stepColor = const Color(0xFF426253);
+        stepColor = AppColors.teal;
         stepLabel = 'Active Lease ✓';
         stepIcon = Icons.verified_rounded;
       case 2:
@@ -975,7 +975,7 @@ class _AgreementCard extends ConsumerWidget {
                           backgroundColor: AppColors.line,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             step == 3
-                                ? const Color(0xFF426253)
+                                ? AppColors.teal
                                 : step == 2
                                 ? const Color(0xFF916622)
                                 : const Color(0xFF526A78),
@@ -1065,7 +1065,7 @@ class _AgreementCard extends ConsumerWidget {
                             style: FilledButton.styleFrom(
                               backgroundColor: step == 1
                                   ? const Color(0xFF526A78)
-                                  : const Color(0xFF426253),
+                                  : AppColors.teal,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1101,7 +1101,7 @@ class _AgreementCard extends ConsumerWidget {
                             icon: const Icon(Icons.payment_rounded, size: 16),
                             label: const Text('Pay Monthly Rent'),
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF426253),
+                              backgroundColor: AppColors.teal,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1155,11 +1155,11 @@ class _PaymentSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF293F35),
+        color: AppColors.softTeal,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.teal.withAlpha(60),
+            color: AppColors.line.withAlpha(100),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -1171,7 +1171,7 @@ class _PaymentSummaryCard extends StatelessWidget {
           const Text(
             'Payment Overview',
             style: TextStyle(
-              color: Colors.white70,
+              color: AppColors.muted,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -1180,7 +1180,7 @@ class _PaymentSummaryCard extends StatelessWidget {
           Text(
             'LKR ${_fmtMoney(totalPaid)}',
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 32,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
@@ -1188,15 +1188,15 @@ class _PaymentSummaryCard extends StatelessWidget {
           ),
           Text(
             'Security deposits: LKR ${_fmtMoney(deposits)}',
-            style: const TextStyle(color: Colors.white70),
+            style: const TextStyle(color: AppColors.muted),
           ),
           Text(
             'Monthly rent: LKR ${_fmtMoney(rentPaid)}',
-            style: const TextStyle(color: Colors.white70),
+            style: const TextStyle(color: AppColors.muted),
           ),
           const Text(
             'Total amount paid',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
           ),
           const SizedBox(height: 20),
           Row(
@@ -1240,13 +1240,17 @@ class _StatChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(25),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withAlpha(40)),
+          border: Border.all(color: AppColors.line),
         ),
         child: Row(
           children: [
-            Icon(icon, color: warning ? Colors.amber : Colors.white, size: 18),
+            Icon(
+              icon,
+              color: warning ? AppColors.amber : AppColors.teal,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1254,14 +1258,14 @@ class _StatChip extends StatelessWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   label,
-                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
                 ),
               ],
             ),
@@ -1293,7 +1297,7 @@ class _PaymentTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFECF1EC),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -1344,7 +1348,7 @@ class _PaymentTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: payment.isSuccessful
-                      ? const Color(0xFFECF1EC)
+                      ? AppColors.softTeal
                       : const Color(0xFFFEF9C3),
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -1388,12 +1392,12 @@ class _ActivatedLeaseTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFECF1EC),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.verified_rounded,
-              color: Color(0xFF426253),
+              color: AppColors.teal,
               size: 22,
             ),
           ),
@@ -1414,7 +1418,7 @@ class _ActivatedLeaseTile extends StatelessWidget {
                 ),
                 const Text(
                   'Lease Activated',
-                  style: TextStyle(color: Color(0xFF426253), fontSize: 11),
+                  style: TextStyle(color: AppColors.teal, fontSize: 11),
                 ),
               ],
             ),
@@ -1424,7 +1428,7 @@ class _ActivatedLeaseTile extends StatelessWidget {
             style: const TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 14,
-              color: Color(0xFF426253),
+              color: AppColors.teal,
             ),
           ),
         ],
@@ -1570,7 +1574,7 @@ class _PlaceholderBanner extends StatelessWidget {
     return Container(
       height: 160,
       width: double.infinity,
-      decoration: const BoxDecoration(color: Color(0xFF293F35)),
+      decoration: const BoxDecoration(color: AppColors.darkGreen),
       child: Center(
         child: Icon(
           Icons.home_work_rounded,

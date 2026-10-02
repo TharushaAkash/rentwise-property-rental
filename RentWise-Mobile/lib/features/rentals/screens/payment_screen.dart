@@ -324,7 +324,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                 width: 110,
                 height: 110,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF293F35),
+                  color: AppColors.darkGreen,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -364,7 +364,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFECF1EC),
+                color: AppColors.softTeal,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -372,7 +372,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                 children: [
                   const Icon(
                     Icons.verified_rounded,
-                    color: Color(0xFF426253),
+                    color: AppColors.teal,
                     size: 18,
                   ),
                   const SizedBox(width: 6),
@@ -381,7 +381,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                         ? 'Paid for $_selectedMonth ✓'
                         : 'Active Lease ✓',
                     style: const TextStyle(
-                      color: Color(0xFF293F35),
+                      color: AppColors.darkGreen,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -432,11 +432,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF293F35),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.teal.withAlpha(60),
+                  color: AppColors.line.withAlpha(100),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -450,7 +450,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                       ? 'Monthly Rent Payment'
                       : 'Lease Activation Payment',
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: AppColors.muted,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -459,7 +459,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                 Text(
                   'LKR ${_fmtMoney(_totalPayable)}',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 34,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -1,
@@ -467,7 +467,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                 ),
                 Text(
                   '${widget.agreement.propertyTitle} · ${widget.agreement.propertyAddress}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -634,7 +634,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFECF1EC),
+                    color: AppColors.softTeal,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFF86EFAC)),
                   ),
@@ -824,7 +824,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               const SizedBox(width: 6),
               Text(
                 'Secured by 256-bit SSL encryption',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                style: TextStyle(color: AppColors.muted, fontSize: 11),
               ),
             ],
           ),
@@ -852,7 +852,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(56),
-                backgroundColor: const Color(0xFF426253),
+                backgroundColor: AppColors.teal,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),

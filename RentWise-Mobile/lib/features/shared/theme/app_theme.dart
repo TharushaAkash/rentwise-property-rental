@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const ink = Color(0xFF252D28); // Charcoal
-  static const muted = Color(0xFF68736B); // Secondary text
+  static const ink = Color(0xFF1F2933); // Charcoal
+  static const muted = Color(0xFF52616B); // Secondary text
   static const surface = Color(0xFFFFFFFF);
-  static const canvas = Color(0xFFF7F7F2); // Warm off-white
-  static const line = Color(0xFFE0E4DC); // Neutral border
-  static const navy = Color(0xFF426253); // Muted forest
-  static const teal = Color(0xFF426253); // Primary Action
-  static const darkGreen = Color(0xFF293F35); // Darker Green
-  static const softTeal = Color(0xFFECF1EC); // Soft green surface
+  static const canvas = Color(0xFFF5F7F8); // Warm off-white
+  static const line = Color(0xFFD5DDE1); // Neutral border
+  static const navy = Color(0xFF176B57); // Muted forest
+  static const teal = Color(0xFF176B57); // Primary Action
+  static const darkGreen = Color(0xFF183F36); // Darker Green
+  static const softTeal = Color(0xFFEAF4EF); // Soft green surface
   static const amber = Color(0xFF916622); // Warning / In Progress
   static const rose = Color(0xFFAD443C); // Danger / Emergency
+  static const onDark = Color(0xFFFFFFFF);
+  static const onDarkMuted = Color(0xFFDDEBE6);
   static const blue = Color(0xFF526A78); // Info
 }
 
@@ -19,6 +21,16 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
   final scheme = ColorScheme.fromSeed(
     seedColor: AppColors.teal,
     brightness: brightness,
+    primary: brightness == Brightness.light
+        ? AppColors.teal
+        : const Color(0xFF90D5BA),
+    onPrimary: brightness == Brightness.light
+        ? Colors.white
+        : AppColors.darkGreen,
+    onSurface: brightness == Brightness.light ? AppColors.ink : Colors.white,
+    onSurfaceVariant: brightness == Brightness.light
+        ? AppColors.muted
+        : AppColors.onDarkMuted,
     surface: brightness == Brightness.light
         ? AppColors.surface
         : const Color(0xFF1E293B),
@@ -28,8 +40,13 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     colorScheme: scheme,
     scaffoldBackgroundColor: brightness == Brightness.light
         ? AppColors.canvas
-        : const Color(0xFF252D28),
+        : const Color(0xFF1F2933),
     visualDensity: VisualDensity.standard,
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: scheme.primary,
+      selectionColor: scheme.primary.withValues(alpha: 0.18),
+      selectionHandleColor: scheme.primary,
+    ),
     textTheme: const TextTheme(
       headlineMedium: TextStyle(
         fontSize: 28,
@@ -115,6 +132,9 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       ),
     ),
     snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.ink,
+      contentTextStyle: const TextStyle(color: AppColors.onDark, fontSize: 14),
+      actionTextColor: AppColors.onDarkMuted,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
@@ -122,7 +142,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     appBarTheme: AppBarTheme(
       backgroundColor: brightness == Brightness.light
           ? AppColors.canvas
-          : const Color(0xFF252D28),
+          : const Color(0xFF1F2933),
       foregroundColor: brightness == Brightness.light
           ? AppColors.ink
           : Colors.white,

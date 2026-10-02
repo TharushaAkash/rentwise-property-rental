@@ -314,7 +314,7 @@ class MaintenanceScreen extends ConsumerWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF293F35),
+                        color: AppColors.darkGreen,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
