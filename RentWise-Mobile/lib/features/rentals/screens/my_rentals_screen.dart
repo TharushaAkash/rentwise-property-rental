@@ -86,7 +86,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
               background: Stack(
                 children: [
                   Container(
-                    decoration: const BoxDecoration(color: AppColors.darkGreen),
+                    decoration: const BoxDecoration(color: AppColors.softTeal),
                   ),
                   Positioned(
                     right: -30,
@@ -96,7 +96,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                       height: 180,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withAlpha(15),
+                        color: AppColors.teal.withAlpha(12),
                       ),
                     ),
                   ),
@@ -106,7 +106,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                     child: Icon(
                       Icons.description_rounded,
                       size: 64,
-                      color: Colors.white.withAlpha(25),
+                      color: AppColors.teal.withAlpha(35),
                     ),
                   ),
                 ],
@@ -211,7 +211,7 @@ class _OwnerLeasesTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.darkGreen,
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
@@ -223,7 +223,7 @@ class _OwnerLeasesTab extends ConsumerWidget {
                     const Text(
                       'OWNER LEASE MANAGEMENT',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.muted,
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.2,
@@ -233,7 +233,7 @@ class _OwnerLeasesTab extends ConsumerWidget {
                     Text(
                       '${agreements.length} Total Tenant Leases',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontWeight: FontWeight.w700,
                         fontSize: 18,
                       ),
@@ -242,7 +242,7 @@ class _OwnerLeasesTab extends ConsumerWidget {
                 ),
                 const Icon(
                   Icons.verified_user_rounded,
-                  color: Colors.white,
+                  color: AppColors.ink,
                   size: 28,
                 ),
               ],
