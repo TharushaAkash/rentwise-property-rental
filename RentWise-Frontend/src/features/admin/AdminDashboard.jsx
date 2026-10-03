@@ -78,7 +78,13 @@ export const AdminDashboard = () => {
       setInspectingProperty(prev => prev && String(prev.id || prev.Id).toLowerCase() === cleanId.toLowerCase() ? response.data : prev);
     } catch (err) {
       console.error('Failed to approve or refresh property:', err);
-      setFeedback({ text: 'Could not confirm property approval. Refresh the listing and try again.', type: 'error' });
+      const message = err.response?.data?.message;
+      setFeedback({
+        text: typeof message === 'string' && message.trim()
+          ? message
+          : 'Could not confirm property approval. Refresh the listing and try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -1073,7 +1079,7 @@ export const AdminDashboard = () => {
               />
             </div>
 
-            <div className="inline-flex p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
+            <div className="inline-flex flex-wrap max-w-full p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setPropStatusFilter('ALL')}
@@ -1676,7 +1682,7 @@ export const AdminDashboard = () => {
               />
             </div>
 
-            <div className="inline-flex p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
+            <div className="inline-flex flex-wrap max-w-full p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setUserRoleFilter('ALL')}
@@ -2008,7 +2014,7 @@ export const AdminDashboard = () => {
               </p>
             </div>
 
-            <div className="inline-flex p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
+            <div className="inline-flex flex-wrap max-w-full p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setAgreementFilter('ALL')}

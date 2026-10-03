@@ -960,7 +960,7 @@ export const MaintenanceDashboard = () => {
       {/* ========================================================== */}
       {!isTenant && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-3">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setActiveMainTab('requests')}

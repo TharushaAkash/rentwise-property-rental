@@ -233,8 +233,10 @@ class _CreateMaintenanceScreenState
                   ),
                   const SizedBox(height: 28),
                   // 1. Property Context
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text(
                         'TARGET PROPERTY',
@@ -247,6 +249,7 @@ class _CreateMaintenanceScreenState
                       ),
                       if (_selectedPropertyId != null)
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.check_circle_rounded,
@@ -276,6 +279,7 @@ class _CreateMaintenanceScreenState
                         border: Border.all(color: Colors.orange[200]!),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.info_outline,
@@ -297,6 +301,7 @@ class _CreateMaintenanceScreenState
                     )
                   else
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _selectedPropertyId,
                       decoration: InputDecoration(
                         filled: true,
@@ -313,13 +318,16 @@ class _CreateMaintenanceScreenState
                           horizontal: 16,
                           vertical: 12,
                         ),
-                        hintText: '-- Choose your booked property --',
+                        hintText: 'Choose your booked property',
+                        hintMaxLines: 2,
                       ),
                       items: properties.map((prop) {
                         return DropdownMenuItem(
                           value: prop.id,
                           child: Text(
                             prop.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
@@ -344,8 +352,10 @@ class _CreateMaintenanceScreenState
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               const Text(
                                 'CATEGORY',
@@ -357,6 +367,7 @@ class _CreateMaintenanceScreenState
                                 ),
                               ),
                               Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.auto_awesome,
@@ -378,6 +389,7 @@ class _CreateMaintenanceScreenState
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
+                            isExpanded: true,
                             initialValue: _category,
                             decoration: InputDecoration(
                               filled: true,
@@ -501,6 +513,7 @@ class _CreateMaintenanceScreenState
                         border: Border.all(color: Colors.blue[200]!),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.handyman_rounded,
@@ -558,29 +571,24 @@ class _CreateMaintenanceScreenState
                   const SizedBox(height: 24),
 
                   // 3. Issue Description
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Row(
-                        children: [
-                          Text(
-                            'ISSUE DESCRIPTION',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.muted,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '*',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      const Text.rich(
+                        TextSpan(
+                          text: 'ISSUE DESCRIPTION ',
+                          children: [
+                            TextSpan(text: '*', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.muted,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -613,6 +621,7 @@ class _CreateMaintenanceScreenState
                             ],
                           ),
                           child: const Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.auto_awesome,
