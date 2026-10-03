@@ -273,6 +273,7 @@ export const FindRentals = () => {
 
   // Clear all filters
   const handleClearFilters = () => {
+    handleClearAiSearch();
     setLocationInput('');
     setMinBudget('');
     setMaxBudget('');
@@ -281,6 +282,7 @@ export const FindRentals = () => {
 
   // Quick apply preference: Malabe - LKR 40,000 to LKR 70,000
   const handleApplyPreferences = () => {
+    handleClearAiSearch();
     setLocationInput('Malabe');
     setMinBudget('40000');
     setMaxBudget('70000');
@@ -501,7 +503,7 @@ export const FindRentals = () => {
               <input
                 type="text"
                 value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
+                onChange={(e) => { handleClearAiSearch(); setLocationInput(e.target.value); }}
                 placeholder="City or neighbourhood"
                 className="w-full h-11 px-3.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors"
               />
@@ -516,7 +518,7 @@ export const FindRentals = () => {
             <input
               type="number"
               value={minBudget}
-              onChange={(e) => setMinBudget(e.target.value)}
+              onChange={(e) => { handleClearAiSearch(); setMinBudget(e.target.value); }}
               placeholder="LKR minimum"
               className="w-full h-11 px-3.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors"
             />
@@ -530,7 +532,7 @@ export const FindRentals = () => {
             <input
               type="number"
               value={maxBudget}
-              onChange={(e) => setMaxBudget(e.target.value)}
+              onChange={(e) => { handleClearAiSearch(); setMaxBudget(e.target.value); }}
               placeholder="LKR maximum"
               className="w-full h-11 px-3.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors"
             />
@@ -543,7 +545,7 @@ export const FindRentals = () => {
             </label>
             <select
               value={bedroomsFilter}
-              onChange={(e) => setBedroomsFilter(e.target.value)}
+              onChange={(e) => { handleClearAiSearch(); setBedroomsFilter(e.target.value); }}
               className="w-full h-11 px-3.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors cursor-pointer"
             >
               <option value="Any">Any</option>
@@ -558,7 +560,7 @@ export const FindRentals = () => {
           <div className="lg:col-span-2">
             <button
               type="button"
-              onClick={() => {}}
+              onClick={() => { handleClearAiSearch(); browse.refresh(); document.getElementById('rental-results')?.scrollIntoView({ behavior: 'smooth' }); }}
               className="w-full h-11 bg-[#1a2e35] hover:bg-[#132329] text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
             >
               <Search className="w-4 h-4" />
@@ -593,7 +595,7 @@ export const FindRentals = () => {
       </div>
 
       {/* 4. "PLACES TO PICTURE YOURSELF IN" / AI MATCHES SECTION */}
-      <div>
+      <div id="rental-results" className="scroll-mt-24">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">

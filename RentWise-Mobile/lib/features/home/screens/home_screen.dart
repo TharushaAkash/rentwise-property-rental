@@ -1,3 +1,4 @@
+import '../../properties/saved_properties.dart';
 import '../controllers/property_browse_controller.dart';
 
 import '../models/property_model.dart';
@@ -187,6 +188,15 @@ class _DiscoverPropertiesTabState
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+            tooltip: 'Saved properties',
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SavedPropertiesScreen()),
+            ),
+          ),
+        ],
         title: const Text(
           'Find your place',
           style: TextStyle(fontWeight: FontWeight.w700),
@@ -885,19 +895,7 @@ class _MobilePropertyCard extends StatelessWidget {
                 Positioned(
                   top: 14,
                   right: 14,
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    radius: 18,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(
-                        Icons.favorite_border_rounded,
-                        size: 20,
-                        color: AppColors.muted,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
+                  child: SavePropertyButton(propertyId: property.id),
                 ),
               ],
             ),

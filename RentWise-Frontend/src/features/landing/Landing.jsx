@@ -210,6 +210,7 @@ export const Landing = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     handleClearAiSearch();
+    browse.refresh();
     document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -359,7 +360,7 @@ export const Landing = () => {
                     <input
                       type="text"
                       value={searchLocation}
-                      onChange={(e) => setSearchLocation(e.target.value)}
+                      onChange={(e) => { handleClearAiSearch(); setSearchLocation(e.target.value); }}
                       placeholder="Type a city, district, or property title (e.g. Colombo, Kandy, Galle)..."
                       className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/15 transition-all"
                     />
@@ -378,7 +379,7 @@ export const Landing = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <select
                     value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
+                    onChange={(e) => { handleClearAiSearch(); setMinPrice(e.target.value); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
                   >
                     <option value="" className="bg-slate-900 text-white">Max Rent (Any)</option>
@@ -390,7 +391,7 @@ export const Landing = () => {
 
                   <select
                     value={propertyType}
-                    onChange={(e) => setPropertyType(e.target.value)}
+                    onChange={(e) => { handleClearAiSearch(); setPropertyType(e.target.value); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
                   >
                     <option value="" className="bg-slate-900 text-white">Property Keyword (All)</option>
@@ -402,7 +403,7 @@ export const Landing = () => {
 
                   <select
                     value={bedrooms}
-                    onChange={(e) => setBedrooms(e.target.value)}
+                    onChange={(e) => { handleClearAiSearch(); setBedrooms(e.target.value); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
                   >
                     <option value="" className="bg-slate-900 text-white">Bedrooms (Any)</option>
