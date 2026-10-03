@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../saved_properties.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../home/models/property_model.dart';
@@ -27,41 +29,9 @@ class PropertyDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
-  bool _busy = false, _saved = false, _expanded = false;
+  bool _busy = false, _expanded = false;
   String? _error;
   int _photoIndex = 0;
-
-  String get _savedKey =>
-      'saved_properties_${ref.read(authStateProvider).value?.id}';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSaved();
-  }
-
-  Future<void> _loadSaved() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(
-        () => _saved = (prefs.getStringList(_savedKey) ?? []).contains(
-          widget.property.id,
-        ),
-      );
-    }
-  }
-
-  Future<void> _saveFavorite() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ids = prefs.getStringList(_savedKey) ?? [];
-      _saved ? ids.remove(widget.property.id) : ids.add(widget.property.id);
-      await prefs.setStringList(_savedKey, ids);
-      if (mounted) setState(() => _saved = !_saved);
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
-    }
-  }
 
   Future<void> _open(Uri uri) async {
     try {
@@ -260,24 +230,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
               ),
             ),
             actions: [
-              GestureDetector(
-                onTap: _saveFavorite,
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(120),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _saved
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    color: _saved ? Colors.redAccent : Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
+              SavePropertyButton(propertyId: widget.property.id),
               GestureDetector(
                 onTap: () async {
                   await Clipboard.setData(

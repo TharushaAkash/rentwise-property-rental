@@ -1,4 +1,5 @@
 import 'bank_details_screen.dart';
+import '../../properties/saved_properties.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -127,6 +128,12 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
                 children: [
+                  _ProfileLink(
+                    icon: Icons.favorite_border,
+                    title: 'Saved properties',
+                    subtitle: 'Homes you saved for later',
+                    onTap: () => open(const SavedPropertiesScreen()),
+                  ),
                   if (owner)
                     _ProfileLink(
                       icon: Icons.account_balance_outlined,
