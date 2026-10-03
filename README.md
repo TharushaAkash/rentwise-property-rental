@@ -14,7 +14,7 @@ A property rental platform with a React web app, Flutter mobile app, and an appr
 
 **SE3090 · Software Engineering Frameworks · Year 3, Semester 1**
 
-[Features](#features) · [Architecture](#architecture) · [Local setup](#local-setup) · [Testing](#testing) · [Documentation](#documentation)
+[Screenshots](#screenshots) · [Features](#features) · [Architecture](#architecture) · [Local setup](#local-setup) · [Testing](#testing) · [Documentation](#documentation)
 
 </div>
 
@@ -25,6 +25,42 @@ A property rental platform with a React web app, Flutter mobile app, and an appr
 RentWise brings property discovery, owner listings, rental agreements, payments and maintenance requests into one project. Tenants can search for a home and prepare a rental proposal, owners manage their properties and requests, and administrators review listings and platform activity.
 
 The AI service supports matching, verification, agreement preparation and maintenance tasks. ASP.NET Core owns application permissions, persisted workflow state and approval decisions.
+
+## Screenshots
+
+### Web preview
+
+**Home — discover your next rental**
+
+![RentWise web home page](docs/screenshots/web/home.png)
+
+<details>
+<summary><strong>Explore rental search and the rental workflow</strong></summary>
+
+**Find rentals**
+
+![RentWise rental search](docs/screenshots/web/find-rentals.png)
+
+**Rental workflow**
+
+![RentWise web rental workflow](docs/screenshots/web/rental-workflow.png)
+
+</details>
+
+### Mobile preview
+
+<table>
+  <tr>
+    <th>Home</th>
+    <th>Owner dashboard</th>
+    <th>Rental workflow</th>
+  </tr>
+  <tr>
+    <td width="33%" align="center"><img src="docs/screenshots/mobile/home.png" alt="RentWise mobile home screen" width="240"></td>
+    <td width="33%" align="center"><img src="docs/screenshots/mobile/owner-dashboard.png" alt="RentWise mobile owner dashboard" width="240"></td>
+    <td width="33%" align="center"><img src="docs/screenshots/mobile/rental-workflow.png" alt="RentWise mobile rental workflow" width="240"></td>
+  </tr>
+</table>
 
 ## Features
 
