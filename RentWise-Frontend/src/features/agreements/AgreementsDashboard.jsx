@@ -1,6 +1,6 @@
 import { validateCard } from '../../utils/paymentValidation';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import { Button } from '../../components/ui/Button';
@@ -13,6 +13,7 @@ const formatLKR = (val) => `LKR ${Number(val || 0).toLocaleString()}`;
 
 export const AgreementsDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
   const isTenant = user?.role === 'Tenant' || !user;
@@ -20,7 +21,9 @@ export const AgreementsDashboard = () => {
   const isAdmin = ['Administrator', 'Admin', 'SystemAdmin'].includes(user?.role);
 
   // Active Tab: 'tenant-leases' | 'owner-approvals'
-  const [activeTab, setActiveTab] = useState('tenant-leases');
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'owner-approvals' ? 'owner-approvals' : 'tenant-leases'
+  );
 
   // Agreements State
   const [agreements, setAgreements] = useState([]);
@@ -187,7 +190,8 @@ export const AgreementsDashboard = () => {
   const fetchProperties = async () => {
     setIsLoadingProps(true);
     try {
-      const res = await api.get('/properties');
+      if (!isAdmin && !(isOwner && user?.id)) return;
+      const res = await api.get(isOwner ? `/properties/owner/${user.id}` : '/properties');
       let list = Array.isArray(res.data) ? res.data : [];
 
       // If owner, filter by owner
@@ -198,6 +202,7 @@ export const AgreementsDashboard = () => {
       setProperties(list);
     } catch (err) {
       console.error('Failed to load properties:', err);
+      setFeedback({ text: 'Could not load listing verification details. Please refresh and try again.', type: 'error' });
     } finally {
       setIsLoadingProps(false);
     }
@@ -621,7 +626,7 @@ export const AgreementsDashboard = () => {
                 
                 // Inspect verification documents
                 const hasProof = Array.isArray(property.documents) && property.documents.length > 0;
-                const hasFee = (Array.isArray(property.verificationRecords) && property.verificationRecords.some(v => v.comments?.includes('FEE_PAID') || v.agentReport?.includes('fee paid'))) || isApproved;
+                const hasFee = Array.isArray(property.verificationRecords) && property.verificationRecords.some(v => v.comments?.startsWith('[LISTING_FEE_PAID:'));
 
                 let statusBadge = {
                   text: 'Pending Proof & Fee',
@@ -721,7 +726,7 @@ export const AgreementsDashboard = () => {
                     {/* Actions Footer */}
                     <div className="p-3 pt-0 space-y-1.5">
                       {/* Owner Actions */}
-                      {isOwner && !isApproved && (
+                      {isOwner && (!isApproved || !hasFee) && (
                         <div className="flex flex-col gap-1.5">
                           {!hasProof && (
                             <button
@@ -1764,9 +1769,11 @@ const UploadProofModal = ({ isOpen, onClose, property, onSuccess }) => {
 // =============================================================================
 const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState('');
 
   const handlePay = async (e) => {
     e.preventDefault();
+    setError('');
     setIsProcessing(true);
     try {
       await api.post(`/properties/${property.id}/listing-fee`, {
@@ -1777,13 +1784,7 @@ const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
       onSuccess();
     } catch (err) {
       console.error('Failed to pay listing fee:', err);
-      // Local fallback
-      property.verificationRecords = property.verificationRecords || [];
-      property.verificationRecords.push({
-        comments: '[LISTING_FEE_PAID: LKR 2500.00]',
-        agentReport: 'Listing fee paid (LKR 2,500)'
-      });
-      onSuccess();
+      setError(err.response?.data?.message || 'Could not confirm your listing fee payment. Refresh the listing status before trying again.');
     } finally {
       setIsProcessing(false);
     }
@@ -1792,6 +1793,7 @@ const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Pay Listing Fee — ${property.title}`}>
       <form onSubmit={handlePay} className="space-y-4 text-xs sm:text-sm">
+        {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
         <div className="bg-gradient-to-br from-amber-700 to-amber-900 rounded-2xl p-5 text-white shadow-md">
           <span className="text-xs uppercase tracking-wider font-semibold text-amber-200">
             Mandatory Listing Verification Fee

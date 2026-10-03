@@ -660,12 +660,12 @@ export const PropertiesDashboard = () => {
               <Badge variant={isActive ? 'success' : 'default'} className={!isActive ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold' : ''}>
                 {isActive ? 'Active & Approved' : 'Not Active by Admin'}
               </Badge>
-              {statusStr === 'PendingVerification' && (
+              {!isActive && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate('/agreements');
+                    navigate('/agreements?tab=owner-approvals');
                   }}
                   className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-0.5"
                   title="View proof and verification status"
@@ -762,7 +762,7 @@ export const PropertiesDashboard = () => {
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Properties Count</p>
-            <div className="flex items-baseline gap-2.5 mt-0.5">
+            <div className="flex flex-wrap items-baseline gap-2.5 mt-0.5">
               <span className="text-3xl font-black text-gray-900">{totalPropertiesCount}</span>
               <span className="text-sm font-semibold text-gray-500">Total Properties Listed</span>
             </div>
@@ -844,7 +844,7 @@ export const PropertiesDashboard = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
         <button
           type="button"
           onClick={() => setActiveView('properties')}
