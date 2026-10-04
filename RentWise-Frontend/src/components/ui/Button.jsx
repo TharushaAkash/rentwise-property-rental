@@ -13,7 +13,7 @@ export const Button = React.forwardRef(
     const baseStyles = "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]";
 
     const variants = {
-      primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-[0_4px_14px_0_rgba(49,94,150,0.20)] hover:shadow-[0_6px_20px_rgba(49,94,150,0.16)]",
+      primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)]",
       secondary: "bg-white/70 backdrop-blur-md text-gray-800 border border-gray-200/50 hover:bg-white/90 shadow-sm focus:ring-gray-200",
       danger: "bg-rose-500 text-white hover:bg-rose-600 focus:ring-rose-500 shadow-[0_4px_14px_0_rgba(225,29,72,0.39)]",
       ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-200",
