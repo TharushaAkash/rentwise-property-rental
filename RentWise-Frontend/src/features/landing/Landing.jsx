@@ -216,7 +216,7 @@ export const Landing = () => {
 
 
   return (
-    <div className="min-h-screen bg-[#0d1322] text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#0f172a] text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
       
       {/* 1. Translucent Luxury Navbar */}
       <nav className="fixed w-full z-50 top-0 transition-all duration-300 bg-slate-950/60 backdrop-blur-xl border-b border-white/10">
@@ -279,7 +279,7 @@ export const Landing = () => {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-100"
           style={{ backgroundImage: `url('${HERO_BG}')` }}
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0d1322] via-black/45 to-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-black/45 to-black/60" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40" />
         </div>
 
@@ -368,7 +368,7 @@ export const Landing = () => {
                   
                   <button
                     type="submit"
-                    className="px-8 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all flex items-center justify-center gap-2 text-sm tracking-wide uppercase cursor-pointer"
+                    className="px-8 py-3.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold rounded-2xl shadow-lg shadow-primary-900/20 hover:shadow-primary-900/30 transition-all flex items-center justify-center gap-2 text-sm tracking-wide uppercase cursor-pointer"
                   >
                     <Search className="w-4 h-4" />
                     <span>Search</span>
@@ -601,15 +601,15 @@ export const Landing = () => {
       </section>
 
       {/* 5. LankaPropertyWeb Style Real Properties Showcase */}
-      <section id="featured" className="py-14 px-4 sm:px-6 lg:px-8 bg-[#f8faf9] text-gray-900 border-t border-gray-200">
+      <section id="featured" className="py-14 px-4 sm:px-6 lg:px-8 bg-[#f8fafc] text-gray-900 border-t border-gray-200">
         <div className="max-w-7xl mx-auto space-y-6">
           
           {/* Breadcrumbs, Header Title, and Actions Toolbar */}
           <div className="space-y-3">
             <div className="text-[11.5px] text-gray-500 flex items-center gap-1">
-              <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-[#008037] cursor-pointer">Home</button>
+              <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-[#315e96] cursor-pointer">Home</button>
               <span>&gt;</span>
-              <span className="hover:text-[#008037] cursor-pointer">Rentals</span>
+              <span className="hover:text-[#315e96] cursor-pointer">Rentals</span>
               <span>&gt;</span>
               <span className="text-gray-800 font-medium">{propertyType ? `${propertyType}s` : 'Houses'}</span>
             </div>
@@ -650,7 +650,7 @@ export const Landing = () => {
 
                 {/* Pagination */}
                 <div className="hidden sm:flex items-center gap-1 ml-2">
-                  <span className="w-6 h-6 rounded bg-[#008037] text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                  <span className="w-6 h-6 rounded bg-[#315e96] text-white font-bold flex items-center justify-center text-xs shadow-xs">
                     1
                   </span>
                   <span className="w-6 h-6 rounded border border-gray-200 text-gray-600 font-medium flex items-center justify-center text-xs hover:bg-gray-50 cursor-pointer bg-white">
@@ -774,7 +774,7 @@ export const Landing = () => {
                     onClick={() => setPropertyType(propertyType === pill.val ? '' : pill.val)}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
                       propertyType === pill.val
-                        ? 'border-[#008037] bg-emerald-50 text-[#008037] font-bold shadow-xs'
+                        ? 'border-[#315e96] bg-primary-50 text-[#315e96] font-bold shadow-xs'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
                     }`}
                   >
@@ -795,7 +795,7 @@ export const Landing = () => {
                   onClick={() => setSearchLocation(searchLocation === cityName ? '' : cityName)}
                   className={`rounded-full border px-3 py-0.5 text-xs font-medium transition-all cursor-pointer ${
                     searchLocation === cityName
-                      ? 'border-[#008037] bg-emerald-50 text-[#008037] font-bold shadow-xs'
+                      ? 'border-[#315e96] bg-primary-50 text-[#315e96] font-bold shadow-xs'
                       : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
                   }`}
                 >
@@ -847,7 +847,7 @@ export const Landing = () => {
                     setMinPrice('');
                     setBedrooms('');
                   }}
-                  className="text-[11px] font-bold text-[#0066cc] hover:underline uppercase tracking-wide ml-1 cursor-pointer"
+                  className="text-[11px] font-bold text-[#315e96] hover:underline uppercase tracking-wide ml-1 cursor-pointer"
                 >
                   RESET ALL
                 </button>
@@ -861,7 +861,7 @@ export const Landing = () => {
             <div className="flex-1 min-w-0">
               {loadingProperties ? (
                 <div className="py-24 text-center text-gray-500 font-medium bg-white rounded-xl border border-gray-200">
-                  <div className="w-8 h-8 border-3 border-[#008037] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <div className="w-8 h-8 border-3 border-[#315e96] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                   Loading verified property catalog...
                 </div>
               ) : displayedProperties.length === 0 ? (
@@ -884,14 +884,14 @@ export const Landing = () => {
                   {activeAiPrompt ? (
                     <button
                       onClick={handleClearAiSearch}
-                      className="mt-4 rounded bg-[#008037] hover:bg-[#00662c] px-5 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
+                      className="mt-4 rounded bg-[#315e96] hover:bg-[#284d7b] px-5 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
                     >
                       Clear AI Search & Show All Listings
                     </button>
                   ) : properties.length === 0 ? (
                     <button
                       onClick={() => navigate('/register')}
-                      className="mt-5 rounded bg-[#ff5a00] hover:bg-[#e04f00] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm cursor-pointer transition-all"
+                      className="mt-5 rounded bg-[#315e96] hover:bg-[#284d7b] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm cursor-pointer transition-all"
                     >
                       Register as Property Owner
                     </button>
@@ -903,7 +903,7 @@ export const Landing = () => {
                         setPropertyType('');
                         setBedrooms('');
                       }}
-                      className="mt-4 rounded bg-[#ff5a00] hover:bg-[#e04f00] px-5 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
+                      className="mt-4 rounded bg-[#315e96] hover:bg-[#284d7b] px-5 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
                     >
                       Reset All Filters
                     </button>
@@ -930,13 +930,13 @@ export const Landing = () => {
                             <div className="flex items-center gap-2.5 shrink-0">
                               <button
                                 onClick={() => navigate('/login')}
-                                className="px-5 py-2 rounded bg-[#008037] hover:bg-[#00662c] text-white text-xs font-bold uppercase tracking-wider shadow-xs transition-all cursor-pointer"
+                                className="px-5 py-2 rounded bg-[#315e96] hover:bg-[#284d7b] text-white text-xs font-bold uppercase tracking-wider shadow-xs transition-all cursor-pointer"
                               >
                                 Login
                               </button>
                               <button
                                 onClick={() => navigate('/register')}
-                                className="px-5 py-2 rounded bg-[#008037] hover:bg-[#00662c] text-white text-xs font-bold uppercase tracking-wider shadow-xs transition-all cursor-pointer"
+                                className="px-5 py-2 rounded bg-[#315e96] hover:bg-[#284d7b] text-white text-xs font-bold uppercase tracking-wider shadow-xs transition-all cursor-pointer"
                               >
                                 Register
                               </button>
@@ -985,7 +985,7 @@ export const Landing = () => {
                 <button
                   type="button"
                   onClick={() => { setSearchLocation('Colombo'); document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  className="mt-3 w-full py-1.5 text-xs font-bold text-[#008037] border border-[#008037] rounded hover:bg-emerald-50 transition-colors text-center cursor-pointer"
+                  className="mt-3 w-full py-1.5 text-xs font-bold text-[#315e96] border border-[#315e96] rounded hover:bg-emerald-50 transition-colors text-center cursor-pointer"
                 >
                   Find out more &rarr;
                 </button>
@@ -1008,7 +1008,7 @@ export const Landing = () => {
                       key={city}
                       type="button"
                       onClick={() => { setSearchLocation(city); document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' }); }}
-                      className="text-left text-gray-700 hover:text-[#008037] hover:underline font-medium truncate cursor-pointer"
+                      className="text-left text-gray-700 hover:text-[#315e96] hover:underline font-medium truncate cursor-pointer"
                     >
                       {city}
                     </button>
@@ -1023,7 +1023,7 @@ export const Landing = () => {
                 <p className="text-[11px] text-sky-100 mt-1">Post your property advertisement on RentWise PropertyWeb today.</p>
                 <button
                   onClick={() => navigate('/register')}
-                  className="mt-3 py-1.5 px-3 bg-white text-[#0066cc] rounded text-xs font-bold hover:bg-sky-50 transition-all text-center shadow-xs cursor-pointer"
+                  className="mt-3 py-1.5 px-3 bg-white text-[#315e96] rounded text-xs font-bold hover:bg-sky-50 transition-all text-center shadow-xs cursor-pointer"
                 >
                   Post Your Ad Now
                 </button>
@@ -1058,7 +1058,7 @@ export const Landing = () => {
                           else setSearchLocation(searchItem.split(' ')[0]);
                           document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
                         }}
-                        className="text-left text-gray-600 hover:text-[#008037] hover:underline text-[11.5px] cursor-pointer"
+                        className="text-left text-gray-600 hover:text-[#315e96] hover:underline text-[11.5px] cursor-pointer"
                       >
                         {searchItem}
                       </button>
@@ -1074,7 +1074,7 @@ export const Landing = () => {
       </section>
 
       {/* 6. Luxury Footer directly matching screenshot */}
-      <footer id="contact" className="bg-[#070b14] text-slate-400 pt-20 pb-12 border-t border-slate-800/80">
+      <footer id="contact" className="bg-[#020617] text-slate-400 pt-20 pb-12 border-t border-slate-800/80">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-16 border-b border-slate-800/60">
             

@@ -1,18 +1,105 @@
 @import "tailwindcss";
 
+/* Muted blue for actions, neutral surfaces, separate semantic status colors. */
 @theme {
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-900: #1e3a8a;
-  
-  --color-dark-800: #1f2937;
-  --color-dark-900: #111827;
+  --color-primary-50: #f2f6fb;
+  --color-primary-100: #e5edf7;
+  --color-primary-200: #ccdcef;
+  --color-primary-300: #a6c1e0;
+  --color-primary-400: #789fcb;
+  --color-primary-500: #416faa;
+  --color-primary-600: #315e96;
+  --color-primary-700: #284d7b;
+  --color-primary-800: #253f61;
+  --color-primary-900: #22364f;
+  --color-primary-950: #152235;
+
+  /* Legacy blue/purple action utilities share the restrained brand palette. */
+  --color-blue-50: var(--color-primary-50);
+  --color-blue-100: var(--color-primary-100);
+  --color-blue-200: var(--color-primary-200);
+  --color-blue-300: var(--color-primary-300);
+  --color-blue-400: var(--color-primary-400);
+  --color-blue-500: var(--color-primary-500);
+  --color-blue-600: var(--color-primary-600);
+  --color-blue-700: var(--color-primary-700);
+  --color-blue-800: var(--color-primary-800);
+  --color-blue-900: var(--color-primary-900);
+  --color-blue-950: var(--color-primary-950);
+  --color-indigo-50: var(--color-primary-50);
+  --color-indigo-100: var(--color-primary-100);
+  --color-indigo-200: var(--color-primary-200);
+  --color-indigo-300: var(--color-primary-300);
+  --color-indigo-400: var(--color-primary-400);
+  --color-indigo-500: var(--color-primary-500);
+  --color-indigo-600: var(--color-primary-600);
+  --color-indigo-700: var(--color-primary-700);
+  --color-indigo-800: var(--color-primary-800);
+  --color-indigo-900: var(--color-primary-900);
+  --color-indigo-950: var(--color-primary-950);
+  --color-violet-50: var(--color-primary-50);
+  --color-violet-100: var(--color-primary-100);
+  --color-violet-200: var(--color-primary-200);
+  --color-violet-300: var(--color-primary-300);
+  --color-violet-400: var(--color-primary-400);
+  --color-violet-500: var(--color-primary-500);
+  --color-violet-600: var(--color-primary-600);
+  --color-violet-700: var(--color-primary-700);
+  --color-violet-800: var(--color-primary-800);
+  --color-violet-900: var(--color-primary-900);
+  --color-violet-950: var(--color-primary-950);
+  --color-purple-50: var(--color-primary-50);
+  --color-purple-100: var(--color-primary-100);
+  --color-purple-200: var(--color-primary-200);
+  --color-purple-300: var(--color-primary-300);
+  --color-purple-400: var(--color-primary-400);
+  --color-purple-500: var(--color-primary-500);
+  --color-purple-600: var(--color-primary-600);
+  --color-purple-700: var(--color-primary-700);
+  --color-purple-800: var(--color-primary-800);
+  --color-purple-900: var(--color-primary-900);
+  --color-purple-950: var(--color-primary-950);
+  --color-sky-50: var(--color-primary-50);
+  --color-sky-100: var(--color-primary-100);
+  --color-sky-200: var(--color-primary-200);
+  --color-sky-300: var(--color-primary-300);
+  --color-sky-400: var(--color-primary-400);
+  --color-sky-500: var(--color-primary-500);
+  --color-sky-600: var(--color-primary-600);
+  --color-sky-700: var(--color-primary-700);
+  --color-sky-800: var(--color-primary-800);
+  --color-sky-900: var(--color-primary-900);
+  --color-sky-950: var(--color-primary-950);
+  --color-cyan-50: var(--color-primary-50);
+  --color-cyan-100: var(--color-primary-100);
+  --color-cyan-200: var(--color-primary-200);
+  --color-cyan-300: var(--color-primary-300);
+  --color-cyan-400: var(--color-primary-400);
+  --color-cyan-500: var(--color-primary-500);
+  --color-cyan-600: var(--color-primary-600);
+  --color-cyan-700: var(--color-primary-700);
+  --color-cyan-800: var(--color-primary-800);
+  --color-cyan-900: var(--color-primary-900);
+  --color-cyan-950: var(--color-primary-950);
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+  --color-dark-800: #1e293b;
+  --color-dark-900: #0f172a;
 }
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    background-color: #f5f6f8;
+    color: #1f2933;
   }
 }

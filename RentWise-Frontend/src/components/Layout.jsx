@@ -129,13 +129,13 @@ export const Layout = () => {
               
               {/* Brand Logo (LankaPropertyWeb style green circle + typography) */}
               <Link to={user ? "/properties" : "/"} className="flex items-center gap-2.5 group shrink-0">
-                <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[#008037] text-white shadow-sm group-hover:scale-105 transition-transform">
+                <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[#315e96] text-white shadow-sm group-hover:scale-105 transition-transform">
                   <Home className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center text-xl sm:text-2xl font-black tracking-tight leading-none">
                     <span className="text-gray-900">Rent</span>
-                    <span className="text-[#008037]">Wise</span>
+                    <span className="text-[#315e96]">Wise</span>
                     <span className="text-xs sm:text-sm font-semibold text-gray-400 ml-1">PropertyWeb</span>
                   </div>
                 </div>
@@ -148,7 +148,7 @@ export const Layout = () => {
                     {/* User / My Profile link */}
                     <Link
                       to="/tenants"
-                      className="hidden md:flex items-center gap-1.5 font-medium text-gray-700 hover:text-[#008037] transition-colors"
+                      className="hidden md:flex items-center gap-1.5 font-medium text-gray-700 hover:text-[#315e96] transition-colors"
                       title="View my profile"
                     >
                       <User className="w-3.5 h-3.5 text-gray-400" />
@@ -160,7 +160,7 @@ export const Layout = () => {
                     {/* Saved Items Quick Link */}
                     <Link
                       to="/saved-items"
-                      className="hidden sm:flex items-center gap-1.5 font-medium text-gray-700 hover:text-[#008037] transition-colors text-xs sm:text-sm"
+                      className="hidden sm:flex items-center gap-1.5 font-medium text-gray-700 hover:text-[#315e96] transition-colors text-xs sm:text-sm"
                       title="View saved wishlist properties"
                     >
                       <Heart className={`w-4 h-4 ${savedCount > 0 ? 'text-rose-500 fill-rose-500' : 'text-gray-400'}`} />
@@ -175,7 +175,7 @@ export const Layout = () => {
                     {/* Help / Support Link */}
                     <Link
                       to="/maintenance"
-                      className="hidden sm:inline font-medium text-gray-600 hover:text-[#008037] transition-colors text-xs sm:text-sm"
+                      className="hidden sm:inline font-medium text-gray-600 hover:text-[#315e96] transition-colors text-xs sm:text-sm"
                     >
                       Help
                     </Link>
@@ -202,7 +202,7 @@ export const Layout = () => {
                     </Link>
                     <Link
                       to="/register"
-                      className="px-4 py-1.5 rounded bg-[#008037] hover:bg-[#00662c] text-white text-xs font-bold shadow-xs transition-colors"
+                      className="px-4 py-1.5 rounded bg-[#315e96] hover:bg-[#284d7b] text-white text-xs font-bold shadow-xs transition-colors"
                     >
                       Register
                     </Link>
@@ -213,13 +213,13 @@ export const Layout = () => {
           </div>
 
           {/* Tier 2: Solid Forest Green Ribbon Bar */}
-          <div className="bg-[#008037] text-white px-4 sm:px-8 lg:px-12 shadow-sm">
+          <div className="bg-[#315e96] text-white px-4 sm:px-8 lg:px-12 shadow-sm">
             <div className="mx-auto flex max-w-[1440px] items-center justify-between overflow-x-auto no-scrollbar">
               <nav className="flex items-center gap-1 sm:gap-2 py-1.5 text-xs sm:text-[13.5px] font-semibold whitespace-nowrap">
                 <Link
                   to="/properties"
                   className={`px-3 py-1 rounded transition-colors ${
-                    location.pathname === '/properties' ? 'bg-[#006329] text-white font-bold' : 'text-white/95 hover:bg-[#006e2e]'
+                    location.pathname === '/properties' ? 'bg-[#253f61] text-white font-bold' : 'text-white/95 hover:bg-[#284d7b]'
                   }`}
                 >
                   Homes
@@ -228,17 +228,17 @@ export const Layout = () => {
                 <Link
                   to="/find-rentals"
                   className={`px-3 py-1 rounded transition-colors ${
-                    location.pathname.startsWith('/find-rentals') ? 'bg-[#006329] text-white font-bold' : 'text-white/95 hover:bg-[#006e2e]'
+                    location.pathname.startsWith('/find-rentals') ? 'bg-[#253f61] text-white font-bold' : 'text-white/95 hover:bg-[#284d7b]'
                   }`}
                 >
                   Find Rentals
                 </Link>
-                {user && <Link to="/rental-workflows" className="px-3 py-1 rounded text-white hover:bg-[#006e2e]">Rental concierge</Link>}
+                {user && <Link to="/rental-workflows" className="px-3 py-1 rounded text-white hover:bg-[#284d7b]">Rental concierge</Link>}
 
                 <Link
                   to="/agreements"
                   className={`px-3 py-1 rounded transition-colors ${
-                    location.pathname.startsWith('/agreements') ? 'bg-[#006329] text-white font-bold' : 'text-white/95 hover:bg-[#006e2e]'
+                    location.pathname.startsWith('/agreements') ? 'bg-[#253f61] text-white font-bold' : 'text-white/95 hover:bg-[#284d7b]'
                   }`}
                 >
                   Rentals
@@ -246,21 +246,21 @@ export const Layout = () => {
 
                 <Link
                   to="/tenants?tab=payments"
-                  className="px-3 py-1 rounded transition-colors text-white/95 hover:bg-[#006e2e]"
+                  className="px-3 py-1 rounded transition-colors text-white/95 hover:bg-[#284d7b]"
                 >
                   Payments
                 </Link>
 
                 <Link
                   to="/tenants?tab=maintenance"
-                  className="px-3 py-1 rounded transition-colors text-white/95 hover:bg-[#006e2e]"
+                  className="px-3 py-1 rounded transition-colors text-white/95 hover:bg-[#284d7b]"
                 >
                   Support
                 </Link>
 
                 <Link
                   to="/tenants?tab=bookings"
-                  className="px-3 py-1 rounded transition-colors text-white/95 hover:bg-[#006e2e]"
+                  className="px-3 py-1 rounded transition-colors text-white/95 hover:bg-[#284d7b]"
                 >
                   My Bookings
                 </Link>
@@ -272,8 +272,8 @@ export const Layout = () => {
                   to="/tenants"
                   className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors text-xs font-semibold ${
                     location.pathname.startsWith('/tenants') || location.pathname.startsWith('/profile')
-                      ? 'bg-[#006329] text-white font-bold'
-                      : 'text-white/95 hover:bg-[#006e2e]'
+                      ? 'bg-[#253f61] text-white font-bold'
+                      : 'text-white/95 hover:bg-[#284d7b]'
                   }`}
                 >
                   <User className="w-4 h-4 opacity-90" />
@@ -283,7 +283,7 @@ export const Layout = () => {
                 <Link
                   to="/saved-items"
                   title={`Saved Properties (${savedCount})`}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded hover:bg-[#006e2e] text-white transition-colors text-xs font-semibold"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded hover:bg-[#284d7b] text-white transition-colors text-xs font-semibold"
                 >
                   <Heart className={`w-4 h-4 ${savedCount > 0 ? 'fill-rose-300 text-rose-300' : 'text-white/80'}`} />
                   <span className="hidden md:inline">Saved</span>
@@ -302,7 +302,7 @@ export const Layout = () => {
       {!isTenant && <aside className="w-full shrink-0 lg:w-[280px] bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800 relative z-20">
         <div className="p-4 lg:p-8 lg:pb-4">
           <div className="flex items-center gap-3 mb-3 lg:mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_20px_rgb(99,102,241,0.3)]">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_20px_rgb(49,94,150,0.3)]">
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white">
@@ -343,7 +343,7 @@ export const Layout = () => {
                 to={item.path}
                 className={`flex shrink-0 items-center whitespace-nowrap space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive 
-                    ? 'bg-indigo-600 text-white shadow-[0_4px_20px_rgb(79,70,229,0.3)]' 
+                    ? 'bg-indigo-600 text-white shadow-[0_4px_20px_rgb(49,94,150,0.3)]'
                     : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
                 }`}
               >

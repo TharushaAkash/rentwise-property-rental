@@ -82,8 +82,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 backgroundColor: AppColors.teal,
               ),
             );
-            Navigator.of(context).pushReplacement(
+            Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
             );
           }
         },

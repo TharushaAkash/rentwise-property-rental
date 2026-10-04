@@ -52,8 +52,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
         data: (user) {
           if (user != null) {
-            Navigator.of(context).pushReplacement(
+            Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
             );
           }
         },
@@ -61,6 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
+      appBar: Navigator.of(context).canPop() ? AppBar() : null,
       body: Form(
         key: _form,
         autovalidateMode: AutovalidateMode.onUserInteraction,
