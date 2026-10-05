@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AgreementsDashboard } from '../features/agreements/AgreementsDashboard';
@@ -8,7 +8,7 @@ vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'owner-1', role: 'PropertyOwner' } }),
 }));
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const property = {
   id: 'property-1', ownerId: 'owner-1', title: 'Address mismatch listing',
@@ -38,6 +38,10 @@ it('keeps a failed fee payment unpaid and shows the server error', async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(api, 'post').mockRejectedValue({ response: { data: { message: 'Payment could not be recorded.' } } });
   fireEvent.click(await screen.findByRole('button', { name: 'Pay Fee (Rs. 2,500)' }));
+  fireEvent.change(screen.getByLabelText('Cardholder name'), { target: { value: 'Test Owner' } });
+  fireEvent.change(screen.getByLabelText('Card number'), { target: { value: '4242424242424242' } });
+  fireEvent.change(screen.getByLabelText('Expiry'), { target: { value: '12' + String(new Date().getFullYear() + 2).slice(-2) } });
+  fireEvent.change(screen.getByLabelText('CVV'), { target: { value: '123' } });
   fireEvent.click(screen.getByRole('button', { name: 'Pay LKR 2,500 Now' }));
   expect((await screen.findByRole('alert')).textContent).toContain('Payment could not be recorded.');
   await waitFor(() => expect(screen.getByRole('button', { name: 'Pay LKR 2,500 Now' }).disabled).toBe(false));
