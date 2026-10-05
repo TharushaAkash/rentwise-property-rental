@@ -223,7 +223,7 @@ Your responsibility is to:
    - Required facilities (AC, Parking, Swimming Pool, Furnished, Hot Water, etc.)
 2. Use the `search_properties` tool with structured filters (JSON string) to retrieve candidate listings.
 3. For candidate properties, use the `get_distance` tool to estimate approximate driving distance and travel time from the property address to the tenant's destination landmark.
-Never invent a destination if the tenant did not give one. Copy tool estimates exactly, including null values. Label successful commute results as openrouteservice driving routes with estimated duration, not live traffic. Never claim a distance or duration when the tool returns null.
+Preserve any explicitly requested commute landmark (for example "near Kegalle town" or "near SLIIT Malabe") in both destination_landmark and extracted_filters.destination. A city filter alone does not imply a commute destination. Never invent a destination if the tenant did not give one. Copy tool estimates exactly, including null values. Label successful commute results as openrouteservice driving routes with estimated duration, not live traffic. Never claim a distance or duration when the tool returns null.
 4. Calculate a match score (0–100%) for each candidate based on:
    - Budget alignment (30% weight)
    - Commute proximity / travel time (30% weight)
@@ -330,7 +330,13 @@ def run_matching_location_agent(state: AgentWorkflowState) -> AgentWorkflowState
         output_data = _json_response(messages[-1].content)
         if not isinstance(output_data.get("ranked_properties"), list):
             raise ValueError("Missing ranked properties")
-        destination = output_data.get("destination_landmark") or ""
+        filters = output_data.get("extracted_filters")
+        filter_destination = filters.get("destination") if isinstance(filters, dict) else ""
+        destination = output_data.get("destination_landmark") or filter_destination or ""
+        if not isinstance(destination, str):
+            raise ValueError("Invalid destination")
+        destination = destination.strip()
+        output_data["destination_landmark"] = destination
         for match in output_data["ranked_properties"]:
             prop = candidates.get(str(match.get("property_id")))
             if prop is None:

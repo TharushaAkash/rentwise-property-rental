@@ -750,7 +750,7 @@ export const FindRentals = () => {
                               <span>{!commuteDestination
                                 ? 'Add a destination to your search to see estimated distance and travel time.'
                                 : property.distance_km == null || property.travel_time_mins == null
-                                  ? 'AI could not estimate this commute. Try a more specific destination or landmark.'
+                                  ? (property.commute_summary || 'Route unavailable. Try a more specific property address or destination.')
                                   : `${property.estimate_source === 'openrouteservice' ? 'ORS driving route' : 'AI estimate'}: ${property.distance_km} km / ~${property.travel_time_mins} mins driving to ${commuteDestination} (not live traffic)`}</span>
                             </div>
                             {Array.isArray(property.match_reasons) && property.match_reasons.length > 0 && (
