@@ -133,10 +133,9 @@ namespace RentWise.API.Modules.Maintenance.Controllers
             if (!await CanAccess(request)) return Forbid();
 
             var oldStatus = request.Status;
-            if (Enum.TryParse<MaintenanceStatus>(dto.Status, true, out var parsedStatus))
-            {
-                request.Status = parsedStatus;
-            }
+            if (!Enum.TryParse<MaintenanceStatus>(dto.Status, true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
+                return BadRequest(new { message = "Choose a valid maintenance status." });
+            request.Status = parsedStatus;
 
             request.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();

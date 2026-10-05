@@ -118,6 +118,9 @@ export function evaluatePropertyVerification(property) {
   const approved = active && recommendation === 'Approve-ready';
   return { ...base, billUrl: report.documentUrl, hasBill: true,
     isVerified: approved, recommendation,
+    billAddress: typeof report.billAddress === 'string' ? report.billAddress : '',
+    accountNo: typeof report.accountNo === 'string' ? report.accountNo : '',
+    utilityProvider: typeof report.utilityProvider === 'string' ? report.utilityProvider : '',
     matchDetails: report.reasoning || 'Administrator review is required.',
     statusLabel: approved ? 'Verified' : recommendation === 'Reject-recommended' ? 'Review Recommended' : 'Needs Review',
     statusBadgeVariant: approved ? 'success' : recommendation === 'Reject-recommended' ? 'danger' : 'warning' };

@@ -22,18 +22,25 @@ class MaintenanceModel {
   factory MaintenanceModel.fromJson(Map<String, dynamic> json) {
     String parsedStatus = 'Pending';
     if (json['status'] != null) {
-      parsedStatus = json['status'].toString();
+      final raw = json['status'];
+      parsedStatus = raw is int && raw >= 0 && raw < 4
+          ? ['Reported', 'Assigned', 'InProgress', 'Completed'][raw]
+          : raw.toString();
     }
 
     return MaintenanceModel(
       id: json['id'] ?? '',
       description: json['description'] ?? '',
-      propertyTitle: json['property'] != null ? json['property']['title'] ?? 'Unknown Property' : 'Unknown Property',
+      propertyTitle: json['property'] != null
+          ? json['property']['title'] ?? 'Unknown Property'
+          : 'Unknown Property',
       photoUrl: json['photoUrl'] ?? '',
       status: parsedStatus,
       priority: json['aiPriority'] ?? 'Normal',
       aiCategory: json['aiCategory'] ?? 'General',
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
     );
   }
 }

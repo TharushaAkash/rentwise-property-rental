@@ -19,7 +19,27 @@ class _NicVerificationScreenState extends ConsumerState<NicVerificationScreen> {
   Uint8List? bytes;
   String? filename, message;
   bool busy = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => refreshStatus());
+  }
+
+  Future<void> refreshStatus() async {
+    if (!mounted || !isOwner(ref.read(authStateProvider).value?.role)) return;
+    try {
+      await ref.read(authStateProvider.notifier).refreshProfile();
+    } catch (_) {
+      if (mounted)
+        setState(
+          () =>
+              message = 'Could not refresh your NIC status. Please try again.',
+        );
+    }
+  }
+
   Future<void> pick() async {
+    if (!isOwner(ref.read(authStateProvider).value?.role)) return;
     try {
       final files = await FilePicker.pickFiles(
         type: FileType.custom,
@@ -45,7 +65,11 @@ class _NicVerificationScreenState extends ConsumerState<NicVerificationScreen> {
 
   Future<void> upload() async {
     final user = ref.read(authStateProvider).value;
-    if (user == null || bytes == null || filename == null) return;
+    if (user == null ||
+        !isOwner(user.role) ||
+        bytes == null ||
+        filename == null)
+      return;
     setState(() {
       busy = true;
       message = null;
@@ -72,8 +96,26 @@ class _NicVerificationScreenState extends ConsumerState<NicVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
+    if (!isOwner(user?.role)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('NIC verification')),
+        body: const Center(
+          child: Text('NIC upload is available to property owners only.'),
+        ),
+      );
+    }
+    final uploaded = user?.nicImageUrl?.trim().isNotEmpty == true;
     return Scaffold(
-      appBar: AppBar(title: const Text('NIC verification')),
+      appBar: AppBar(
+        title: const Text('NIC verification'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh NIC status',
+            onPressed: busy ? null : refreshStatus,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -90,6 +132,39 @@ class _NicVerificationScreenState extends ConsumerState<NicVerificationScreen> {
             ),
             subtitle: Text('NIC: ${user?.nicNumber ?? "Not provided"}'),
           ),
+          ListTile(
+            leading: Icon(
+              uploaded ? Icons.check_circle_outline : Icons.upload_file,
+            ),
+            title: Text(
+              uploaded
+                  ? 'NIC image already uploaded'
+                  : 'No NIC image uploaded yet',
+            ),
+            subtitle: Text(
+              user?.isNicVerified == true
+                  ? 'Verification successful'
+                  : uploaded
+                  ? 'Uploaded image is not verified'
+                  : 'Upload your NIC to start verification',
+            ),
+          ),
+          if (uploaded && bytes == null) ...[
+            const Text('Previously uploaded NIC'),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                user!.nicImageUrl!,
+                height: 200,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('NIC image is uploaded. Preview is unavailable.'),
+                ),
+              ),
+            ),
+          ],
           TextButton(
             onPressed: busy
                 ? null
@@ -114,7 +189,9 @@ class _NicVerificationScreenState extends ConsumerState<NicVerificationScreen> {
           OutlinedButton.icon(
             onPressed: busy ? null : pick,
             icon: const Icon(Icons.upload_file),
-            label: const Text('Choose NIC image'),
+            label: Text(
+              uploaded ? 'Choose replacement NIC image' : 'Choose NIC image',
+            ),
           ),
           FilledButton(
             onPressed:
