@@ -9,9 +9,21 @@ import '../models/rental_model.dart';
 
 class RentalService {
   final http.Client _client;
-  RentalService({http.Client? client}) : _client = client ?? http.Client();
+  final String? accountEmail;
+  final String? token;
+  RentalService({http.Client? client, this.accountEmail, this.token})
+    : _client = client ?? http.Client();
 
-  Future<String?> _getToken() => TokenStore.instance.read();
+  String _cacheKey(String kind) {
+    final email = accountEmail?.trim().toLowerCase();
+    if (email == null || email.isEmpty) {
+      throw StateError('Sign in before accessing saved rentals.');
+    }
+    return 'rentwise_client_${kind}_${Uri.encodeComponent(email)}';
+  }
+
+  Future<String?> _getToken() async =>
+      token ?? await TokenStore.instance.read();
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await _getToken();
@@ -42,7 +54,7 @@ class RentalService {
 
   Future<void> saveLocalAgreement(AgreementModel agreement) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('rentwise_client_agreements');
+    final raw = prefs.getString(_cacheKey('agreements'));
     List<dynamic> list = [];
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -57,12 +69,12 @@ class RentalService {
     } else {
       list.insert(0, agreement.toJson());
     }
-    await prefs.setString('rentwise_client_agreements', jsonEncode(list));
+    await prefs.setString(_cacheKey('agreements'), jsonEncode(list));
   }
 
   Future<void> saveLocalPayment(PaymentModel payment) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('rentwise_client_payments');
+    final raw = prefs.getString(_cacheKey('payments'));
     List<dynamic> list = [];
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -70,7 +82,7 @@ class RentalService {
       } catch (_) {}
     }
     list.insert(0, payment.toJson());
-    await prefs.setString('rentwise_client_payments', jsonEncode(list));
+    await prefs.setString(_cacheKey('payments'), jsonEncode(list));
   }
 
   // ──────────────────────────────────────────────
@@ -102,7 +114,7 @@ class RentalService {
 
     // 2. Load local saved agreements from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    final localRaw = prefs.getString('rentwise_client_agreements');
+    final localRaw = prefs.getString(_cacheKey('agreements'));
     final List<AgreementModel> localAgreements = [];
     if (localRaw != null && localRaw.isNotEmpty) {
       try {
@@ -244,7 +256,7 @@ class RentalService {
     }
 
     // 6. Load local payments from SharedPreferences
-    final localPayRaw = prefs.getString('rentwise_client_payments');
+    final localPayRaw = prefs.getString(_cacheKey('payments'));
     if (localPayRaw != null && localPayRaw.isNotEmpty) {
       try {
         final List pList = jsonDecode(localPayRaw);
@@ -278,7 +290,7 @@ class RentalService {
     // Cache merged result
     try {
       await prefs.setString(
-        'rentwise_client_agreements',
+        _cacheKey('agreements'),
         jsonEncode(resultList.map((a) => a.toJson()).toList()),
       );
     } catch (_) {}
@@ -324,11 +336,10 @@ class RentalService {
     }
     await saveLocalAgreement(saved);
     final prefs = await SharedPreferences.getInstance();
-    final list = jsonDecode(
-      prefs.getString('rentwise_client_agreements') ?? '[]',
-    ) as List;
+    final list =
+        jsonDecode(prefs.getString(_cacheKey('agreements')) ?? '[]') as List;
     list.removeWhere((item) => item is Map && item['id'] == agreement.id);
-    await prefs.setString('rentwise_client_agreements', jsonEncode(list));
+    await prefs.setString(_cacheKey('agreements'), jsonEncode(list));
     return saved;
   }
 

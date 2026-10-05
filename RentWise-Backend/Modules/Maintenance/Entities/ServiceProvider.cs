@@ -4,6 +4,7 @@ namespace RentWise.API.Modules.Maintenance.Entities
 {
     public class ServiceProvider : BaseEntity
     {
+        public Guid? OwnerId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty; // e.g., "Plumber", "Electrician"
         public string ContactNumber { get; set; } = string.Empty;

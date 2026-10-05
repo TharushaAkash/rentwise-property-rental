@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { queryClient } from '../services/queryClient';
 
@@ -83,6 +83,6 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   return <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user), isLoading: false, login, logout, updateUser }}>
-    {children}
+    <Fragment key={user?.email?.trim().toLowerCase() || user?.id || 'guest'}>{children}</Fragment>
   </AuthContext.Provider>;
 }

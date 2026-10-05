@@ -43,40 +43,85 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 32),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(24),
+                    height: 220,
                     decoration: BoxDecoration(
-                      color: AppColors.softTeal,
                       borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: Column(
-                      children: [
-                        const ExcludeSemantics(
-                          child: Icon(
-                            Icons.holiday_village_outlined,
-                            size: 112,
-                            color: AppColors.darkGreen,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Text(
-                            'Your next chapter starts here.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.darkGreen,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.teal.withAlpha(30),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
                       ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            'assets/property_placeholder.jpg',
+                            fit: BoxFit.cover,
+                          ),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withAlpha(120),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            right: 16,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(40),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.auto_awesome,
+                                      color: AppColors.teal,
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Your next chapter starts here.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: AppColors.darkGreen,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),

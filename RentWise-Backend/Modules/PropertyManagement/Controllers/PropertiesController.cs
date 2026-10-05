@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RentWise.API.Data;
+using RentWise.API.Modules.Agreements.Entities;
 using RentWise.API.Modules.PropertyManagement.Entities;
 using RentWise.API.Modules.PropertyManagement.Interfaces;
 using RentWise.API.Modules.PropertyManagement.DTOs;
@@ -38,6 +39,16 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             if (!(User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin")))
                 properties = properties.Where(p => p.Status == PropertyStatus.Active &&
                     p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
+            if (!CanManageListings(Guid.Empty))
+            {
+                var reserved = await _context.PropertyApplications
+                    .Where(a => a.Status == "Submitted" || a.Status == "Accepted")
+                    .Select(a => a.PropertyId).ToListAsync();
+                var leased = await _context.RentalAgreements
+                    .Where(a => a.Status != AgreementStatus.Ended && a.EndDate > DateTime.UtcNow)
+                    .Select(a => a.PropertyId).ToListAsync();
+                properties = properties.Where(p => !reserved.Contains(p.Id) && !leased.Contains(p.Id));
+            }
             return Ok(properties);
         }
 
@@ -50,6 +61,9 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             if (pageSize < 1 || pageSize > 48 || minBudget < 0 || maxBudget < 0 || bedrooms < 0)
                 return BadRequest(new { message = "Invalid search filters." });
             var query = _context.Properties.AsNoTracking().Where(p => p.Status == PropertyStatus.Active && p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
+            query = query.Where(p => !_context.PropertyApplications.Any(a => a.PropertyId == p.Id &&
+                (a.Status == "Submitted" || a.Status == "Accepted")) &&
+                !_context.RentalAgreements.Any(a => a.PropertyId == p.Id && a.Status != AgreementStatus.Ended && a.EndDate > DateTime.UtcNow));
             if (!string.IsNullOrWhiteSpace(location))
             {
                 var term = location.Trim().ToLower();

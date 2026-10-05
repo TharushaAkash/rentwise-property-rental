@@ -23,6 +23,10 @@ api.interceptors.request.use(
 // Interceptor to handle 401s (e.g., token expired) without infinite loops
 api.interceptors.response.use(
   (response) => {
+    const sentToken = response.config.headers?.Authorization;
+    if (sentToken && sentToken !== `Bearer ${localStorage.getItem('token')}`) {
+      return Promise.reject(new axios.CanceledError('Account changed while loading data.'));
+    }
     // Invalidate cached reads after writes, including calls outside useMutation.
     if (['post', 'put', 'patch', 'delete'].includes(response.config.method?.toLowerCase())) {
       void queryClient.invalidateQueries({ queryKey: ['api'] });

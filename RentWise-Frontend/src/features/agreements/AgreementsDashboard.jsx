@@ -1,3 +1,4 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
 import { validateCard } from '../../utils/paymentValidation';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -153,12 +154,12 @@ export const AgreementsDashboard = () => {
   const fetchAgreements = async () => {
     setIsLoadingAgreements(true);
     try {
-      const res = await api.get('/agreements/mine').catch(() => api.get('/agreements'));
+      const res = await api.get(isAdmin ? '/agreements' : '/agreements/mine');
       let list = Array.isArray(res.data) ? res.data : [];
 
       // Merge and normalize local cache
       try {
-        const local = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const local = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         const cleaned = local.map(a => {
           const terms = a?.termsAndConditions || a?.terms || '';
           const isPaid = terms.includes('[PAYMENT_SUCCESS') || Boolean(a?.isPaid);
@@ -171,7 +172,7 @@ export const AgreementsDashboard = () => {
           }
           return a;
         });
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(cleaned));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(cleaned));
 
         const map = new Map();
         cleaned.forEach(a => a?.id && map.set(a.id, a));
@@ -179,7 +180,7 @@ export const AgreementsDashboard = () => {
         list = Array.from(map.values());
       } catch {}
 
-      setAgreements(list);
+      setAgreements(list.filter(a => belongsToAccount(a, user)));
     } catch (err) {
       console.error('Failed to load agreements:', err);
     } finally {
@@ -218,7 +219,7 @@ export const AgreementsDashboard = () => {
     setAgreements(prev => {
       const next = prev.map(a => a.id === updated.id ? { ...a, ...updated } : a);
       try {
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
       } catch {}
       return next;
     });

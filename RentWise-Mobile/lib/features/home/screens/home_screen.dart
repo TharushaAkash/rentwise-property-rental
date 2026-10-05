@@ -686,6 +686,7 @@ class _DiscoverPropertiesTabState
                               );
                             }
                             return _MobilePropertyCard(
+                              onReturn: () => _catalog.load(),
                               property: displayedProperties[index],
                               aiResult:
                                   aiMatchResults != null &&
@@ -723,10 +724,15 @@ class _DiscoverPropertiesTabState
 }
 
 class _MobilePropertyCard extends StatelessWidget {
+  final VoidCallback? onReturn;
   final dynamic property;
   final AiPropertyMatchResult? aiResult;
 
-  const _MobilePropertyCard({required this.property, this.aiResult});
+  const _MobilePropertyCard({
+    required this.property,
+    this.aiResult,
+    this.onReturn,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -752,7 +758,7 @@ class _MobilePropertyCard extends StatelessWidget {
               builder: (context) =>
                   PropertyDetailScreen(property: property, aiResult: aiResult),
             ),
-          );
+          ).then((_) => onReturn?.call());
         },
         borderRadius: BorderRadius.circular(22),
         child: Column(
@@ -768,7 +774,7 @@ class _MobilePropertyCard extends StatelessWidget {
                   child: property.photoUrl.isNotEmpty
                       ? Image.network(
                           property.photoUrl,
-                          height: 180,
+                          height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
@@ -896,6 +902,30 @@ class _MobilePropertyCard extends StatelessWidget {
                   top: 14,
                   right: 14,
                   child: SavePropertyButton(propertyId: property.id),
+                ),
+                // Gradient overlay for premium look
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 70,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(0),
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withAlpha(100),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1092,14 +1122,30 @@ class _MobilePropertyCard extends StatelessWidget {
   }
 
   Widget _buildPlaceholder() {
-    return Container(
-      height: 180,
-      color: const Color(0xFFE2E8F0),
-      child: const Icon(
-        Icons.apartment_rounded,
-        size: 50,
-        color: AppColors.muted,
-      ),
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Image.asset(
+          'assets/property_placeholder.jpg',
+          height: 200,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withAlpha(80),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

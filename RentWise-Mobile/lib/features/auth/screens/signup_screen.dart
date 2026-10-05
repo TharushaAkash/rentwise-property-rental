@@ -57,7 +57,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           name,
           email,
           password,
-          _isOwner ? 'Owner' : 'Tenant',
+          _isOwner ? 'PropertyOwner' : 'Tenant',
           phone,
           nic,
         );

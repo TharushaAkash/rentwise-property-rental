@@ -161,6 +161,61 @@ await using (var db = NewDb()) {
  Check(photos.Count == 2 && photos.Single(p => p.IsPrimary).PhotoUrl == "https://example.com/house.jpg",
   "Saved photo URLs and primary photo survive reload");
 }
+await using (var db = NewDb()) {
+ var lease = new RentWise.API.Modules.Agreements.Entities.RentalAgreement {
+  PropertyId = listing.Id, TenantId = tenant.Id, OwnerId = owner.Id,
+  StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddMonths(6)
+ };
+ db.RentalAgreements.Add(lease); await db.SaveChangesAsync();
+ RentWise.API.Modules.Agreements.Controllers.RentalAgreementsController Agreements(Guid? actor) => new(null!, db, null!,
+  Microsoft.Extensions.Logging.Abstractions.NullLogger<RentWise.API.Modules.Agreements.Controllers.RentalAgreementsController>.Instance) {
+  ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext {
+   User = new ClaimsPrincipal(new ClaimsIdentity(actor == null ? Array.Empty<Claim>() : new[] {
+    new Claim(ClaimTypes.NameIdentifier, actor.ToString()!), new Claim(ClaimTypes.Role, "Tenant") }, "fixture"))
+  } }
+ };
+ Check(await Agreements(null).GetMyAgreements() is ForbidResult, "Missing identity never returns all agreements");
+ var other = (OkObjectResult)await Agreements(stranger.Id).GetAgreements();
+ Check(JsonSerializer.SerializeToElement(other.Value).GetArrayLength() == 0, "Agreement list excludes other accounts");
+ Check(await Agreements(stranger.Id).GetAgreement(lease.Id) is ForbidResult, "Other account cannot read agreement by ID");
+ Check(await Agreements(stranger.Id).GetAgreementPayments(lease.Id) is ForbidResult, "Other account cannot read lease payments");
+ Check(await Agreements(tenant.Id).GetAgreement(lease.Id) is OkObjectResult, "Tenant can read own agreement");
+ Check(await Agreements(owner.Id).GetAgreement(lease.Id) is OkObjectResult, "Owner can read own agreement");
+}
+await using (var db = NewDb()) {
+ var request = new RentWise.API.Modules.Maintenance.Entities.MaintenanceRequest {
+  PropertyId = listing.Id, TenantId = tenant.Id, Description = "Own maintenance fixture"
+ };
+ var provider = new RentWise.API.Modules.Maintenance.Entities.ServiceProvider { OwnerId = owner.Id, Name = "Own contractor" };
+ var otherProvider = new RentWise.API.Modules.Maintenance.Entities.ServiceProvider { OwnerId = stranger.Id, Name = "Other contractor" };
+ var legacyProvider = new RentWise.API.Modules.Maintenance.Entities.ServiceProvider { Name = "Unattributed contractor" };
+ db.AddRange(request, provider, otherProvider, legacyProvider); await db.SaveChangesAsync();
+ ControllerContext Identity(Guid? actor, string role) => new() { HttpContext = new DefaultHttpContext {
+  User = new ClaimsPrincipal(new ClaimsIdentity(actor == null ? Array.Empty<Claim>() : new[] {
+   new Claim(ClaimTypes.NameIdentifier, actor.ToString()!), new Claim(ClaimTypes.Role, role) }, "fixture"))
+ } };
+ RentWise.API.Modules.Maintenance.Controllers.MaintenanceRequestsController Maintenance(Guid? actor, string role) =>
+  new(null!, db) { ControllerContext = Identity(actor, role) };
+ RentWise.API.Modules.Maintenance.Controllers.ServiceProvidersController Providers(Guid? actor, string role) =>
+  new(null!, db) { ControllerContext = Identity(actor, role) };
+ Check(await Maintenance(null, "Tenant").GetMyRequests() is ForbidResult, "Missing maintenance identity cannot read all requests");
+ var empty = (OkObjectResult)await Maintenance(stranger.Id, "Tenant").GetMyRequests();
+ Check(JsonSerializer.SerializeToElement(empty.Value).GetArrayLength() == 0, "No own maintenance requests returns empty, never all");
+ Check(await Maintenance(stranger.Id, "Tenant").GetRequest(request.Id) is ForbidResult, "Other tenant cannot read maintenance details");
+ Check(await Maintenance(tenant.Id, "Tenant").GetRequest(request.Id) is OkObjectResult, "Tenant can read own maintenance");
+ Check(await Maintenance(owner.Id, "PropertyOwner").GetRequest(request.Id) is OkObjectResult, "Property owner can read property maintenance");
+ var ownerProviders = (OkObjectResult)await Providers(owner.Id, "PropertyOwner").GetProviders();
+ var ownerRecords = JsonSerializer.SerializeToElement(ownerProviders.Value);
+ Check(ownerRecords.GetArrayLength() == 1 && ownerRecords[0].GetProperty("Id").GetGuid() == provider.Id,
+  "Owner provider directory excludes other owners and unattributed legacy providers");
+ var tenantProviders = (OkObjectResult)await Providers(tenant.Id, "Tenant").GetProviders();
+ var tenantRecords = JsonSerializer.SerializeToElement(tenantProviders.Value);
+ Check(tenantRecords.GetArrayLength() == 1 && tenantRecords[0].GetProperty("Id").GetGuid() == provider.Id,
+  "Tenant sees providers of their rental owner only");
+ Check(await Providers(owner.Id, "PropertyOwner").GetProvider(otherProvider.Id) is NotFoundResult,
+  "Other owner's provider cannot be read by ID");
+ Check(await Providers(null, "Tenant").GetProviders() is ForbidResult, "Missing provider identity is denied");
+}
 Console.WriteLine($"{checks} booking checks passed ({(pg == null ? "SQLite" : "PostgreSQL migrations + concurrent requests")}).");
 
 sealed class FailingSaveInterceptor(Exception failure) : SaveChangesInterceptor

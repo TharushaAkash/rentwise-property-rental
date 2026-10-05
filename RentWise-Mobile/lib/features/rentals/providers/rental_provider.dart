@@ -1,10 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/providers/auth_provider.dart';
 import '../models/rental_model.dart';
 import '../services/rental_service.dart';
 
 // ── Service singleton ──────────────────────────────────────
-final rentalServiceProvider = Provider<RentalService>((ref) => RentalService());
+final rentalServiceProvider = Provider<RentalService>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  return RentalService(accountEmail: user?.email, token: user?.token);
+});
 
 // ── Agreements list ────────────────────────────────────────
 final agreementsProvider =
@@ -15,7 +19,10 @@ final agreementsProvider =
 class AgreementsNotifier extends AsyncNotifier<List<AgreementModel>> {
   @override
   Future<List<AgreementModel>> build() {
-    return ref.read(rentalServiceProvider).fetchAgreements();
+    final user = ref.watch(authStateProvider).value;
+    final service = ref.watch(rentalServiceProvider);
+    if (user == null) return Future.value([]);
+    return service.fetchAgreements();
   }
 
   Future<void> refresh() async {
