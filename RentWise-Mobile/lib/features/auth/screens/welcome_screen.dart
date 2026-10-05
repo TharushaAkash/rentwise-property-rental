@@ -212,7 +212,7 @@ class WelcomeScreen extends StatelessWidget {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.teal,
+                            backgroundColor: AppColors.ink,
                             foregroundColor: Colors.white,
                             elevation: 4,
                             shadowColor: AppColors.teal.withAlpha(100),

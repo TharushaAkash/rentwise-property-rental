@@ -78,7 +78,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Account created successfully!'),
-                backgroundColor: AppColors.teal,
+                backgroundColor: AppColors.ink,
               ),
             );
             Navigator.of(context).pushAndRemoveUntil(
@@ -585,7 +585,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     child: FilledButton(
                       onPressed: authState.isLoading ? null : _register,
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.teal,
+                        backgroundColor: AppColors.ink,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),

@@ -131,10 +131,10 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
 
   Widget _sectionCard(String title, IconData icon, List<Widget> children) =>
       Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(18),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.line),
           boxShadow: const [
@@ -164,7 +164,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             ...children,
           ],
         ),
@@ -211,20 +211,21 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
             ),
           // ── Hero Photo Carousel AppBar ────────────────────────────────
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 255,
             pinned: true,
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.canvas,
+            surfaceTintColor: Colors.transparent,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(120),
+                  color: AppColors.canvas,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.arrow_back_ios_rounded,
-                  color: Colors.white,
+                  color: AppColors.ink,
                   size: 18,
                 ),
               ),
@@ -249,12 +250,12 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                   margin: const EdgeInsets.only(right: 12),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(120),
+                    color: AppColors.canvas,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.share_rounded,
-                    color: Colors.white,
+                    Icons.ios_share_rounded,
+                    color: AppColors.ink,
                     size: 20,
                   ),
                 ),
@@ -269,7 +270,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           child: Image.network(
                             photos[_photoIndex.clamp(0, photos.length - 1)],
                             width: double.infinity,
-                            height: 320,
+                            height: 315,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
                               color: AppColors.teal,
@@ -293,7 +294,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     child: Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.transparent, Color(0xCC000000)],
+                          colors: [Colors.transparent, Color(0x26000000)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
@@ -330,8 +331,12 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
 
           // ── Main Content ──────────────────────────────────────────────
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+              decoration: const BoxDecoration(
+                color: AppColors.canvas,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -370,92 +375,92 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     ),
                   const SizedBox(height: 16),
 
-                  // Title & Address
-                  Text(
-                    p.title,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.ink,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.location_on_rounded,
-                        size: 16,
-                        color: AppColors.muted,
-                      ),
-                      const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          p.address,
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Price Banner
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.softTeal,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      spacing: 16,
-                      runSpacing: 12,
-                      children: [
-                        Column(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Monthly Rent',
-                              style: TextStyle(
-                                color: AppColors.muted,
-                                fontSize: 11,
+                            Text(
+                              p.title,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                height: 1.1,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink,
+                                letterSpacing: -.7,
                               ),
                             ),
-                            Text(
-                              'LKR ${p.monthlyRent.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}',
-                              style: const TextStyle(
-                                color: AppColors.ink,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 15,
+                                  color: AppColors.muted,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    p.address,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(30),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            p.propertyType,
-                            style: const TextStyle(
-                              color: AppColors.ink,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'LKR',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.muted,
                             ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            p.monthlyRent
+                                .toStringAsFixed(0)
+                                .replaceAllMapped(
+                                  RegExp(r'\B(?=(\d{3})+(?!\d))'),
+                                  (_) => ',',
+                                ),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          const Text(
+                            '/ month',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Chip(
+                      label: Text(p.propertyType),
+                      backgroundColor: AppColors.softTeal,
+                      side: BorderSide.none,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
                   // Owner Management Controls (if owner/admin)
                   if (manage)
@@ -479,7 +484,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               icon: const Icon(Icons.edit_rounded, size: 16),
                               label: const Text('Edit Listing Details'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.teal,
+                                backgroundColor: AppColors.ink,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -511,27 +516,29 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       ],
                     ),
 
-                  // Specs Grid
-                  _sectionCard(
-                    'Property Specs',
-                    Icons.space_dashboard_rounded,
-                    [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _SpecItem(Icons.bed_rounded, '${p.bedrooms} Beds'),
-                          _SpecItem(
-                            Icons.bathtub_rounded,
-                            '${p.bathrooms} Baths',
-                          ),
-                          _SpecItem(
-                            Icons.square_foot_rounded,
-                            '${p.sqft} sqft',
-                          ),
-                        ],
+                  // Compact facts keep the important details together.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SpecItem(
+                          Icons.bed_outlined,
+                          '${p.bedrooms} Beds',
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _SpecItem(
+                          Icons.bathtub_outlined,
+                          '${p.bathrooms} Baths',
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _SpecItem(Icons.square_foot, '${p.sqft} sqft'),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 14),
 
                   // Agentic AI Matching Insights (if came from search)
                   if (widget.aiResult != null)
@@ -544,7 +551,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFF1F4F1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFD8E3D7)),
+                            border: Border.all(color: AppColors.line),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,23 +586,28 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     ),
 
                   // Description
-                  _sectionCard('About Property', Icons.description_rounded, [
-                    Text(
-                      p.description,
-                      maxLines: _expanded ? null : 4,
-                      overflow: _expanded ? null : TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 13,
-                        height: 1.5,
+                  _sectionCard(
+                    'About this property',
+                    Icons.description_rounded,
+                    [
+                      Text(
+                        p.description,
+                        maxLines: _expanded ? null : 4,
+                        overflow: _expanded ? null : TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.ink,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
                       ),
-                    ),
-                    if (p.description.length > 120)
-                      TextButton(
-                        onPressed: () => setState(() => _expanded = !_expanded),
-                        child: Text(_expanded ? 'Show Less' : 'Read More'),
-                      ),
-                  ]),
+                      if (p.description.length > 120)
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _expanded = !_expanded),
+                          child: Text(_expanded ? 'Show Less' : 'Read More'),
+                        ),
+                    ],
+                  ),
 
                   // Facilities
                   _sectionCard('Facilities & Amenities', Icons.star_rounded, [
@@ -704,7 +716,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -726,17 +738,18 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                             builder: (_) => PropertyBookingScreen(property: p),
                           ),
                         ),
-                  icon: const Icon(Icons.calendar_today_rounded),
+                  icon: const Icon(Icons.arrow_forward_rounded),
                   label: Text(
                     booked
                         ? 'Booking Pending / Leased'
                         : p.status != 'Active'
                         ? 'Listing Not Available'
-                        : 'Submit Rental Booking Request',
+                        : 'Request Booking',
                   ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(54),
-                    backgroundColor: AppColors.teal,
+                    backgroundColor: AppColors.ink,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -761,19 +774,31 @@ class _SpecItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: AppColors.teal, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-            color: AppColors.ink,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.softTeal,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.ink, size: 17),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.ink,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

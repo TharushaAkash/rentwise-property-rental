@@ -434,7 +434,7 @@ class _AgreementDetailScreenState extends ConsumerState<AgreementDetailScreen>
                       decoration: BoxDecoration(
                         color: AppColors.softTeal,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFD8E3D7)),
+                        border: Border.all(color: AppColors.line),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,

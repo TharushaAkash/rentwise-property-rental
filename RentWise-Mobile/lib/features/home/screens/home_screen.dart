@@ -73,6 +73,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: pages[_tab],
       ),
       bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFFFAFBF5),
+        indicatorColor: const Color(0xFFD8EF54),
+        height: 70,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
         selectedIndex: _tab,
         onDestinationSelected: (index) => setState(() => _tab = index),
         destinations: [
@@ -133,8 +137,9 @@ class _DiscoverPropertiesTabState extends ConsumerState<_DiscoverPropertiesTab>
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted &&
           !_isAiSearching &&
-          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         _catalog.load();
+      }
     });
     _catalog.addListener(_catalogChanged);
     _catalog.load();
@@ -216,542 +221,408 @@ class _DiscoverPropertiesTabState extends ConsumerState<_DiscoverPropertiesTab>
     _runAiSearch(properties);
   }
 
+  String _category = 'All';
+  bool _showSearch = false;
+  static const _lime = Color(0xFFD8EF54);
+  static const _paper = Color(0xFFFAFBF5);
+
   @override
   Widget build(BuildContext context) {
-    final propertiesAsync = _browse;
-
+    final user = ref.watch(authStateProvider).value;
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            tooltip: 'Saved properties',
-            icon: const Icon(Icons.favorite_border),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SavedPropertiesScreen()),
-            ),
-          ),
-        ],
-        title: const Text(
-          'Find your place',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        backgroundColor: Colors.white,
-        scrolledUnderElevation: 0,
-      ),
-      body: propertiesAsync.when(
-        data: (properties) {
-          List<dynamic> displayedProperties = properties;
-          List<AiPropertyMatchResult>? aiMatchResults;
-
-          if (_searchQuery.trim().isNotEmpty) {
-            if (_isAiSearch && _aiSearchResult != null) {
-              aiMatchResults = _aiSearchResult!.results
-                  .where(
-                    (r) => !_catalog.unavailableIds.contains(r.property.id),
-                  )
-                  .toList();
-              displayedProperties = aiMatchResults
-                  .map((r) => r.property)
-                  .toList();
-            }
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => _loadBrowse(),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                  child: Row(
+      backgroundColor: _paper,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () => _loadBrowse(),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'RENTWISE AI INTELLIGENCE',
-                              style: TextStyle(
-                                fontSize: 10,
-                                letterSpacing: 1.8,
-                                color: AppColors.teal,
-                                fontWeight: FontWeight.w700,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              greeting,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF30332B),
                               ),
                             ),
-                            SizedBox(height: 4),
-                            Text(
-                              'A space for your next chapter.',
-                              style: TextStyle(
-                                fontSize: 22,
-                                height: 1.15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                                letterSpacing: -.5,
+                          ),
+                          IconButton(
+                            tooltip: 'Saved properties',
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SavedPropertiesScreen(),
                               ),
                             ),
-                          ],
+                            icon: const Icon(Icons.favorite_border, size: 22),
+                          ),
+                          Semantics(
+                            label: 'Open profile',
+                            button: true,
+                            child: InkWell(
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ProfileScreen(),
+                                ),
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              child: CircleAvatar(
+                                radius: 19,
+                                backgroundColor: const Color(0xFFE6EAD9),
+                                child: Text(
+                                  user != null && user.name.trim().isNotEmpty
+                                      ? user.name.trim()[0].toUpperCase()
+                                      : 'R',
+                                  style: const TextStyle(
+                                    color: Color(0xFF293323),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Find your\nnext stay',
+                              style: TextStyle(
+                                fontSize: 34,
+                                height: 1.03,
+                                letterSpacing: -1.3,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF151813),
+                              ),
+                            ),
+                          ),
+                          IconButton.filledTonal(
+                            tooltip: 'Search properties',
+                            style: IconButton.styleFrom(
+                              backgroundColor: _paper,
+                              side: const BorderSide(color: Color(0xFFE2E5D9)),
+                              minimumSize: const Size(48, 48),
+                            ),
+                            onPressed: () =>
+                                setState(() => _showSearch = !_showSearch),
+                            icon: const Icon(
+                              Icons.search,
+                              color: Color(0xFF151813),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 40,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: 5,
+                          separatorBuilder: (_, index) =>
+                              const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final category = [
+                              'All',
+                              'House',
+                              'Apartment',
+                              'Villa',
+                              'Studio',
+                            ][index];
+                            return ChoiceChip(
+                              label: Text(category),
+                              selected: _category == category,
+                              showCheckmark: false,
+                              selectedColor: _lime,
+                              backgroundColor: const Color(0xFFF0F2E9),
+                              side: BorderSide.none,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              labelStyle: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF151813),
+                              ),
+                              onSelected: (_) {
+                                setState(() => _category = category);
+                                _catalog.propertyType = category == 'All'
+                                    ? ''
+                                    : category;
+                                _catalog.load();
+                              },
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.softTeal,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.cottage_outlined,
-                          color: AppColors.teal,
-                          size: 28,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ── AI Search Card ──────────────────────────────────────────
-                _isAiSearch
-                    ? Container(
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.softTeal,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.line),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.line.withAlpha(100),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: AppColors.line,
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.auto_awesome,
-                                        color: AppColors.teal,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Search by AI',
-                                          style: TextStyle(
-                                            color: AppColors.ink,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Matching & Location Intelligence',
-                                          style: TextStyle(
-                                            color: AppColors.muted,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _isAiSearch = false;
-                                      _normalSearchChanged();
-                                      _searchController.clear();
-                                      _searchQuery = '';
-                                      _aiSearchResult = null;
-                                    });
-                                  },
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: AppColors.muted,
-                                    size: 20,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-
-                            // Prompt Input Field
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    style: const TextStyle(
-                                      color: AppColors.ink,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    onSubmitted: (val) {
-                                      _searchQuery = val;
-                                      _normalSearchChanged();
-                                      _runAiSearch(properties);
-                                    },
-                                    decoration: InputDecoration(
-                                      hintText: 'e.g. 2 bed near SLIIT Malabe under 75k...',
-                                      hintStyle: TextStyle(
-                                        color: AppColors.muted,
-                                        fontSize: 12,
-                                      ),
-                                      filled: true,
-                                      fillColor: AppColors.surface,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 12,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                InkWell(
-                                  onTap: () {
-                                    _searchQuery = _searchController.text;
-                                    _runAiSearch(properties);
-                                  },
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 13,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.teal,
-                                      borderRadius: BorderRadius.circular(14),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.line,
-                                          blurRadius: 8,
-                                        ),
-                                      ],
-                                    ),
-                                    child: _isAiSearching
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.5,
-                                              color: AppColors.onDark,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.auto_awesome,
-                                            color: AppColors.onDark,
-                                            size: 20,
-                                          ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            // Sample Prompt Chips
-                            SizedBox(
-                              height: 30,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _samplePrompts.length,
-                                itemBuilder: (context, i) {
-                                  final p = _samplePrompts[i];
-                                  return GestureDetector(
-                                    onTap: () => _applyPrompt(p, properties),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: AppColors.line,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        p,
-                                        style: const TextStyle(
-                                          color: AppColors.ink,
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                        child: Row(
+                      if (_showSearch || _isAiSearch) ...[
+                        const SizedBox(height: 14),
+                        Row(
                           children: [
                             Expanded(
                               child: TextField(
                                 controller: _searchController,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _searchQuery = val;
-                                    _normalSearchChanged();
-                                  });
+                                onChanged: (value) {
+                                  _searchQuery = value;
+                                  if (!_isAiSearch) _normalSearchChanged();
+                                },
+                                onSubmitted: (_) {
+                                  if (_isAiSearch) _runAiSearch(const []);
                                 },
                                 decoration: InputDecoration(
-                                  hintText: 'Search properties...',
-                                  prefixIcon: const Icon(
-                                    Icons.search_rounded,
-                                    color: AppColors.muted,
-                                  ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(
-                                            Icons.clear,
-                                            size: 20,
-                                          ),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() {
-                                              _searchQuery = '';
-                                              _normalSearchChanged();
-                                            });
-                                          },
-                                        )
-                                      : null,
+                                  hintText: _isAiSearch
+                                      ? 'Describe your ideal place...'
+                                      : 'Search a location...',
+                                  prefixIcon: const Icon(Icons.search),
                                   filled: true,
                                   fillColor: Colors.white,
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(18),
                                     borderSide: const BorderSide(
-                                      color: AppColors.line,
+                                      color: Color(0xFFE2E5D9),
                                     ),
                                   ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.line,
-                                    ),
+                                  suffixIcon: IconButton(
+                                    tooltip: 'Clear search',
+                                    icon: const Icon(Icons.close, size: 18),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = '';
+                                        _aiSearchResult = null;
+                                      });
+                                      _normalSearchChanged();
+                                    },
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _isAiSearch = true;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(14),
-                              child: Container(
-                                padding: const EdgeInsets.all(13),
-                                decoration: BoxDecoration(
-                                  color: AppColors.darkGreen,
-                                  borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.teal.withAlpha(60),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.auto_awesome,
-                                  color: Colors.amberAccent,
-                                  size: 20,
-                                ),
+                            const SizedBox(width: 8),
+                            IconButton.filled(
+                              tooltip: _isAiSearch
+                                  ? 'Run AI search'
+                                  : 'Search with AI',
+                              style: IconButton.styleFrom(
+                                backgroundColor: _lime,
+                                foregroundColor: const Color(0xFF151813),
                               ),
+                              onPressed: _isAiSearching
+                                  ? null
+                                  : () {
+                                      if (_isAiSearch) {
+                                        _runAiSearch(const []);
+                                      } else {
+                                        setState(() => _isAiSearch = true);
+                                        _catalog.search('');
+                                      }
+                                    },
+                              icon: _isAiSearching
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.auto_awesome),
                             ),
                           ],
                         ),
-                      ),
-
-                if (_isAiSearch && _aiSearchResult != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 14,
-                          color: AppColors.teal,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'AI Matched ${displayedProperties.length} Properties to "${_aiSearchResult!.destinationLandmark}"',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF385345),
+                        if (_isAiSearch) ...[
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            children: _samplePrompts
+                                .take(2)
+                                .map(
+                                  (prompt) => ActionChip(
+                                    label: Text(
+                                      prompt,
+                                      style: const TextStyle(fontSize: 10),
+                                    ),
+                                    onPressed: () =>
+                                        _applyPrompt(prompt, const []),
+                                  ),
+                                )
+                                .toList(),
                           ),
-                        ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isAiSearch = false;
+                                _aiSearchResult = null;
+                              });
+                              _normalSearchChanged();
+                            },
+                            child: const Text('Use location search'),
+                          ),
+                        ],
                       ],
-                    ),
-                  ),
-
-                Expanded(
-                  child: displayedProperties.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _isAiSearch && _aiSearchResult != null
+                                  ? 'AI matches for you'
+                                  : 'Explore properties',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -.4,
+                                color: Color(0xFF151813),
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _category = 'All';
+                                _isAiSearch = false;
+                                _aiSearchResult = null;
+                                _searchQuery = '';
+                                _searchController.clear();
+                              });
+                              _catalog.propertyType = '';
+                              _catalog.search('');
+                            },
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 70,
-                                  height: 70,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFF1F5F9),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.search_off_rounded,
-                                    size: 32,
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
                                 Text(
-                                  _isAiSearch
-                                      ? 'No AI matches for "${_aiSearchResult?.destinationLandmark ?? _searchQuery}"'
-                                      : 'No properties found',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.ink,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Try searching for another location like SLIIT Malabe, Colombo 07, Kandy, or Galle.',
+                                  'See all',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.muted,
+                                    color: Color(0xFF151813),
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
-                                const SizedBox(height: 20),
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _isAiSearch = false;
-                                      _normalSearchChanged();
-                                      _searchController.clear();
-                                      _searchQuery = '';
-                                      _aiSearchResult = null;
-                                    });
-                                  },
-                                  icon: const Icon(
-                                    Icons.refresh_rounded,
-                                    size: 16,
-                                  ),
-                                  label: const Text('Reset Search'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.ink,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
+                                Icon(
+                                  Icons.chevron_right,
+                                  size: 16,
+                                  color: Color(0xFF151813),
                                 ),
                               ],
                             ),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          itemCount:
-                              displayedProperties.length +
-                              (!_isAiSearch &&
-                                      (_hasMore || _browseError != null)
-                                  ? 1
-                                  : 0),
-                          itemBuilder: (context, index) {
-                            if (index == displayedProperties.length) {
-                              return Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    if (_browseError != null)
-                                      Text(_browseError!),
-                                    OutlinedButton(
-                                      onPressed: _loadingMore
-                                          ? null
-                                          : () => _loadBrowse(more: true),
-                                      child: Text(
-                                        _loadingMore
-                                            ? 'Loading...'
-                                            : _browseError != null
-                                            ? 'Retry'
-                                            : 'Load more',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            return _MobilePropertyCard(
-                              onReturn: () => _catalog.load(),
-                              property: displayedProperties[index],
-                              aiResult:
-                                  aiMatchResults != null &&
-                                      index < aiMatchResults.length
-                                  ? aiMatchResults[index]
-                                  : null,
-                            );
-                          },
-                        ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Failed to load properties',
-                style: TextStyle(color: Colors.red),
               ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () => _loadBrowse(),
-                child: const Text('Retry'),
+              ..._browse.when<List<Widget>>(
+                loading: () => [
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(48),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+                ],
+                error: (error, stack) => [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          const Text('Could not load properties.'),
+                          TextButton(
+                            onPressed: () => _loadBrowse(),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                data: (properties) {
+                  final matches = _isAiSearch && _aiSearchResult != null
+                      ? _aiSearchResult!.results
+                            .where(
+                              (match) =>
+                                  !_catalog.unavailableIds.contains(
+                                    match.property.id,
+                                  ) &&
+                                  (_category == 'All' ||
+                                      match.property.propertyType
+                                              .toLowerCase() ==
+                                          _category.toLowerCase()),
+                            )
+                            .toList()
+                      : null;
+                  final displayed = matches != null
+                      ? matches.map((match) => match.property).toList()
+                      : properties;
+                  return [
+                    if (displayed.isEmpty)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(40),
+                          child: Column(
+                            children: [
+                              Icon(Icons.search_off_rounded, size: 36),
+                              SizedBox(height: 12),
+                              Text(
+                                'No properties found. Try another location or category.',
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => _MobilePropertyCard(
+                            property: displayed[index],
+                            aiResult: matches?[index],
+                            onReturn: () => _catalog.load(),
+                          ),
+                          childCount: displayed.length,
+                        ),
+                      ),
+                    ),
+                    if (!_isAiSearch && (_hasMore || _browseError != null))
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              if (_browseError != null) Text(_browseError!),
+                              OutlinedButton(
+                                onPressed: _loadingMore
+                                    ? null
+                                    : () => _loadBrowse(more: true),
+                                child: Text(
+                                  _loadingMore
+                                      ? 'Loading...'
+                                      : _browseError != null
+                                      ? 'Retry'
+                                      : 'Load more',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  ];
+                },
               ),
             ],
           ),
@@ -765,7 +636,6 @@ class _MobilePropertyCard extends StatelessWidget {
   final VoidCallback? onReturn;
   final dynamic property;
   final AiPropertyMatchResult? aiResult;
-
   const _MobilePropertyCard({
     required this.property,
     this.aiResult,
@@ -774,322 +644,268 @@ class _MobilePropertyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.line),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
+              builder: (_) =>
                   PropertyDetailScreen(property: property, aiResult: aiResult),
             ),
-          ).then((_) => onReturn?.call());
-        },
-        borderRadius: BorderRadius.circular(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Photo Banner
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(22),
-                  ),
-                  child: property.photoUrl.isNotEmpty
-                      ? Image.network(
-                          property.photoUrl,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildPlaceholder(),
-                        )
-                      : _buildPlaceholder(),
-                ),
-                if (aiResult != null)
-                  Positioned(
-                    top: 14,
-                    left: 14,
-                    child: Row(
-                      children: [
-                        // Match Score Badge
-                        Container(
+          ).then((_) => onReturn?.call()),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(5),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 1.85,
+                        child: property.photoUrl.isNotEmpty
+                            ? Image.network(
+                                property.photoUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, error, stack) =>
+                                    _placeholder(),
+                              )
+                            : _placeholder(),
+                      ),
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.teal,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(50),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.auto_awesome,
-                                color: Colors.amberAccent,
+                              Icon(
+                                aiResult != null
+                                    ? Icons.auto_awesome
+                                    : Icons.home_outlined,
                                 size: 13,
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '${aiResult!.matchScore}% Match',
+                                aiResult != null
+                                    ? '${aiResult!.matchScore}% Match'
+                                    : property.propertyType,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 6),
-
-                        // Distance Badge
-                        if (aiResult!.distanceKm != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withAlpha(200),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(50),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.navigation_rounded,
-                                  color: Colors.lightBlueAccent,
-                                  size: 12,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'AI estimate: ${aiResult!.distanceKm} km',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
+                      ),
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: SavePropertyButton(propertyId: property.id),
+                      ),
+                    ],
                   ),
-                if (aiResult == null)
-                  Positioned(
-                    top: 14,
-                    left: 14,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.star_rounded,
-                            color: Colors.orange[400],
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Featured',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  top: 14,
-                  right: 14,
-                  child: SavePropertyButton(propertyId: property.id),
                 ),
-                // Gradient overlay for premium look
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 70,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(0),
-                    ),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withAlpha(100),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                property.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF151813),
+                                  letterSpacing: -.3,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_on_outlined,
+                                    size: 13,
+                                    color: Color(0xFF666B61),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(
+                                      property.address,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF666B61),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'LKR ${_fmtMoney(property.monthlyRent)}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF151813),
+                              ),
+                            ),
+                            const Text(
+                              '/ month',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF666B61),
+                              ),
+                            ),
                           ],
                         ),
-                      ),
+                      ],
                     ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    property.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.ink,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_rounded,
-                        size: 14,
-                        color: AppColors.muted,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          property.address,
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 13,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 13),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 8,
+                      children: [
+                        _feature(
+                          Icons.bed_outlined,
+                          '${property.bedrooms} Beds',
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      _buildFeature(
-                        Icons.bed_rounded,
-                        '${property.bedrooms} Beds',
-                      ),
-                      const SizedBox(width: 12),
-                      _buildFeature(
-                        Icons.bathtub_rounded,
-                        '${property.bathrooms} Baths',
-                      ),
-                      const SizedBox(width: 12),
-                      _buildFeature(
-                        Icons.square_foot_rounded,
-                        '${property.sqft} sqft',
-                      ),
-                    ],
-                  ),
-
-                  if (aiResult != null &&
-                      aiResult!.matchReasons.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F4F1),
-                        border: Border.all(color: const Color(0xFFD8E3D7)),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.explore_rounded,
-                                size: 15,
-                                color: AppColors.teal,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  aiResult!.destinationLandmark.trim().isEmpty
-                                      ? 'Add a destination to see distance and travel time.'
-                                      : aiResult!.distanceKm == null
-                                      ? 'AI could not estimate this commute. Try a clearer landmark.'
-                                      : 'AI estimate: ${aiResult!.distanceKm} km / ~${aiResult!.travelTimeMins ?? "?"} mins to ${aiResult!.destinationLandmark} (not live traffic)',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF385345),
+                        _feature(
+                          Icons.bathtub_outlined,
+                          '${property.bathrooms} Baths',
+                        ),
+                        _feature(Icons.square_foot, '${property.sqft} sq ft'),
+                      ],
+                    ),
+                    if (aiResult != null)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.softTeal,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome,
+                                  size: 15,
+                                  color: AppColors.teal,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    aiResult!.destinationLandmark.isEmpty
+                                        ? 'AI commute estimates'
+                                        : 'To ${aiResult!.destinationLandmark}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.ink,
+                                    ),
                                   ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 14,
+                              runSpacing: 6,
+                              children: [
+                                _feature(
+                                  Icons.near_me_outlined,
+                                  aiResult!.distanceKm == null
+                                      ? 'Distance unavailable'
+                                      : '${aiResult!.distanceKm} km',
+                                ),
+                                _feature(
+                                  Icons.schedule_outlined,
+                                  aiResult!.travelTimeMins == null
+                                      ? 'Travel time unavailable'
+                                      : '~${aiResult!.travelTimeMins} min',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'AI estimates; not live traffic or route calculations.',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: AppColors.muted,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          ...aiResult!.matchReasons
-                              .take(3)
-                              .map(
+                            ),
+                            if (aiResult!.matchReasons.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Why this matches',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                              ...aiResult!.matchReasons.map(
                                 (reason) => Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: 4,
-                                    left: 2,
-                                  ),
+                                  padding: const EdgeInsets.only(top: 4),
                                   child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        '•',
-                                        style: TextStyle(
+                                      const Padding(
+                                        padding: EdgeInsets.only(
+                                          top: 3,
+                                          right: 6,
+                                        ),
+                                        child: Icon(
+                                          Icons.check_circle_outline,
+                                          size: 13,
                                           color: AppColors.teal,
-                                          fontSize: 14,
-                                          height: 1.2,
                                         ),
                                       ),
-                                      const SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
                                           reason,
                                           style: const TextStyle(
-                                            fontSize: 11.5,
-                                            color: AppColors.ink,
+                                            fontSize: 11,
                                             height: 1.4,
+                                            color: AppColors.ink,
                                           ),
                                         ),
                                       ),
@@ -1097,114 +913,35 @@ class _MobilePropertyCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                        ],
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
                   ],
-
-                  const SizedBox(height: 14),
-                  const Divider(height: 1, color: AppColors.line),
-                  const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Monthly Rent',
-                            style: TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'LKR ${_fmtMoney(property.monthlyRent)}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.teal,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.teal,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'View Details',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPlaceholder() {
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        Image.asset(
-          'assets/property_placeholder.jpg',
-          height: 200,
-          width: double.infinity,
-          fit: BoxFit.cover,
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withAlpha(80)],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeature(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppColors.muted),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.ink,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _fmtMoney(dynamic v) {
-    final numVal = num.tryParse(v?.toString() ?? '') ?? 0;
-    return numVal
-        .toStringAsFixed(0)
-        .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');
-  }
+  Widget _placeholder() =>
+      Image.asset('assets/property_placeholder.jpg', fit: BoxFit.cover);
+  Widget _feature(IconData icon, String text) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 15, color: const Color(0xFF51574A)),
+      const SizedBox(width: 5),
+      Text(
+        text,
+        style: const TextStyle(fontSize: 11, color: Color(0xFF30332B)),
+      ),
+    ],
+  );
+  String _fmtMoney(dynamic value) =>
+      (num.tryParse(value?.toString() ?? '') ?? 0)
+          .toStringAsFixed(0)
+          .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
 }

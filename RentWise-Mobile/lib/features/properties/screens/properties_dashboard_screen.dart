@@ -62,7 +62,7 @@ class _PropertiesDashboardScreenState
           context,
           MaterialPageRoute(builder: (_) => const PropertyFormScreen()),
         ),
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.ink,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: const Text(
           'Add Property',
@@ -460,7 +460,7 @@ class _OwnerPropertyCard extends StatelessWidget {
                         icon: const Icon(Icons.edit_rounded, size: 16),
                         label: const Text('Edit Details'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.teal,
+                          backgroundColor: AppColors.ink,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -643,7 +643,7 @@ class _PropertyInspectSheet extends StatelessWidget {
                     icon: const Icon(Icons.edit_rounded),
                     label: const Text('Edit Property Details'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.teal,
+                      backgroundColor: AppColors.ink,
                       minimumSize: const Size.fromHeight(50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -1034,7 +1034,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                       rent,
                                     ),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: AppColors.teal,
+                                      backgroundColor: AppColors.ink,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),

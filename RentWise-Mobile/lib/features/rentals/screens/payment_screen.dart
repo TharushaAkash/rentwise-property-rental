@@ -852,7 +852,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(56),
-                backgroundColor: AppColors.teal,
+                backgroundColor: AppColors.ink,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
