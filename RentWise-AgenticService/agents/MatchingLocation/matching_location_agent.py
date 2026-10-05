@@ -1,6 +1,7 @@
 import os
 import json
 import math
+import logging
 import requests
 from typing import Dict, Any, List, Optional
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -189,10 +190,19 @@ def get_distance(origin: str = "", destination: str = "") -> str:
               "travel_time_mins": None, "estimate_source": "unavailable",
               "commute_summary": "Route unavailable. Provide a precise property address and destination."}
     key = os.getenv("ORS_API_KEY", "").strip()
-    if not key or not origin.strip() or not destination.strip():
+    if not key:
+        result["commute_summary"] = "Routing is not configured on the server. Set ORS_API_KEY in the Agentic Service environment and restart it."
         return json.dumps(result)
+    if not origin.strip() or not destination.strip():
+        result["commute_summary"] = "A property address and commute destination are required."
+        return json.dumps(result)
+    stage = "property address"
     try:
-        coordinates = [_ors_coordinates(origin, key), _ors_coordinates(destination, key)]
+        origin_coords = _ors_coordinates(origin, key)
+        stage = "destination"
+        destination_coords = _ors_coordinates(destination, key)
+        coordinates = [origin_coords, destination_coords]
+        stage = "driving route"
         response = requests.post("https://api.openrouteservice.org/v2/directions/driving-car/json",
                                  headers={"Authorization": key},
                                  json={"coordinates": coordinates, "instructions": False}, timeout=20)
@@ -204,9 +214,24 @@ def get_distance(origin: str = "", destination: str = "") -> str:
         result.update(distance_km=round(distance / 1000, 2), travel_time_mins=math.ceil(duration / 60),
                       estimate_source="openrouteservice",
                       commute_summary="Driving route by openrouteservice / OpenStreetMap. Estimated duration excludes live traffic; locations resolved from address text.")
-    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
-        # Never expose request URLs: geocoding URLs contain the API key.
-        pass
+    except requests.HTTPError as error:
+        status = error.response.status_code if error.response is not None else None
+        if status in (401, 403):
+            result["commute_summary"] = "Routing service rejected access. Check the server ORS API key and its permissions."
+        elif status == 429:
+            result["commute_summary"] = "Routing service usage limit reached. Try again later."
+        else:
+            result["commute_summary"] = "Routing service could not complete the lookup. Try again later."
+        logging.getLogger(__name__).warning("ORS lookup failed at %s (HTTP %s)", stage, status)
+    except requests.RequestException:
+        result["commute_summary"] = "Routing service could not be reached. Try again later."
+        logging.getLogger(__name__).warning("ORS connection failed at %s", stage)
+    except (ValueError, KeyError, IndexError, TypeError):
+        result["commute_summary"] = ("The property address could not be located reliably. The owner needs to provide a precise address."
+            if stage == "property address" else "The destination could not be located reliably. Include the town or a specific landmark."
+            if stage == "destination" else "No usable driving route was returned for these locations.")
+        # Do not log exception text or request URLs; they may contain the API key.
+        logging.getLogger(__name__).warning("ORS returned unresolved or invalid data at %s", stage)
     return json.dumps(result)
 
 # ==============================================================================
