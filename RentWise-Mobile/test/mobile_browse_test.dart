@@ -40,7 +40,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(requests.first.path, '/api/properties/browse');
       expect(requests.first.queryParameters['pageSize'], '12');
-      await tester.enterText(find.byType(TextField).first, 'Colombo');
+      expect(find.byType(TextField), findsNothing);
+      await tester.tap(find.byTooltip('Search properties'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Colombo');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
       expect(

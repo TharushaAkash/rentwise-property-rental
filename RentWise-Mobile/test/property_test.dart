@@ -100,11 +100,11 @@ void main() {
         );
         await tester.pumpAndSettle();
         if (role == 'Tenant') {
-          expect(find.text('Submit Rental Booking Request'), findsOneWidget);
+          expect(find.text('Request Booking'), findsOneWidget);
           expect(find.text('Delete'), findsNothing);
         } else {
           expect(find.text('Delete'), findsOneWidget);
-          expect(find.text('Submit Rental Booking Request'), findsNothing);
+          expect(find.text('Request Booking'), findsNothing);
         }
         expect(
           find.text('Edit Listing Details'),
