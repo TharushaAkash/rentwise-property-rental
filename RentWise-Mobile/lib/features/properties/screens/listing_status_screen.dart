@@ -1,3 +1,5 @@
+import '../../../shared/validation/payment_validators.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,7 +18,10 @@ class _ListingStatusScreenState extends ConsumerState<ListingStatusScreen> {
   Map<String, dynamic>? data;
   bool busy = true;
   String? error;
-  final reference = TextEditingController();
+  final holder = TextEditingController();
+  final number = TextEditingController();
+  final expiry = TextEditingController();
+  final cvv = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -25,7 +30,10 @@ class _ListingStatusScreenState extends ConsumerState<ListingStatusScreen> {
 
   @override
   void dispose() {
-    reference.dispose();
+    holder.dispose();
+    number.dispose();
+    expiry.dispose();
+    cvv.dispose();
     super.dispose();
   }
 
@@ -51,9 +59,17 @@ class _ListingStatusScreenState extends ConsumerState<ListingStatusScreen> {
   }
 
   Future<void> submit(bool approve) async {
-    if (!approve && reference.text.trim().isEmpty) {
-      setState(() => error = 'Enter the listing fee payment reference.');
-      return;
+    if (!approve) {
+      final errors = PaymentValidators.validate(
+        holder: holder.text,
+        number: number.text,
+        date: expiry.text,
+        code: cvv.text,
+      );
+      if (errors.isNotEmpty) {
+        setState(() => error = errors.values.first);
+        return;
+      }
     }
     final confirmed = await showDialog<bool>(
       context: context,
@@ -64,7 +80,7 @@ class _ListingStatusScreenState extends ConsumerState<ListingStatusScreen> {
         content: Text(
           approve
               ? 'Confirm you have reviewed the ownership documents and fee.'
-              : 'Confirm the LKR 2,500 listing fee payment reference is correct.',
+              : 'Record the LKR 2,500 demo card payment? No real money will be charged.',
         ),
         actions: [
           TextButton(
@@ -93,8 +109,9 @@ class _ListingStatusScreenState extends ConsumerState<ListingStatusScreen> {
                 ? <String, dynamic>{}
                 : {
                     'amount': 2500,
-                    'paymentMethod': 'Bank Transfer',
-                    'paymentReference': reference.text.trim(),
+                    'paymentMethod': 'Demo Card',
+                    'paymentReference':
+                        'FEE-${DateTime.now().microsecondsSinceEpoch}',
                   },
           );
       ref.invalidate(managedPropertiesProvider);
@@ -126,7 +143,7 @@ class _ListingStatusScreenState extends ConsumerState<ListingStatusScreen> {
             ),
           ),
           ListTile(
-            title: const Text('Listing fee ? LKR 2,500'),
+            title: const Text('Listing fee - LKR 2,500'),
             subtitle: Text(
               data!['isFeePaid'] == true
                   ? 'Payment recorded'
@@ -138,14 +155,63 @@ class _ListingStatusScreenState extends ConsumerState<ListingStatusScreen> {
             subtitle: Text(data!['status'].toString()),
           ),
           if (data!['isFeePaid'] != true) ...[
-            TextField(
-              controller: reference,
-              enabled: !busy,
-              decoration: const InputDecoration(labelText: 'Payment reference'),
+            const Text(
+              'Card checkout',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'Demo checkout, matching booking payments. No real money is charged. Use test card details.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: holder,
+              enabled: !busy,
+              decoration: const InputDecoration(labelText: 'Cardholder name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: number,
+              enabled: !busy,
+              keyboardType: TextInputType.number,
+              maxLength: 19,
+              decoration: const InputDecoration(
+                labelText: 'Card number',
+                hintText: '4242 4242 4242 4242',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: expiry,
+                    enabled: !busy,
+                    maxLength: 5,
+                    keyboardType: TextInputType.datetime,
+                    decoration: const InputDecoration(
+                      labelText: 'Expiry',
+                      hintText: 'MM/YY',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: cvv,
+                    enabled: !busy,
+                    maxLength: 4,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'CVV'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             FilledButton(
               onPressed: busy ? null : () => submit(false),
-              child: const Text('Submit fee payment'),
+              child: const Text('Pay LKR 2,500 (Demo)'),
             ),
           ],
           if (isAdmin(ref.watch(authStateProvider).value?.role))

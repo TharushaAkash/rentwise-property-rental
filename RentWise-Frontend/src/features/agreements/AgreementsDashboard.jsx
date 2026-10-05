@@ -1771,15 +1771,22 @@ const UploadProofModal = ({ isOpen, onClose, property, onSuccess }) => {
 const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+
 
   const handlePay = async (e) => {
     e.preventDefault();
     setError('');
+    const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+    if (cardError) { setError(cardError); return; }
     setIsProcessing(true);
     try {
       await api.post(`/properties/${property.id}/listing-fee`, {
         amount: 2500,
-        paymentMethod: 'Card',
+        paymentMethod: 'Demo Card',
         paymentReference: `FEE-${Date.now().toString().slice(-6)}`
       });
       onSuccess();
@@ -1822,6 +1829,16 @@ const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
           </div>
         </div>
 
+        <div className="rounded-xl border border-gray-200 p-4 space-y-3">
+          <p className="font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4" />Card checkout</p>
+          <p className="text-xs text-gray-600">Demo checkout, matching booking payments. No real money is charged. Use test card details.</p>
+          <label className="block">Cardholder name<input required value={cardHolder} onChange={e => setCardHolder(e.target.value)} className="mt-1 block w-full rounded-lg border p-3" /></label>
+          <label className="block">Card number<input required inputMode="numeric" value={cardNumber} onChange={e => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 '))} placeholder="4242 4242 4242 4242" className="mt-1 block w-full rounded-lg border p-3" /></label>
+          <div className="grid grid-cols-2 gap-3">
+            <label>Expiry<input required inputMode="numeric" value={cardExpiry} onChange={e => { const digits = e.target.value.replace(/\D/g, '').slice(0, 4); setCardExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits); }} placeholder="MM/YY" className="mt-1 block w-full rounded-lg border p-3" /></label>
+            <label>CVV<input required type="password" inputMode="numeric" maxLength={4} value={cardCvc} onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))} className="mt-1 block w-full rounded-lg border p-3" /></label>
+          </div>
+        </div>
         <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
           <button
             type="button"
