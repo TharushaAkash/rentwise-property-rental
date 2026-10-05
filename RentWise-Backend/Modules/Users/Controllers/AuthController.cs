@@ -357,6 +357,23 @@ namespace RentWise.API.Modules.Users.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                // Booking references restrict both user and property deletion.
+                var ownedPropertyIds = await _context.Properties.Where(p => p.OwnerId == userId)
+                    .Select(p => p.Id).ToListAsync();
+                var bookings = await _context.PropertyApplications.Where(a =>
+                    a.TenantId == userId || ownedPropertyIds.Contains(a.PropertyId)).ToListAsync();
+                _context.PropertyApplications.RemoveRange(bookings);
+                var savedProperties = await _context.SavedProperties.Where(s =>
+                    s.TenantProfileId == userId || ownedPropertyIds.Contains(s.PropertyId)).ToListAsync();
+                _context.SavedProperties.RemoveRange(savedProperties);
+                var documentReviews = await _context.DocumentReviewRequests.Where(r =>
+                    ownedPropertyIds.Contains(r.PropertyId)).ToListAsync();
+                _context.DocumentReviewRequests.RemoveRange(documentReviews);
+
+                // Keep other owners' verification history when deleting its administrator.
+                var adminVerifications = await _context.VerificationRecords.Where(v => v.AdminId == userId).ToListAsync();
+                foreach (var verification in adminVerifications) verification.AdminId = null;
+
                 // 1. Maintenance Requests (as tenant)
                 var maintenanceReqs = await _context.MaintenanceRequests.Where(m => m.TenantId == userId).ToListAsync();
                 foreach (var req in maintenanceReqs)
@@ -419,10 +436,15 @@ namespace RentWise.API.Modules.Users.Controllers
 
                 return Ok(new { message = "User and all related data successfully deleted." });
             }
-            catch (Exception ex)
+            catch (DbUpdateException)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, new { message = "Failed to force delete user. An error occurred while removing related data.", error = ex.Message });
+                return Conflict(new { message = "User deletion was blocked by related records. No changes were saved. Review the account's linked records before retrying." });
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Failed to delete user. No changes were saved." });
             }
         }
     }
