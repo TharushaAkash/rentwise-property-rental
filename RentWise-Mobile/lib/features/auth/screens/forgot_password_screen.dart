@@ -200,7 +200,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       child: FilledButton(
         onPressed: _busy ? null : onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.teal,
+          backgroundColor: AppColors.ink,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

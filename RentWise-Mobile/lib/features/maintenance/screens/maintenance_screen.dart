@@ -56,7 +56,7 @@ class MaintenanceScreen extends ConsumerWidget {
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateMaintenanceScreen()));
         },
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.ink,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('New Request', style: TextStyle(fontWeight: FontWeight.bold)),

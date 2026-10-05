@@ -303,7 +303,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: FilledButton(
                         onPressed: authState.isLoading ? null : _signIn,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.teal,
+                          backgroundColor: AppColors.ink,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),

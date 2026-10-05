@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const ink = Color(0xFF1F2933); // Charcoal
-  static const muted = Color(0xFF52616B); // Secondary text
+  static const lime = Color(0xFFD8EF54);
+  static const ink = Color(0xFF151813); // Charcoal
+  static const muted = Color(0xFF666B61); // Secondary text
   static const surface = Color(0xFFFFFFFF);
-  static const canvas = Color(0xFFF5F7F8); // Warm off-white
-  static const line = Color(0xFFD5DDE1); // Neutral border
-  static const navy = Color(0xFF176B57); // Muted forest
-  static const teal = Color(0xFF176B57); // Primary Action
-  static const darkGreen = Color(0xFF183F36); // Darker Green
-  static const softTeal = Color(0xFFEAF4EF); // Soft green surface
+  static const canvas = Color(0xFFFAFBF5); // Warm off-white
+  static const line = Color(0xFFE2E5D9); // Neutral border
+  static const navy = Color(0xFF303A22); // Muted forest
+  static const teal = Color(0xFF303A22); // Primary Action
+  static const darkGreen = Color(0xFF151813); // Darker Green
+  static const softTeal = Color(0xFFF0F3E6); // Soft green surface
   static const amber = Color(0xFF916622); // Warning / In Progress
   static const rose = Color(0xFFAD443C); // Danger / Emergency
   static const onDark = Color(0xFFFFFFFF);
@@ -19,10 +20,10 @@ abstract final class AppColors {
 
 ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
   final scheme = ColorScheme.fromSeed(
-    seedColor: AppColors.teal,
+    seedColor: AppColors.lime,
     brightness: brightness,
     primary: brightness == Brightness.light
-        ? AppColors.teal
+        ? AppColors.ink
         : const Color(0xFF90D5BA),
     onPrimary: brightness == Brightness.light
         ? Colors.white
@@ -40,7 +41,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     colorScheme: scheme,
     scaffoldBackgroundColor: brightness == Brightness.light
         ? AppColors.canvas
-        : const Color(0xFF1F2933),
+        : const Color(0xFF151813),
     visualDensity: VisualDensity.standard,
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: scheme.primary,
@@ -71,8 +72,8 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       bodySmall: TextStyle(fontSize: 12, height: 1.5, color: AppColors.muted),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: AppColors.surface,
-      indicatorColor: AppColors.softTeal,
+      backgroundColor: AppColors.canvas,
+      indicatorColor: AppColors.lime,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       labelTextStyle: WidgetStateProperty.resolveWith(
@@ -88,7 +89,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: AppColors.teal,
+      backgroundColor: AppColors.ink,
       foregroundColor: Colors.white,
       elevation: 1,
     ),
@@ -98,11 +99,34 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.ink,
         foregroundColor: Colors.white,
         elevation: 0,
         minimumSize: const Size(48, 52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? AppColors.ink
+            : AppColors.muted,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? AppColors.lime
+            : AppColors.line,
+      ),
+      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.canvas,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppColors.canvas,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
     ),
     dividerTheme: const DividerThemeData(
@@ -112,7 +136,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surface,
-      selectedColor: AppColors.softTeal,
+      selectedColor: AppColors.lime,
       side: const BorderSide(color: AppColors.line),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -142,7 +166,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     appBarTheme: AppBarTheme(
       backgroundColor: brightness == Brightness.light
           ? AppColors.canvas
-          : const Color(0xFF1F2933),
+          : const Color(0xFF151813),
       foregroundColor: brightness == Brightness.light
           ? AppColors.ink
           : Colors.white,
@@ -200,7 +224,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       style: FilledButton.styleFrom(
         minimumSize: const Size(48, 52),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.ink,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),

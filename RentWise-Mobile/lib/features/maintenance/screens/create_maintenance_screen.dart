@@ -734,7 +734,7 @@ class _CreateMaintenanceScreenState
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _submitRequest,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.teal,
+                        backgroundColor: AppColors.ink,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(

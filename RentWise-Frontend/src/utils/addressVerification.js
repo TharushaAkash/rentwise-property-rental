@@ -117,11 +117,11 @@ export function evaluatePropertyVerification(property) {
   if (!['Approve-ready', 'Needs Review', 'Reject-recommended'].includes(recommendation)) return base;
   const approved = active && recommendation === 'Approve-ready';
   return { ...base, billUrl: report.documentUrl, hasBill: true,
-    isVerified: approved, recommendation,
+    isVerified: approved, automatedChecksPassed: recommendation === 'Approve-ready', recommendation,
     billAddress: typeof report.billAddress === 'string' ? report.billAddress : '',
     accountNo: typeof report.accountNo === 'string' ? report.accountNo : '',
     utilityProvider: typeof report.utilityProvider === 'string' ? report.utilityProvider : '',
     matchDetails: report.reasoning || 'Administrator review is required.',
-    statusLabel: approved ? 'Verified' : recommendation === 'Reject-recommended' ? 'Review Recommended' : 'Needs Review',
-    statusBadgeVariant: approved ? 'success' : recommendation === 'Reject-recommended' ? 'danger' : 'warning' };
+    statusLabel: approved ? 'Verified' : recommendation === 'Approve-ready' ? 'Checks Passed - Activation Pending' : recommendation === 'Reject-recommended' ? 'Review Recommended' : 'Needs Review',
+    statusBadgeVariant: recommendation === 'Approve-ready' ? 'success' : recommendation === 'Reject-recommended' ? 'danger' : 'warning' };
 }

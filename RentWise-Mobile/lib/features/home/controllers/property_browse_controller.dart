@@ -16,6 +16,7 @@ class PropertyBrowseController extends ChangeNotifier {
   bool loadingMore = false;
   String? error;
   String query = '';
+  String propertyType = '';
   int _requestVersion = 0;
   Timer? _searchDelay;
   bool _disposed = false;
@@ -45,6 +46,7 @@ class PropertyBrowseController extends ChangeNotifier {
         queryParameters: {
           'pageSize': '12',
           'location': query,
+          if (propertyType.isNotEmpty) 'propertyType': propertyType,
           if (more && _cursor != null) 'cursor': _cursor!,
         },
       ).toString();

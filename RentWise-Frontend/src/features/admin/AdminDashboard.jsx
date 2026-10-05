@@ -1448,7 +1448,7 @@ export const AdminDashboard = () => {
                           <span className={`text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
                             ver.isManuallyVerified
                               ? 'bg-blue-100 text-blue-800 border-blue-300'
-                              : ver.isVerified 
+                              : (ver.isVerified || ver.automatedChecksPassed)
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
                               : 'bg-rose-100 text-rose-800 border-rose-300'
                           }`}>
@@ -1457,7 +1457,7 @@ export const AdminDashboard = () => {
                                 <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                                 <span>✓ Admin Approved</span>
                               </>
-                            ) : ver.isVerified ? (
+                            ) : (ver.isVerified || ver.automatedChecksPassed) ? (
                               <>
                                 <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>{ver.statusLabel}</span>
@@ -1486,14 +1486,14 @@ export const AdminDashboard = () => {
                                 <strong className="text-gray-900">Entered Property Address:</strong> {ver.propertyAddress || 'N/A'}
                               </p>
                               <p className="text-[11px] text-gray-600">
-                                <strong className="text-gray-900">Detected Bill Address:</strong> <span className={ver.isVerified ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>{ver.billAddress || 'Not provided in the verification report'}</span>
+                                <strong className="text-gray-900">Detected Bill Address:</strong> <span className={(ver.isVerified || ver.automatedChecksPassed) ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>{ver.billAddress || 'Not provided in the verification report'}</span>
                               </p>
                               <p className="text-[10.5px] text-gray-500 font-mono">
                                 Provider: <strong>{ver.utilityProvider || 'Not provided'}</strong> • Acc: <strong>{ver.accountNo || 'Not provided'}</strong>
                               </p>
                             </div>
                             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-                              <span className={`text-[11px] font-semibold ${ver.isVerified ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              <span className={`text-[11px] font-semibold ${(ver.isVerified || ver.automatedChecksPassed) ? 'text-emerald-700' : 'text-rose-700'}`}>
                                 {ver.matchDetails}
                               </span>
                               <div className="flex items-center gap-2">

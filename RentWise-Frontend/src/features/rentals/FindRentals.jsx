@@ -667,7 +667,7 @@ export const FindRentals = () => {
                             {property.distance_km != null && (
                               <span className="inline-flex items-center gap-1 bg-slate-900/90 text-white text-[10.5px] font-bold px-2 py-1 rounded-md backdrop-blur-xs shadow-sm">
                                 <Navigation className="w-3 h-3 text-blue-300" />
-                                <span>AI estimate: {property.distance_km} km</span>
+                                <span>{property.estimate_source === 'openrouteservice' ? 'ORS driving route:' : 'AI estimate:'} {property.distance_km} km</span>
                               </span>
                             )}
                           </>
@@ -751,7 +751,7 @@ export const FindRentals = () => {
                                 ? 'Add a destination to your search to see estimated distance and travel time.'
                                 : property.distance_km == null || property.travel_time_mins == null
                                   ? 'AI could not estimate this commute. Try a more specific destination or landmark.'
-                                  : `AI estimate: ${property.distance_km} km / ~${property.travel_time_mins} mins driving to ${commuteDestination} (not live traffic)`}</span>
+                                  : `${property.estimate_source === 'openrouteservice' ? 'ORS driving route' : 'AI estimate'}: ${property.distance_km} km / ~${property.travel_time_mins} mins driving to ${commuteDestination} (not live traffic)`}</span>
                             </div>
                             {Array.isArray(property.match_reasons) && property.match_reasons.length > 0 && (
                               <ul className="text-gray-600 space-y-1 pl-3.5 list-disc text-[11px] leading-relaxed">

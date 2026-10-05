@@ -486,7 +486,7 @@ class _ListingApprovalsTab extends ConsumerWidget {
                           icon: const Icon(Icons.verified_rounded, size: 16),
                           label: const Text('Approve & Publish Listing'),
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.teal,
+                            backgroundColor: AppColors.ink,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -621,7 +621,7 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD8E3D7)),
+        border: Border.all(color: AppColors.line),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -694,7 +694,7 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
               icon: const Icon(Icons.payment_rounded, size: 16),
               label: const Text('Pay Monthly Rent'),
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.teal,
+                backgroundColor: AppColors.ink,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1101,7 +1101,7 @@ class _AgreementCard extends ConsumerWidget {
                             icon: const Icon(Icons.payment_rounded, size: 16),
                             label: const Text('Pay Monthly Rent'),
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.teal,
+                              backgroundColor: AppColors.ink,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1384,7 +1384,7 @@ class _ActivatedLeaseTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD8E3D7)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         children: [
