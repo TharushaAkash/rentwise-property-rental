@@ -819,31 +819,33 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final role = ref.watch(authStateProvider).value?.role;
+    final canManage = isOwner(role) || isAdmin(role);
     final appsAsync = ref.watch(applicationsProvider);
     final agreementsAsync = ref.watch(agreementsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text(
-          'Tenants & Applications',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          canManage ? 'Tenant bookings' : 'My bookings',
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.canvas,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.teal,
           unselectedLabelColor: AppColors.muted,
-          indicatorColor: AppColors.teal,
+          indicatorColor: AppColors.lime,
           indicatorWeight: 3,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,
           ),
           tabs: const [
-            Tab(text: 'Inquiries & Applications'),
+            Tab(text: 'Bookings'),
             Tab(text: 'Active Leases'),
           ],
         ),
@@ -894,12 +896,21 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                     final isAccepted =
                         status == 'Accepted' || status == 'Approved';
 
+                    final photoUrl = app['propertyPhotoUrl']?.toString() ?? '';
+                    final address = app['propertyAddress']?.toString() ?? '';
+                    String dateLabel(dynamic value) {
+                      final date = DateTime.tryParse(value?.toString() ?? '');
+                      return date == null
+                          ? 'Not specified'
+                          : '${date.day}/${date.month}/${date.year}';
+                    }
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: AppColors.line),
                         boxShadow: const [
                           BoxShadow(
@@ -912,6 +923,27 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: AspectRatio(
+                              aspectRatio: 1.9,
+                              child: photoUrl.isEmpty
+                                  ? Image.asset(
+                                      'assets/property_placeholder.jpg',
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.network(
+                                      photoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, error, stack) =>
+                                          Image.asset(
+                                            'assets/property_placeholder.jpg',
+                                            fit: BoxFit.cover,
+                                          ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -951,8 +983,72 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
+                          if (address.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_on_outlined,
+                                    size: 14,
+                                    color: AppColors.muted,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      address,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.softTeal,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'LKR ${rent.toStringAsFixed(0)} / month',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${dateLabel(app['startDate'])} - ${dateLabel(app['endDate'])}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                                Text(
+                                  '${app['durationMonths'] ?? '-'} month lease',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
                             children: [
                               const Icon(
                                 Icons.person_rounded,
@@ -1001,7 +1097,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                               icon: const Icon(Icons.delete_outline),
                               label: const Text('Delete request'),
                             ),
-                          if (!isAccepted)
+                          if (canManage && status == 'Submitted')
                             Row(
                               children: [
                                 Expanded(
@@ -1044,7 +1140,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                 ),
                               ],
                             )
-                          else
+                          else if (isAccepted)
                             const Row(
                               children: [
                                 Icon(
