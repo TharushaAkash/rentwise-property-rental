@@ -18,6 +18,8 @@ void main() {
       final requests = <Uri>[];
       final client = MockClient((request) async {
         requests.add(request.url);
+        if (request.url.path.endsWith('/unavailable'))
+          return http.Response('[]', 200);
         return http.Response(
           jsonEncode({'items': [], 'nextCursor': null, 'hasMore': false}),
           200,
@@ -36,13 +38,20 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(requests.single.path, '/api/properties/browse');
-      expect(requests.single.queryParameters['pageSize'], '12');
+      expect(requests.first.path, '/api/properties/browse');
+      expect(requests.first.queryParameters['pageSize'], '12');
       await tester.enterText(find.byType(TextField).first, 'Colombo');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
-      expect(requests.last.queryParameters['location'], 'Colombo');
-      expect(requests.every((url) => url.path.endsWith('/browse')), true);
+      expect(
+        requests
+            .where((url) => url.path.endsWith('/browse'))
+            .last
+            .queryParameters['location'],
+        'Colombo',
+      );
+      expect(requests.last.path, '/api/properties/unavailable');
+      await tester.pumpWidget(const SizedBox());
     },
   );
 }

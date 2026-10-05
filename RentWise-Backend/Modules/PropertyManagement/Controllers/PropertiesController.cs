@@ -53,6 +53,19 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet("unavailable")]
+        public async Task<IActionResult> GetUnavailablePropertyIds()
+        {
+            var reserved = _context.PropertyApplications
+                .Where(a => a.Status == "Submitted" || a.Status == "Accepted")
+                .Select(a => a.PropertyId);
+            var leased = _context.RentalAgreements
+                .Where(a => a.Status != AgreementStatus.Ended && a.EndDate > DateTime.UtcNow)
+                .Select(a => a.PropertyId);
+            return Ok(await reserved.Union(leased).Distinct().ToListAsync());
+        }
+
+        [AllowAnonymous]
         [HttpGet("browse")]
         public async Task<IActionResult> Browse([FromQuery] string? location, [FromQuery] decimal? minBudget,
             [FromQuery] decimal? maxBudget, [FromQuery] int? bedrooms, [FromQuery] bool minimumBedrooms = false,

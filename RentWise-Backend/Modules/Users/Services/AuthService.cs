@@ -137,7 +137,13 @@ namespace RentWise.API.Modules.Users.Services
 
             if (dto.NicNumber != null)
             {
-                user.NicNumber = dto.NicNumber.Trim().ToUpperInvariant();
+                var nicNumber = dto.NicNumber.Trim().ToUpperInvariant();
+                if (user.NicNumber != nicNumber)
+                {
+                    user.IsNicVerified = false;
+                    user.NicImageUrl = null;
+                }
+                user.NicNumber = nicNumber;
             }
 
             user.UpdatedAt = DateTime.UtcNow;

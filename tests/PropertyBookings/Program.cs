@@ -216,6 +216,15 @@ await using (var db = NewDb()) {
   "Other owner's provider cannot be read by ID");
  Check(await Providers(null, "Tenant").GetProviders() is ForbidResult, "Missing provider identity is denied");
 }
+await using (var db = NewDb()) {
+ var properties = new PropertiesController(null!, db, new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+ var unavailable = (OkObjectResult)await properties.GetUnavailablePropertyIds();
+ Check(((IEnumerable<Guid>)unavailable.Value!).Contains(listing.Id), "Booked property availability is global across tenant accounts");
+ var bookings = (OkObjectResult)await Controller(db, owner.Id, "PropertyOwner").GetApplications();
+ var data = JsonSerializer.SerializeToElement(bookings.Value);
+ Check(data.EnumerateArray().Any(a => a.GetProperty("ownerId").GetGuid() == owner.Id),
+  "Owner booking inbox includes trusted owner identity for mobile notifications");
+}
 Console.WriteLine($"{checks} booking checks passed ({(pg == null ? "SQLite" : "PostgreSQL migrations + concurrent requests")}).");
 
 sealed class FailingSaveInterceptor(Exception failure) : SaveChangesInterceptor

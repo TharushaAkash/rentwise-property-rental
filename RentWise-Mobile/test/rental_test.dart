@@ -219,7 +219,7 @@ void main() {
     );
     expect(await service.payAgreement('lease', 50000, 'Card', 'ref'), false);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('rentwise_client_payments'), isNull);
+    expect(prefs.getString('rentwise_client_payments_test%40example.com'), isNull);
   });
 
   test('monthly rent uses the monthly endpoint and preserves the server receipt ID', () async {
@@ -245,8 +245,9 @@ void main() {
       true,
     );
     final prefs = await SharedPreferences.getInstance();
-    final saved =
-        jsonDecode(prefs.getString('rentwise_client_payments')!) as List;
+    final cached = prefs.getString('rentwise_client_payments_test%40example.com');
+    expect(cached, isNotNull, reason: 'A successful receipt must be saved for the signed-in account.');
+    final saved = jsonDecode(cached!) as List;
     expect(saved.single['id'], 'server-payment');
     expect(saved.single['purpose'], 'MonthlyRent');
   });
@@ -296,7 +297,7 @@ void main() {
       false,
     );
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('rentwise_client_agreements'), isNull);
+    expect(prefs.getString('rentwise_client_agreements_test%40example.com'), isNull);
   });
 
   test('offline estimate identifies its source and actual deposit', () {
