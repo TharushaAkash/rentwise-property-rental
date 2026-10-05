@@ -833,7 +833,7 @@ class _MobilePropertyCard extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     aiResult!.destinationLandmark.isEmpty
-                                        ? 'AI commute estimates'
+                                        ? 'Commute details'
                                         : 'To ${aiResult!.destinationLandmark}',
                                     style: const TextStyle(
                                       fontSize: 12,
@@ -864,8 +864,10 @@ class _MobilePropertyCard extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            const Text(
-                              'AI estimates; not live traffic or route calculations.',
+                            Text(
+                              aiResult!.commuteSummary.isNotEmpty
+                                  ? aiResult!.commuteSummary
+                                  : 'AI estimates; not live traffic or route calculations.',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: AppColors.muted,

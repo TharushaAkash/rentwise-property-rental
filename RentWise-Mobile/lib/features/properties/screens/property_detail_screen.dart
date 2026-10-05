@@ -559,7 +559,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               Text(
                                 widget.aiResult.distanceKm == null
                                     ? 'Commute estimate unavailable'
-                                    : 'AI estimate: ${widget.aiResult.distanceKm} km / ~${widget.aiResult.travelTimeMins ?? "?"} mins to ${widget.aiResult.destinationLandmark} (not live traffic)',
+                                    : '${widget.aiResult.estimateSource == 'openrouteservice' ? 'ORS driving route' : 'AI estimate'}: ${widget.aiResult.distanceKm} km / ~${widget.aiResult.travelTimeMins ?? "?"} mins to ${widget.aiResult.destinationLandmark} (not live traffic)',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF385345),

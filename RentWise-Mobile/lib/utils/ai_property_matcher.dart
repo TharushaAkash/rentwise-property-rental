@@ -14,6 +14,8 @@ class AiPropertyMatchResult {
   final double? distanceKm;
   final int? travelTimeMins;
   final List<String> matchReasons;
+  final String estimateSource;
+  final String commuteSummary;
   final String destinationLandmark;
 
   AiPropertyMatchResult({
@@ -22,6 +24,8 @@ class AiPropertyMatchResult {
     required this.distanceKm,
     required this.travelTimeMins,
     required this.matchReasons,
+    this.estimateSource = 'ai_estimate',
+    this.commuteSummary = '',
     required this.destinationLandmark,
   });
 }
@@ -104,6 +108,8 @@ Future<AiSearchResult> matchPropertiesWithAi(
           matchReasons: (p['match_reasons'] as List? ?? [])
               .map((v) => v.toString())
               .toList(),
+          estimateSource: p['estimate_source']?.toString() ?? 'ai_estimate',
+          commuteSummary: p['commute_summary']?.toString() ?? '',
           destinationLandmark: destination,
         ),
       );
