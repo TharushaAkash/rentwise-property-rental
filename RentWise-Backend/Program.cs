@@ -343,7 +343,6 @@ app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 app.UseRateLimiter();
-app.UseMiddleware<RentWise_Backend.Common.Middleware.ApiKeyMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

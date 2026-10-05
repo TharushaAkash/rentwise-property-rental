@@ -1,3 +1,4 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
 import { paymentPurpose, paidRentMonths } from '../../utils/paymentPurpose';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -360,7 +361,7 @@ export const TenantProfilePortal = () => {
 
       // 3. Persist to localStorage
       try {
-        const local = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const local = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         let matched = false;
         const updatedList = local.map((ag) => {
           if (ag.id === agreementId) {
@@ -386,7 +387,7 @@ export const TenantProfilePortal = () => {
             termsAndConditions: `${terms}\n[TENANT_AGREED: ${timestamp} | Signer: ${signer}]`
           });
         }
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(updatedList));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(updatedList));
         window.dispatchEvent(new Event('storage'));
       } catch (storageErr) {
         console.error('LocalStorage agreement save error:', storageErr);
@@ -436,7 +437,7 @@ export const TenantProfilePortal = () => {
       );
 
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         const updated = stored.map((ag) => {
           if (ag.id === targetId) {
             const terms = ag.termsAndConditions || ag.terms || '';
@@ -451,7 +452,7 @@ export const TenantProfilePortal = () => {
           }
           return ag;
         });
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
       } catch {}
     }
@@ -462,17 +463,17 @@ export const TenantProfilePortal = () => {
     try {
       const [profileRes, agreementRes, maintenanceRes, bookingsRes, propertiesRes] = await Promise.all([
         api.get('/auth/profile').catch(() => null),
-        api.get('/agreements/mine').catch(() => api.get('/agreements').catch(() => ({ data: [] }))),
-        api.get('/maintenance-requests/mine').catch(() => api.get('/maintenance-requests').catch(() => ({ data: [] }))),
+        api.get('/agreements/mine').catch(() => ({ data: [] })),
+        api.get('/maintenance-requests/mine').catch(() => ({ data: [] })),
         api.get('/property-applications').catch(() => ({ data: [] })),
         api.get('/properties').catch(() => ({ data: [] }))
       ]);
 
-      let agreementData = Array.isArray(agreementRes?.data) ? agreementRes.data : [];
+      let agreementData = (Array.isArray(agreementRes?.data) ? agreementRes.data : []).filter(a => belongsToAccount(a, user));
       let bookingData = Array.isArray(bookingsRes?.data) ? bookingsRes.data : [];
-      bookingData = bookingData.filter(b => !b.tenantId || b.tenantId === user?.id || b.tenantId === 'demo_tenant_id');
+      bookingData = bookingData.filter(b => Boolean(user?.id) && b.tenantId === user.id);
       
-      let rawMaintenance = Array.isArray(maintenanceRes?.data) ? maintenanceRes.data : [];
+      let rawMaintenance = (Array.isArray(maintenanceRes?.data) ? maintenanceRes.data : []).filter(m => Boolean(user?.id) && m.tenantId === user.id);
       const propertiesData = Array.isArray(propertiesRes?.data) ? propertiesRes.data : [];
 
       const propLookup = new Map();
@@ -485,8 +486,8 @@ export const TenantProfilePortal = () => {
 
       // Synchronize with client-side confirmed agreements and bookings
       try {
-        const localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]')
-          .filter(ag => !ag.tenantId || ag.tenantId === user?.id || ag.tenantId === 'demo_tenant_id');
+        const localAgreements = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]')
+          .filter(ag => Boolean(user?.id) && ag.tenantId === user.id);
         if (localAgreements.length > 0) {
           const map = new Map();
           for (const a of [...localAgreements, ...agreementData]) {
@@ -495,8 +496,8 @@ export const TenantProfilePortal = () => {
           agreementData = Array.from(map.values());
         }
 
-        const localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]')
-          .filter(b => !b.tenantId || b.tenantId === user?.id || b.tenantId === 'demo_tenant_id');
+        const localBookings = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]')
+          .filter(b => Boolean(user?.id) && b.tenantId === user.id);
         if (localBookings.length > 0) {
           const bMap = new Map();
           for (const b of [...localBookings, ...bookingData]) {
@@ -583,7 +584,7 @@ export const TenantProfilePortal = () => {
 
       // Synchronize maintenance requests with localStorage and server data
       try {
-        const localMaintenance = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+        const localMaintenance = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
         const mMap = new Map();
 
         const resolveMaintenancePhoto = (m, matchedProp) => {
@@ -616,7 +617,7 @@ export const TenantProfilePortal = () => {
 
         // Merge client-side cached requests
         localMaintenance.forEach((lm) => {
-          if (lm && lm.id && (!lm.tenantId || !user?.id || lm.tenantId === user?.id)) {
+          if (lm && lm.id && (Boolean(user?.id) && lm.tenantId === user.id)) {
             const matchedProp = propLookup.get(lm.propertyId) || 
                                 propLookup.get(String(lm.propertyId)) || 
                                 lm.property ||
@@ -664,7 +665,7 @@ export const TenantProfilePortal = () => {
 
       // Synchronize with client-side recorded payments
       try {
-        const localPayments = JSON.parse(localStorage.getItem('rentwise_client_payments') || '[]');
+        const localPayments = JSON.parse(accountStorage.getItem('rentwise_client_payments') || '[]');
         const pMap = new Map();
         for (const p of [...localPayments, ...allPayments]) {
           if (p && p.id) pMap.set(p.id, p);
@@ -776,9 +777,9 @@ export const TenantProfilePortal = () => {
 
       // Clean up localStorage
       try {
-        const localList = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+        const localList = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
         const updated = localList.filter((item) => item.id !== requestId);
-        localStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
       } catch {}
     } catch (err) {
@@ -805,7 +806,7 @@ export const TenantProfilePortal = () => {
 
       // 2. Persist to localStorage
       try {
-        const localList = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+        const localList = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
         let found = false;
         const updatedList = localList.map((item) => {
           if (item.id === requestId) {
@@ -820,7 +821,7 @@ export const TenantProfilePortal = () => {
             updatedList.push({ ...currentItem, photoUrl: base64 });
           }
         }
-        localStorage.setItem('rentwise_client_maintenance', JSON.stringify(updatedList));
+        accountStorage.setItem('rentwise_client_maintenance', JSON.stringify(updatedList));
         window.dispatchEvent(new Event('storage'));
       } catch (err) {
         console.error('Local maintenance photo save error:', err);
@@ -894,8 +895,8 @@ export const TenantProfilePortal = () => {
 
       // 2. Persist to localStorage
       try {
-        const localList = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
-        localStorage.setItem('rentwise_client_maintenance', JSON.stringify([newRecord, ...localList]));
+        const localList = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
+        accountStorage.setItem('rentwise_client_maintenance', JSON.stringify([newRecord, ...localList]));
         window.dispatchEvent(new Event('storage'));
       } catch (e) {}
 
@@ -910,10 +911,10 @@ export const TenantProfilePortal = () => {
 
   const handleClearLocalCache = () => {
     if (window.confirm('Clear all local browser cached data (offline bookings, test leases, simulated payments)? The dashboard will reload and display only records present in the server database.')) {
-      localStorage.removeItem('rentwise_client_bookings');
-      localStorage.removeItem('rentwise_client_agreements');
-      localStorage.removeItem('rentwise_client_payments');
-      localStorage.removeItem('rentwise_client_maintenance');
+      accountStorage.removeItem('rentwise_client_bookings');
+      accountStorage.removeItem('rentwise_client_agreements');
+      accountStorage.removeItem('rentwise_client_payments');
+      accountStorage.removeItem('rentwise_client_maintenance');
       window.dispatchEvent(new Event('storage'));
       window.location.reload();
     }

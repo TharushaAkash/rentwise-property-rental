@@ -44,6 +44,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'auth_token': 'fixture-token'});
     var called = false;
     final api = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((request) async {
         called = true;
         expect(request.url.path, '/api/agentic/workflow/draft-agreement');
@@ -142,6 +143,7 @@ void main() {
     'booking draft is replaced by the server lease before signing',
     () async {
       final service = RentalService(
+        accountEmail: 'test@example.com',
         client: MockClient((request) async {
           expect(request.url.path, '/api/agreements');
           expect(jsonDecode(request.body)['id'], isNull);
@@ -161,9 +163,40 @@ void main() {
       expect(saved.id, 'server-lease');
       expect(saved.propertyTitle, 'Garden House');
       final prefs = await SharedPreferences.getInstance();
-      final cached =
-          jsonDecode(prefs.getString('rentwise_client_agreements')!) as List;
+      final cached = jsonDecode(
+        prefs.getString('rentwise_client_agreements_test%40example.com')!,
+      ) as List;
       expect(cached.map((item) => item['id']), ['server-lease']);
+    },
+  );
+
+  test(
+    'saved rentals are isolated by normalized email and ignore legacy cache',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'rentwise_client_agreements': '[{"id":"legacy"}]',
+      });
+      final client = MockClient((_) async => http.Response('[]', 200));
+      final first = RentalService(
+        accountEmail: ' FIRST@example.com ',
+        client: client,
+      );
+      final second = RentalService(
+        accountEmail: 'second@example.com',
+        client: client,
+      );
+      await first.saveLocalAgreement(
+        AgreementModel.fromJson({'id': 'first-lease'}),
+      );
+      expect((await first.fetchAgreements()).map((a) => a.id), ['first-lease']);
+      expect(await second.fetchAgreements(), isEmpty);
+      final returning = RentalService(
+        accountEmail: 'first@example.com',
+        client: client,
+      );
+      expect((await returning.fetchAgreements()).map((a) => a.id), [
+        'first-lease',
+      ]);
     },
   );
 
@@ -181,16 +214,18 @@ void main() {
 
   test('rejected payment never creates a successful local receipt', () async {
     final service = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((_) async => http.Response('', 500)),
     );
     expect(await service.payAgreement('lease', 50000, 'Card', 'ref'), false);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('rentwise_client_payments'), isNull);
+    expect(prefs.getString('rentwise_client_payments_test%40example.com'), isNull);
   });
 
   test('monthly rent uses the monthly endpoint and preserves the server receipt ID', () async {
     SharedPreferences.setMockInitialValues({});
     final service = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((request) async {
         expect(request.url.path, '/api/agreements/lease/payments');
         return http.Response(
@@ -210,8 +245,9 @@ void main() {
       true,
     );
     final prefs = await SharedPreferences.getInstance();
-    final saved =
-        jsonDecode(prefs.getString('rentwise_client_payments')!) as List;
+    final cached = prefs.getString('rentwise_client_payments_test%40example.com');
+    expect(cached, isNotNull, reason: 'A successful receipt must be saved for the signed-in account.');
+    final saved = jsonDecode(cached!) as List;
     expect(saved.single['id'], 'server-payment');
     expect(saved.single['purpose'], 'MonthlyRent');
   });
@@ -230,6 +266,7 @@ void main() {
   test('successful payment is submitted exactly once', () async {
     final paths = <String>[];
     final service = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((request) async {
         paths.add(request.url.path);
         return http.Response(
@@ -244,6 +281,7 @@ void main() {
 
   test('failed signing does not cache an agreed lease', () async {
     final service = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((_) async => http.Response('', 403)),
     );
     final agreement = AgreementModel.fromJson({
@@ -259,7 +297,7 @@ void main() {
       false,
     );
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('rentwise_client_agreements'), isNull);
+    expect(prefs.getString('rentwise_client_agreements_test%40example.com'), isNull);
   });
 
   test('offline estimate identifies its source and actual deposit', () {

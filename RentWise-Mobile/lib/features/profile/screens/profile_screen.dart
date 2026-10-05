@@ -1,3 +1,6 @@
+import 'edit_profile_screen.dart';
+import 'nic_verification_screen.dart';
+import 'biometric_settings_tile.dart';
 import 'bank_details_screen.dart';
 import '../../properties/saved_properties.dart';
 
@@ -117,6 +120,26 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => open(const EditProfileScreen()),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit profile'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => open(const NicVerificationScreen()),
+            icon: Icon(
+              user.isNicVerified ? Icons.verified : Icons.badge_outlined,
+            ),
+            label: Text(
+              user.isNicVerified
+                  ? 'NIC verified - view verification'
+                  : 'Upload NIC for verification',
+            ),
+          ),
+          const SizedBox(height: 12),
+          BiometricSettingsTile(key: ValueKey(user.id)),
           const SizedBox(height: 28),
           const FormHeading(
             'Your workspace',

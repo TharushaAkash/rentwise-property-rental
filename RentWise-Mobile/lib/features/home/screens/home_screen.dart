@@ -1,3 +1,8 @@
+import '../../auth/screens/login_screen.dart';
+
+import 'dart:async';
+
+import '../../notifications/booking_notifications.dart';
 import '../../properties/saved_properties.dart';
 import '../controllers/property_browse_controller.dart';
 
@@ -30,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final userState = ref.watch(authStateProvider);
+    if (userState.value == null) return const LoginScreen();
     final isOwner =
         property_access.isOwner(userState.value?.role) ||
         property_access.isAdmin(userState.value?.role);
@@ -53,7 +59,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       RentalRequestsScreen(canCreate: userState.value?.role == 'Tenant'),
     );
     return Scaffold(
-      body: pages[_tab],
+      appBar: property_access.isOwner(userState.value?.role)
+          ? AppBar(
+              toolbarHeight: 44,
+              title: const Text('RentWise'),
+              actions: [
+                BookingNotificationBell(key: ValueKey(userState.value?.id)),
+              ],
+            )
+          : null,
+      body: KeyedSubtree(
+        key: ValueKey('${userState.value?.id}:$_tab'),
+        child: pages[_tab],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (index) => setState(() => _tab = index),
@@ -97,8 +115,9 @@ class _DiscoverPropertiesTab extends ConsumerStatefulWidget {
       _DiscoverPropertiesTabState();
 }
 
-class _DiscoverPropertiesTabState
-    extends ConsumerState<_DiscoverPropertiesTab> {
+class _DiscoverPropertiesTabState extends ConsumerState<_DiscoverPropertiesTab>
+    with WidgetsBindingObserver {
+  Timer? _refreshTimer;
   late final PropertyBrowseController _catalog;
   AsyncValue<List<PropertyModel>> get _browse => _catalog.data;
   bool get _hasMore => _catalog.hasMore;
@@ -110,8 +129,20 @@ class _DiscoverPropertiesTabState
     _catalog = PropertyBrowseController(
       ref.read(property_access.propertyServiceProvider),
     );
+    WidgetsBinding.instance.addObserver(this);
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted &&
+          !_isAiSearching &&
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)
+        _catalog.load();
+    });
     _catalog.addListener(_catalogChanged);
     _catalog.load();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _catalog.load();
   }
 
   void _catalogChanged() {
@@ -137,6 +168,8 @@ class _DiscoverPropertiesTabState
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _catalog.removeListener(_catalogChanged);
     _catalog.dispose();
     _searchController.dispose();
@@ -151,6 +184,7 @@ class _DiscoverPropertiesTabState
     });
 
     try {
+      ref.invalidate(propertiesProvider);
       final allCandidates = await ref.read(propertiesProvider.future);
       final result = await matchPropertiesWithAi(_searchQuery, allCandidates);
       if (mounted) {
@@ -211,7 +245,11 @@ class _DiscoverPropertiesTabState
 
           if (_searchQuery.trim().isNotEmpty) {
             if (_isAiSearch && _aiSearchResult != null) {
-              aiMatchResults = _aiSearchResult!.results;
+              aiMatchResults = _aiSearchResult!.results
+                  .where(
+                    (r) => !_catalog.unavailableIds.contains(r.property.id),
+                  )
+                  .toList();
               displayedProperties = aiMatchResults
                   .map((r) => r.property)
                   .toList();
@@ -686,6 +724,7 @@ class _DiscoverPropertiesTabState
                               );
                             }
                             return _MobilePropertyCard(
+                              onReturn: () => _catalog.load(),
                               property: displayedProperties[index],
                               aiResult:
                                   aiMatchResults != null &&
@@ -723,10 +762,15 @@ class _DiscoverPropertiesTabState
 }
 
 class _MobilePropertyCard extends StatelessWidget {
+  final VoidCallback? onReturn;
   final dynamic property;
   final AiPropertyMatchResult? aiResult;
 
-  const _MobilePropertyCard({required this.property, this.aiResult});
+  const _MobilePropertyCard({
+    required this.property,
+    this.aiResult,
+    this.onReturn,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -752,7 +796,7 @@ class _MobilePropertyCard extends StatelessWidget {
               builder: (context) =>
                   PropertyDetailScreen(property: property, aiResult: aiResult),
             ),
-          );
+          ).then((_) => onReturn?.call());
         },
         borderRadius: BorderRadius.circular(22),
         child: Column(
@@ -768,7 +812,7 @@ class _MobilePropertyCard extends StatelessWidget {
                   child: property.photoUrl.isNotEmpty
                       ? Image.network(
                           property.photoUrl,
-                          height: 180,
+                          height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
@@ -896,6 +940,30 @@ class _MobilePropertyCard extends StatelessWidget {
                   top: 14,
                   right: 14,
                   child: SavePropertyButton(propertyId: property.id),
+                ),
+                // Gradient overlay for premium look
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 70,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(0),
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withAlpha(100),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1092,14 +1160,27 @@ class _MobilePropertyCard extends StatelessWidget {
   }
 
   Widget _buildPlaceholder() {
-    return Container(
-      height: 180,
-      color: const Color(0xFFE2E8F0),
-      child: const Icon(
-        Icons.apartment_rounded,
-        size: 50,
-        color: AppColors.muted,
-      ),
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Image.asset(
+          'assets/property_placeholder.jpg',
+          height: 200,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withAlpha(80)],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

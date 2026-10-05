@@ -1,3 +1,4 @@
+import { accountStorage } from '../../utils/accountStorage';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import api from '../../services/api';
@@ -80,7 +81,7 @@ export const PropertyDetails = () => {
         }
       } catch {}
       try {
-        const local = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const local = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const localMatched = local.filter((a) => String(a.propertyId) === String(id));
         const merged = new Map();
         localMatched.forEach((a) => a?.id && merged.set(a.id, a));

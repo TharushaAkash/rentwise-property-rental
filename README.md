@@ -34,9 +34,6 @@ The AI service supports matching, verification, agreement preparation and mainte
 
 ![RentWise web home page](docs/screenshots/web/home.png)
 
-<details>
-<summary><strong>Explore rental search and the rental workflow</strong></summary>
-
 **Find rentals**
 
 ![RentWise rental search](docs/screenshots/web/find-rentals.png)
@@ -45,22 +42,11 @@ The AI service supports matching, verification, agreement preparation and mainte
 
 ![RentWise web rental workflow](docs/screenshots/web/rental-workflow.png)
 
-</details>
-
 ### Mobile preview
 
-<table>
-  <tr>
-    <th>Home</th>
-    <th>Owner dashboard</th>
-    <th>Rental workflow</th>
-  </tr>
-  <tr>
-    <td width="33%" align="center"><img src="docs/screenshots/mobile/home.png" alt="RentWise mobile home screen" width="240"></td>
-    <td width="33%" align="center"><img src="docs/screenshots/mobile/owner-dashboard.png" alt="RentWise mobile owner dashboard" width="240"></td>
-    <td width="33%" align="center"><img src="docs/screenshots/mobile/rental-workflow.png" alt="RentWise mobile rental workflow" width="240"></td>
-  </tr>
-</table>
+| Home | Owner dashboard | Rental workflow |
+| :---: | :---: | :---: |
+| ![Mobile home](docs/screenshots/mobile/home.png) | ![Mobile owner dashboard](docs/screenshots/mobile/owner-dashboard.png) | ![Mobile rental workflow](docs/screenshots/mobile/rental-workflow.png) |
 
 ## Features
 

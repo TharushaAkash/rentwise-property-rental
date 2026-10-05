@@ -1,3 +1,4 @@
+import { accountStorage } from '../../utils/accountStorage';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, DollarSign, MapPin, CheckCircle2, AlertCircle, Building2, ShieldCheck, Sparkles, X } from 'lucide-react';
@@ -114,9 +115,9 @@ const BookingForm = ({ onClose, property, onSuccess }) => {
 
       // Persist in localStorage for instant sync across tabs and role switches
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const updated = [clientBooking, ...stored.filter(b => b.propertyId !== property.id || b.status === 'Accepted')];
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
         dispatchBookingsUpdated();
       } catch (storageErr) {
         console.error('LocalStorage write failed:', storageErr);

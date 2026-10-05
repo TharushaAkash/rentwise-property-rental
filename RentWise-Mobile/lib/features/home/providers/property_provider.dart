@@ -28,8 +28,23 @@ final propertiesProvider = FutureProvider<List<PropertyModel>>((ref) async {
   if (response.statusCode != 200) {
     throw Exception('Could not load properties. Please retry.');
   }
+  final availability = await ref
+      .watch(propertyCatalogClientProvider)
+      .get(
+        Uri.parse('${ApiConstants.baseUrl}/properties/unavailable'),
+        headers: {'Authorization': 'Bearer $token'},
+      )
+      .timeout(const Duration(seconds: 15));
+  if (availability.statusCode != 200)
+    throw Exception('Could not confirm property availability. Please retry.');
+  final unavailable = (jsonDecode(availability.body) as List)
+      .map((id) => id.toString())
+      .toSet();
   final data = jsonDecode(response.body) as List;
-  return data.map((value) => PropertyModel.fromJson(value)).toList();
+  return data
+      .map((value) => PropertyModel.fromJson(value))
+      .where((p) => !unavailable.contains(p.id))
+      .toList();
 }, retry: (retryCount, error) => null);
 
 final bookedPropertiesProvider = FutureProvider<List<PropertyModel>>((

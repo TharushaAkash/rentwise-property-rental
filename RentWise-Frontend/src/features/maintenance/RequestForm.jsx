@@ -1,3 +1,4 @@
+import { accountStorage } from '../../utils/accountStorage';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -80,7 +81,7 @@ export function RequestForm({
       } catch (err) {}
 
       try {
-        const local = JSON.parse(localStorage.getItem('rentwise_client_service_providers') || '[]');
+        const local = JSON.parse(accountStorage.getItem('rentwise_client_service_providers') || '[]');
         // Filter out any mock ones
         const genuineLocal = local.filter(s => s && s.id && !String(s.id).startsWith('sp-'));
         if (genuineLocal.length > 0) {
@@ -91,11 +92,17 @@ export function RequestForm({
         }
       } catch (e) {}
 
+      const property = selectedProperty || properties.find(p => String(p.id || p.propertyId) === String(currentPropId));
+      let ownerId = property?.ownerId;
+      if (!ownerId && currentPropId) {
+        try { ownerId = (await api.get(`/properties/${currentPropId}`)).data?.ownerId; } catch {}
+      }
+      dbList = dbList.filter(provider => ownerId && provider.ownerId === ownerId);
       setOwnerDbProviders(dbList);
       setProviders(dbList);
     };
     loadProviders();
-  }, []);
+  }, [currentPropId, user?.id]);
 
   // Keep photo preview in sync
   useEffect(() => {

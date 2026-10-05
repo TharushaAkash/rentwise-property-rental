@@ -1,3 +1,4 @@
+import { accountStorage } from '../../utils/accountStorage';
 import { validateCard } from '../../utils/paymentValidation';
 import React, { useEffect, useState } from 'react';
 import { Modal } from '../../components/ui/Modal';
@@ -155,9 +156,9 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
 
       // 2. Persist in local storage
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_payments') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_payments') || '[]');
         stored.unshift(newPayment);
-        localStorage.setItem('rentwise_client_payments', JSON.stringify(stored));
+        accountStorage.setItem('rentwise_client_payments', JSON.stringify(stored));
       } catch (e) {
         console.error('LocalStorage save error:', e);
       }

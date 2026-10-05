@@ -28,48 +28,28 @@ namespace RentWise.API.Modules.Maintenance.Controllers
             _context = context;
         }
 
+        private Guid? Actor => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var id) ? id : null;
+        private bool Admin => User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin");
+        private async Task<bool> CanAccess(MaintenanceRequest request) => Actor != null &&
+            (Admin || request.TenantId == Actor || await _context.Properties.AnyAsync(p => p.Id == request.PropertyId && p.OwnerId == Actor));
+        private async Task<bool> CanAssign(MaintenanceRequest request) => request.AssignedServiceProviderId == null ||
+            await _context.ServiceProviders.AnyAsync(sp => sp.Id == request.AssignedServiceProviderId &&
+                _context.Properties.Any(p => p.Id == request.PropertyId && p.OwnerId == sp.OwnerId));
+
         [HttpGet]
         public async Task<IActionResult> GetRequests()
         {
+            if (Actor == null) return Forbid();
             var requests = await _context.MaintenanceRequests
-                .Include(r => r.Property)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
+                .Include(r => r.Property).Include(r => r.Tenant)
+                .Where(r => Admin || r.TenantId == Actor || r.Property.OwnerId == Actor)
+                .OrderByDescending(r => r.CreatedAt).ToListAsync();
             return Ok(requests);
         }
 
         [HttpGet("mine")]
-        public async Task<IActionResult> GetMyRequests()
-        {
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                         ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                         ?? User.FindFirst("sub")?.Value;
-
-            if (!Guid.TryParse(userIdStr, out var userId))
-            {
-                var all = await _context.MaintenanceRequests
-                    .Include(r => r.Property)
-                    .OrderByDescending(r => r.CreatedAt)
-                    .ToListAsync();
-                return Ok(all);
-            }
-
-            var requests = await _context.MaintenanceRequests
-                .Include(r => r.Property)
-                .Where(r => r.TenantId == userId || (r.Property != null && r.Property.OwnerId == userId) || r.TenantId == Guid.Empty)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
-
-            if (!requests.Any())
-            {
-                requests = await _context.MaintenanceRequests
-                    .Include(r => r.Property)
-                    .OrderByDescending(r => r.CreatedAt)
-                    .ToListAsync();
-            }
-
-            return Ok(requests);
-        }
+        public Task<IActionResult> GetMyRequests() => GetRequests();
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetRequest(Guid id)
@@ -89,24 +69,23 @@ namespace RentWise.API.Modules.Maintenance.Controllers
                 request = await _maintenanceRequestService.GetRequestByIdAsync(id);
             }
             if (request == null) return NotFound();
+            if (!await CanAccess(request)) return Forbid();
             return Ok(request);
         }
 
         [HttpPost]
-        [Authorize(Roles = "Tenant,PropertyOwner")]
+        [Authorize(Roles = "Tenant,Owner,PropertyOwner")]
         public async Task<IActionResult> CreateRequest([FromBody] MaintenanceRequest request)
         {
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                         ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                         ?? User.FindFirst("sub")?.Value;
-
-            if (Guid.TryParse(userIdStr, out var userId))
-            {
-                if (request.TenantId == Guid.Empty)
-                {
-                    request.TenantId = userId;
-                }
-            }
+            if (Actor == null) return Forbid();
+            var property = await _context.Properties.FindAsync(request.PropertyId);
+            if (property == null) return NotFound();
+            if (!Admin && property.OwnerId != Actor &&
+                !await _context.RentalAgreements.AnyAsync(a => a.PropertyId == property.Id && a.TenantId == Actor) &&
+                !await _context.PropertyApplications.AnyAsync(a => a.PropertyId == property.Id && a.TenantId == Actor &&
+                    (a.Status == "Submitted" || a.Status == "Accepted"))) return Forbid();
+            request.TenantId = Actor.Value;
+            if (!await CanAssign(request)) return BadRequest(new { message = "Select a service provider belonging to this property's owner." });
 
             if (request.CreatedAt == default)
             {
@@ -146,11 +125,12 @@ namespace RentWise.API.Modules.Maintenance.Controllers
         }
 
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "Tenant,PropertyOwner,SystemAdmin")]
+        [Authorize(Roles = "Tenant,Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] MaintenanceStatusUpdateDto dto)
         {
             var request = await _context.MaintenanceRequests.FindAsync(id);
             if (request == null) return NotFound();
+            if (!await CanAccess(request)) return Forbid();
 
             var oldStatus = request.Status;
             if (Enum.TryParse<MaintenanceStatus>(dto.Status, true, out var parsedStatus))
@@ -200,6 +180,7 @@ namespace RentWise.API.Modules.Maintenance.Controllers
         {
             var request = await _context.MaintenanceRequests.FindAsync(id);
             if (request == null) return NotFound();
+            if (!await CanAccess(request)) return Forbid();
 
             request.PhotoUrl = dto.PhotoUrl ?? string.Empty;
             request.UpdatedAt = DateTime.UtcNow;
@@ -209,10 +190,16 @@ namespace RentWise.API.Modules.Maintenance.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Tenant,PropertyOwner,SystemAdmin")]
+        [Authorize(Roles = "Tenant,Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> UpdateRequest(Guid id, [FromBody] MaintenanceRequest request)
         {
             if (id != request.Id) return BadRequest();
+            var existing = await _context.MaintenanceRequests.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
+            if (existing == null) return NotFound();
+            if (!await CanAccess(existing)) return Forbid();
+            request.TenantId = existing.TenantId;
+            request.PropertyId = existing.PropertyId;
+            if (!await CanAssign(request)) return BadRequest(new { message = "Select a service provider belonging to this property's owner." });
             await _maintenanceRequestService.UpdateRequestAsync(request);
             return NoContent();
         }
@@ -239,8 +226,10 @@ namespace RentWise.API.Modules.Maintenance.Controllers
                 return NotFound(new { message = "Maintenance request not found" });
             }
 
+            if (Actor == null) return Forbid();
+
             // Permission check: Submitter (Tenant), Property Owner, or Admin
-            bool isSubmitter = request.TenantId == currentUserId || request.TenantId == Guid.Empty;
+            bool isSubmitter = Actor != null && request.TenantId == currentUserId;
             bool isPropertyOwner = request.Property != null && request.Property.OwnerId == currentUserId;
 
             if (!isAdmin && !isSubmitter && !isPropertyOwner)

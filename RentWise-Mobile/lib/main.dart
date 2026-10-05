@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/welcome_screen.dart';
+import 'shared/widgets/device_lock.dart';
 import 'features/shared/theme/app_theme.dart';
 
 void main() {
@@ -17,7 +18,8 @@ class RentWiseApp extends StatelessWidget {
       title: 'RentWise',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(brightness: Brightness.light),
-      home: const LoginScreen(),
+      home: const WelcomeScreen(),
+      builder: (context, child) => DeviceLock(child: child!),
     );
   }
 }

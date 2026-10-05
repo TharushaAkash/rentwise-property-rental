@@ -1,3 +1,4 @@
+import { accountStorage } from '../../utils/accountStorage';
 import { useAdminData } from './useAdminData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -457,8 +458,8 @@ export const AdminDashboard = () => {
       await api.delete(`/property-applications/${app.id}`);
       setApplications(current => current.filter(item => item.id !== app.id));
       try {
-        const cached = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(cached.filter(item => item.id !== app.id)));
+        const cached = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(cached.filter(item => item.id !== app.id)));
       } catch { /* The server deletion already succeeded. */ }
       setFeedback({ text: 'Agreement request deleted.', type: 'success' });
     } catch (error) {
@@ -475,8 +476,8 @@ export const AdminDashboard = () => {
 
       // Sync local storage
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(stored.map(b => b.id === appId ? { ...b, status: 'Accepted' } : b)));
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(stored.map(b => b.id === appId ? { ...b, status: 'Accepted' } : b)));
       } catch {}
 
       setFeedback({ text: 'Agreement request approved & active lease registered!', type: 'success' });

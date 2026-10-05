@@ -1,3 +1,4 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
 import { validateCard } from '../../utils/paymentValidation';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -94,16 +95,16 @@ export const AgreementDetails = () => {
   };
 
   useEffect(() => {
-    if (agreementData) {
+    if (agreementData && belongsToAccount(agreementData, user)) {
       setLocalAgreement(agreementData);
     } else {
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
-        const found = stored.find(a => String(a.id) === String(id));
-        if (found) setLocalAgreement(found);
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
+        const found = stored.find(a => String(a.id) === String(id) && belongsToAccount(a, user));
+        setLocalAgreement(found || null);
       } catch {}
     }
-  }, [agreementData, id]);
+  }, [agreementData, id, user]);
 
   // Fetch payments
   const fetchPayments = async () => {
@@ -212,10 +213,10 @@ export const AgreementDetails = () => {
 
       // 4. Update local storage
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         const next = stored.map(a => a.id === updated.id ? { ...a, ...updated } : a);
         if (!stored.some(a => a.id === updated.id)) next.unshift(updated);
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
       } catch {}
 
       // 5. Add payment record so receipt displays instantly
@@ -231,9 +232,9 @@ export const AgreementDetails = () => {
       setPayments(prev => [newPayment, ...prev]);
 
       try {
-        const localPay = JSON.parse(localStorage.getItem('rentwise_client_payments') || '[]');
+        const localPay = JSON.parse(accountStorage.getItem('rentwise_client_payments') || '[]');
         localPay.unshift(newPayment);
-        localStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
+        accountStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
       } catch {}
 
       setIsAgreeModalOpen(false);
@@ -289,10 +290,10 @@ export const AgreementDetails = () => {
       };
       setLocalAgreement(updated);
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         const next = stored.map(a => a.id === updated.id ? { ...a, ...updated } : a);
         if (!stored.some(a => a.id === updated.id)) next.unshift(updated);
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
       } catch {}
 
       // Add to local payment list so receipt renders immediately
@@ -309,9 +310,9 @@ export const AgreementDetails = () => {
 
       // Cache payment in rentwise_client_payments for tenant dashboard sync
       try {
-        const localPay = JSON.parse(localStorage.getItem('rentwise_client_payments') || '[]');
+        const localPay = JSON.parse(accountStorage.getItem('rentwise_client_payments') || '[]');
         localPay.unshift(newPayment);
-        localStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
+        accountStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
       } catch {}
 
       setIsPayModalOpen(false);

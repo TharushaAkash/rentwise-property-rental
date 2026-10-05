@@ -11,6 +11,7 @@ class PropertyBrowseController extends ChangeNotifier {
   PropertyBrowseController(this.api);
   AsyncValue<List<PropertyModel>> data = const AsyncLoading();
   String? _cursor;
+  Set<String> unavailableIds = {};
   bool hasMore = false;
   bool loadingMore = false;
   String? error;
@@ -48,16 +49,23 @@ class PropertyBrowseController extends ChangeNotifier {
         },
       ).toString();
       final response = await api.request('GET', path);
+      // Availability contains only property IDs, never another tenant's booking details.
+      final unavailable = (await api.request(
+        'GET',
+        '/properties/unavailable',
+      ) as List).map((id) => id.toString()).toSet();
       if (_disposed || version != _requestVersion) return;
       final page = (response['items'] as List)
           .map((p) => PropertyModel.fromJson(Map<String, dynamic>.from(p)))
+          .where((p) => !unavailable.contains(p.id))
           .toList();
       _update(() {
+        unavailableIds = unavailable;
         final previous = more
             ? (data.value ?? <PropertyModel>[])
             : <PropertyModel>[];
         data = AsyncData([
-          ...previous,
+          ...previous.where((p) => !unavailable.contains(p.id)),
           ...page.where((p) => !previous.any((old) => old.id == p.id)),
         ]);
         _cursor = response['nextCursor'] as String?;

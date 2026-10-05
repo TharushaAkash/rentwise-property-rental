@@ -18,7 +18,7 @@ namespace RentWise.API.Modules.Maintenance.Services
 
         public async Task<IEnumerable<RequestStatusLog>> GetAllLogsAsync(Guid requestId)
         {
-            return await _repository.GetAllAsync();
+            return (await _repository.GetAllAsync()).Where(log => log.MaintenanceRequestId == requestId);
         }
 
         public async Task<RequestStatusLog?> GetLogByIdAsync(Guid id)
