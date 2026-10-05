@@ -290,6 +290,9 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var recommendation = "Needs Review";
             var reasoning = "Proof saved. Automated verification could not be completed; administrator review is required.";
             var verificationCompleted = false;
+            var billAddress = "";
+            var utilityProvider = "";
+            var accountNo = "";
             // Trigger Agentic Service
             try
             {
@@ -297,7 +300,11 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                 var workflowKey = Environment.GetEnvironmentVariable("AGENT_WORKFLOW_KEY") ?? _configuration["AgentWorkflowKey"];
                     if (string.IsNullOrWhiteSpace(workflowKey)) throw new InvalidOperationException("AI service is not configured.");
                     httpClient.DefaultRequestHeaders.Add("X-Workflow-Key", workflowKey);
-                    var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
+                    // Forward the authenticated caller; an API key must never impersonate an owner.
+                    var authorization = Request.Headers.Authorization.ToString();
+                    if (string.IsNullOrWhiteSpace(authorization)) throw new InvalidOperationException("Authenticated caller token is required.");
+                    httpClient.DefaultRequestHeaders.Add("Authorization", authorization);
+                    var agentUrl = Environment.GetEnvironmentVariable("AGENTIC_SERVICE_URL") ?? _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
                 var aiUrl = $"{agentUrl}/workflow/verify-property";
                 var payload = new { property_id = id.ToString(), document_url = doc.DocumentUrl };
                 var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
@@ -320,7 +327,10 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                         {
                             recommendation = proposedRecommendation;
                             reasoning = reasonElement.GetString()!;
-                            verificationCompleted = true;
+                            billAddress = reportElement.TryGetProperty("billAddress", out var billElement) && billElement.ValueKind == System.Text.Json.JsonValueKind.String ? billElement.GetString() ?? "" : "";
+                            utilityProvider = reportElement.TryGetProperty("utilityProvider", out var providerElement) && providerElement.ValueKind == System.Text.Json.JsonValueKind.String ? providerElement.GetString() ?? "" : "";
+                            accountNo = reportElement.TryGetProperty("accountNo", out var accountElement) && accountElement.ValueKind == System.Text.Json.JsonValueKind.String ? accountElement.GetString() ?? "" : "";
+                            verificationCompleted = recommendation != "Needs Review";
                         }
                     }
                 }
@@ -340,7 +350,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             property.Status = recommendation == "Approve-ready" && !requiresAdminReview && await HasListingFee(id) ? PropertyStatus.Active
                 : property.Status == PropertyStatus.Suspended ? PropertyStatus.Suspended : PropertyStatus.PendingVerification;
             property.UpdatedAt = DateTime.UtcNow;
-            var report = new { recommendation, reasoning, propertyAddress = property.Address, documentUrl = doc.DocumentUrl };
+            var report = new { recommendation, reasoning, propertyAddress = property.Address, documentUrl = doc.DocumentUrl, billAddress, utilityProvider, accountNo };
             _context.VerificationRecords.Add(new VerificationRecord
             {
                 PropertyId = id,

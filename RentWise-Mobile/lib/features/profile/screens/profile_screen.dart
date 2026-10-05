@@ -126,18 +126,29 @@ class ProfileScreen extends ConsumerWidget {
             icon: const Icon(Icons.edit_outlined),
             label: const Text('Edit profile'),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => open(const NicVerificationScreen()),
-            icon: Icon(
-              user.isNicVerified ? Icons.verified : Icons.badge_outlined,
+          if (owner) ...[
+            const SizedBox(height: 12),
+            ListTile(
+              leading: Icon(
+                user.isNicVerified ? Icons.verified : Icons.badge_outlined,
+              ),
+              title: Text(
+                user.nicImageUrl?.trim().isNotEmpty == true
+                    ? 'NIC image uploaded'
+                    : 'NIC image not uploaded',
+              ),
+              subtitle: Text(user.isNicVerified ? 'Verified' : 'Not verified'),
             ),
-            label: Text(
-              user.isNicVerified
-                  ? 'NIC verified - view verification'
-                  : 'Upload NIC for verification',
+            OutlinedButton.icon(
+              onPressed: () => open(const NicVerificationScreen()),
+              icon: const Icon(Icons.badge_outlined),
+              label: Text(
+                user.nicImageUrl?.trim().isNotEmpty == true
+                    ? 'View or replace uploaded NIC'
+                    : 'Upload NIC for verification',
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 12),
           BiometricSettingsTile(key: ValueKey(user.id)),
           const SizedBox(height: 28),

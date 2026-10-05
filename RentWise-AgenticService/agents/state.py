@@ -19,6 +19,7 @@ class AgentWorkflowState(TypedDict):
     agreement_draft: dict
     
     # Property Verification Agent State
+    backend_authorization: str
     verification_report: dict
     document_url: str
     

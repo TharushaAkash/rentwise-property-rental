@@ -68,7 +68,7 @@ def run_matching_workflow(req: WorkflowRequest):
         return JSONResponse(status_code=error.status, content={"status": "failed", "code": error.code, "message": str(error)})
 
 @app.post("/workflow/verify-property")
-def run_verification_workflow(req: WorkflowRequest):
+def run_verification_workflow(req: WorkflowRequest, authorization: str = Header(default="")):
     if not req.property_id:
         return {"error": "property_id is required"}
     
@@ -79,6 +79,7 @@ def run_verification_workflow(req: WorkflowRequest):
     initial_state = {
         "property_id": req.property_id,
         "verification_report": {},
+        "backend_authorization": authorization,
         "document_url": req.document_url,
         "current_agent": "PropertyVerification"
     }

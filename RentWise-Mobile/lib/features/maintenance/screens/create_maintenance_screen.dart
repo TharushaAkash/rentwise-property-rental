@@ -11,6 +11,7 @@ import '../../../shared/utils/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/property_provider.dart';
 import '../providers/maintenance_provider.dart';
+import '../../properties/property_service.dart';
 
 import 'dart:async';
 
@@ -52,6 +53,7 @@ class _CreateMaintenanceScreenState
 
   Future<void> _runAiTriage(String text, {bool showToast = false}) async {
     if (text.isEmpty) return;
+    final propertyId = _selectedPropertyId;
 
     String cat = 'General';
     String prio = 'Medium';
@@ -106,11 +108,20 @@ class _CreateMaintenanceScreenState
       );
       if (res.statusCode == 200) {
         final List<dynamic> providers = jsonDecode(res.body);
+        final property = propertyId == null
+            ? null
+            : await ref
+                  .read(propertyServiceProvider)
+                  .request('GET', '/properties/$propertyId');
+        final ownerId = property?['ownerId'];
         final matches = providers
             .where(
-              (p) => p['category'].toString().toLowerCase().contains(
-                cat.toLowerCase(),
-              ),
+              (p) =>
+                  ownerId != null &&
+                  p['ownerId'] == ownerId &&
+                  p['category'].toString().toLowerCase().contains(
+                    cat.toLowerCase(),
+                  ),
             )
             .toList();
         if (matches.isNotEmpty) {
@@ -122,7 +133,7 @@ class _CreateMaintenanceScreenState
       debugPrint('Failed to fetch providers: $e');
     }
 
-    if (mounted) {
+    if (mounted && _selectedPropertyId == propertyId && !_isLoading) {
       setState(() {
         _category = cat;
         _priority = prio;
@@ -160,6 +171,25 @@ class _CreateMaintenanceScreenState
     final token = authState.value?.token;
 
     try {
+      final api = ref.read(propertyServiceProvider);
+      final property = await api.request(
+        'GET',
+        '/properties/$_selectedPropertyId',
+      );
+      if (_assignedProviderId != null) {
+        final providers =
+            await api.request('GET', '/service-providers') as List;
+        final valid = providers.any(
+          (p) =>
+              p['id'] == _assignedProviderId &&
+              p['ownerId'] != null &&
+              p['ownerId'] == property['ownerId'],
+        );
+        if (!valid) {
+          _assignedProviderId = null;
+          _assignedProviderName = null;
+        }
+      }
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}/maintenance-requests'),
         headers: {
@@ -188,7 +218,12 @@ class _CreateMaintenanceScreenState
           );
         }
       } else {
-        throw Exception('Failed to create request: ${response.body}');
+        final data = jsonDecode(response.body);
+        throw Exception(
+          data is Map
+              ? data['message'] ?? 'Failed to create request.'
+              : 'Failed to create request.',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -335,8 +370,11 @@ class _CreateMaintenanceScreenState
                           ),
                         );
                       }).toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedPropertyId = val),
+                      onChanged: (val) => setState(() {
+                        _selectedPropertyId = val;
+                        _assignedProviderId = null;
+                        _assignedProviderName = null;
+                      }),
                       validator: (val) =>
                           val == null ? 'Please select a property' : null,
                     ),
@@ -580,7 +618,10 @@ class _CreateMaintenanceScreenState
                         TextSpan(
                           text: 'ISSUE DESCRIPTION ',
                           children: [
-                            TextSpan(text: '*', style: TextStyle(color: Colors.red)),
+                            TextSpan(
+                              text: '*',
+                              style: TextStyle(color: Colors.red),
+                            ),
                           ],
                         ),
                         style: TextStyle(
