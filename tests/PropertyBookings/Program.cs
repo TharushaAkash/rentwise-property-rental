@@ -32,7 +32,11 @@ setup.AddRange(owner, tenant, stranger, listing); await setup.SaveChangesAsync()
 var checks=0;
 void Check(bool result, string message) { if (!result) throw new Exception(message); checks++; }
 // Catalog projection excludes large verification reports while retaining listing visibility.
-listing.VerificationRecords.First().AgentReport = new string('x', 100_000);
+listing.VerificationRecords.First().AgentReport = JsonSerializer.Serialize(new {
+ recommendation = "Needs Review", reasoning = "Bill unreadable", propertyAddress = listing.Address,
+ documentUrl = "https://example.invalid/bill.png", billAddress = "Malabe",
+ internalTrace = new string('x', 100_000)
+});
 var hiddenListing = new Property { OwnerId=owner.Id, Title="Hidden", Status=PropertyStatus.PendingVerification };
 setup.Add(hiddenListing);
 await setup.SaveChangesAsync();
@@ -45,7 +49,10 @@ await using (var catalogDb = NewDb()) {
  using var catalogDocument = JsonDocument.Parse(catalogJson);
  Check(catalogDocument.RootElement.GetArrayLength() == 1, "Public catalog must exclude unverified listings");
  Check(catalogDocument.RootElement[0].GetProperty("Id").GetGuid() == listing.Id, "Catalog must retain eligible listing");
- Check(!catalogJson.Contains("AgentReport") && catalogJson.Length < 10_000, "Catalog must not serialize large verification reports");
+ Check(!catalogJson.Contains("internalTrace") && catalogJson.Length < 10_000, "Catalog must not serialize large verification traces");
+ var report = catalogDocument.RootElement[0].GetProperty("verificationRecords")[0].GetProperty("AgentReport").GetString();
+ using var summary = JsonDocument.Parse(report!);
+ Check(summary.RootElement.GetProperty("billAddress").GetString() == "Malabe", "Catalog must retain verification evidence for admin review");
 }
 setup.Remove(hiddenListing);
 await setup.SaveChangesAsync();

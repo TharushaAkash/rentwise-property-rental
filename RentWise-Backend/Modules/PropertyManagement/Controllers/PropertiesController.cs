@@ -60,9 +60,36 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                     .Select(photo => new { photo.Id, photo.PhotoUrl, photo.IsPrimary }).ToList(),
                 documents = p.Documents.Select(document => new {
                     document.Id, document.DocumentType, document.DocumentUrl
+                }).ToList(),
+                verificationRecords = p.VerificationRecords.Select(record => new VerificationRecord {
+                    Id = record.Id, CreatedAt = record.CreatedAt, UpdatedAt = record.UpdatedAt,
+                    AdminId = record.AdminId, IsApproved = record.IsApproved,
+                    Comments = record.Comments, AgentReport = record.AgentReport
                 }).ToList()
             }).ToListAsync();
+            foreach (var property in properties)
+                foreach (var record in property.verificationRecords)
+                    record.AgentReport = CompactVerificationReport(record.AgentReport);
             return Ok(properties);
+        }
+
+        private static string CompactVerificationReport(string raw)
+        {
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(raw);
+                if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                    return string.Empty;
+                var summary = new Dictionary<string, string>();
+                foreach (var key in new[] { "recommendation", "reasoning", "propertyAddress", "documentUrl", "billAddress", "utilityProvider", "accountNo" })
+                    if (document.RootElement.TryGetProperty(key, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String)
+                        summary[key] = value.GetString() ?? string.Empty;
+                return System.Text.Json.JsonSerializer.Serialize(summary);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return raw.Length > 1000 ? raw[..1000] : raw;
+            }
         }
 
         [AllowAnonymous]

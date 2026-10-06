@@ -49,6 +49,17 @@ it('keeps a failed fee payment unpaid and shows the server error', async () => {
   expect(screen.queryByText(/successfully paid/)).toBeNull();
 });
 
+it('shows an inline error for incomplete checkout without sending a payment', async () => {
+  openListings();
+  const post = vi.spyOn(api, 'post');
+  fireEvent.click(await screen.findByRole('button', { name: 'Pay Fee (Rs. 2,500)' }));
+  const button = screen.getByRole('button', { name: 'Pay LKR 2,500 Now' });
+  expect(button.closest('form').noValidate).toBe(true);
+  fireEvent.click(button);
+  expect((await screen.findByRole('alert')).textContent).toContain('Enter the name on the card.');
+  expect(post).not.toHaveBeenCalled();
+});
+
 it('does not offer another payment when the listing already has a fee record', async () => {
   openListings({ ...property, verificationRecords: [{ comments: '[LISTING_FEE_PAID: LKR 2,500.00]' }] });
   await screen.findByText(property.title);

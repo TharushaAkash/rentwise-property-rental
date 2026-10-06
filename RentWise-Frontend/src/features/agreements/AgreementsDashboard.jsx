@@ -1788,11 +1788,13 @@ const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
         amount: 2500,
         paymentMethod: 'Demo Card',
         paymentReference: `FEE-${Date.now().toString().slice(-6)}`
-      });
+      }, { timeout: 20000 });
       onSuccess();
     } catch (err) {
       console.error('Failed to pay listing fee:', err);
-      setError(err.response?.data?.message || 'Could not confirm your listing fee payment. Refresh the listing status before trying again.');
+      setError(err.response?.data?.message || (err.code === 'ECONNABORTED'
+        ? 'Payment confirmation is taking too long. Refresh the listing status before trying again.'
+        : 'Could not confirm your listing fee payment. Refresh the listing status before trying again.'));
     } finally {
       setIsProcessing(false);
     }
@@ -1800,7 +1802,7 @@ const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Pay Listing Fee — ${property.title}`}>
-      <form onSubmit={handlePay} className="space-y-4 text-xs sm:text-sm">
+      <form noValidate onSubmit={handlePay} className="space-y-4 text-xs sm:text-sm">
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
         <div className="bg-gradient-to-br from-amber-700 to-amber-900 rounded-2xl p-5 text-white shadow-md">
           <span className="text-xs uppercase tracking-wider font-semibold text-amber-200">
