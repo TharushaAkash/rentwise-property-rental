@@ -260,7 +260,7 @@ class _AgreementDetailScreenState extends ConsumerState<AgreementDetailScreen>
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                           maxLines: 2,
                         ),
@@ -348,7 +348,7 @@ class _AgreementDetailScreenState extends ConsumerState<AgreementDetailScreen>
                           'Payment Receipts & History',
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -417,9 +417,9 @@ class _AgreementDetailScreenState extends ConsumerState<AgreementDetailScreen>
                       label: const Text('Make Payment'),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(52),
-                        backgroundColor: const Color(0xFFD97706),
+                        backgroundColor: const Color(0xFF916622),
                         textStyle: const TextStyle(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
                         shape: RoundedRectangleBorder(
@@ -432,24 +432,24 @@ class _AgreementDetailScreenState extends ConsumerState<AgreementDetailScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
+                        color: AppColors.softTeal,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                        border: Border.all(color: AppColors.line),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.verified_rounded,
-                            color: Color(0xFF16a34a),
+                            color: AppColors.teal,
                             size: 24,
                           ),
                           SizedBox(width: 10),
                           Text(
                             'Paid & Active Lease ✓',
                             style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF14532D),
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.darkGreen,
                               fontSize: 16,
                             ),
                           ),
@@ -525,13 +525,7 @@ class _GradientBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF005C27), Color(0xFF008037)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      decoration: const BoxDecoration(color: AppColors.darkGreen),
       child: Center(
         child: Icon(
           Icons.home_work_rounded,
@@ -551,10 +545,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, label, icon) = switch (step) {
-      3 => (const Color(0xFF16a34a), 'Active Lease ✓', Icons.verified_rounded),
-      2 => (const Color(0xFFd97706), 'Payment Required', Icons.payment_rounded),
+      3 => (AppColors.teal, 'Active Lease ✓', Icons.verified_rounded),
+      2 => (const Color(0xFF916622), 'Payment Required', Icons.payment_rounded),
       _ => (
-        const Color(0xFF2563eb),
+        const Color(0xFF526A78),
         'Pending Review',
         Icons.pending_actions_rounded,
       ),
@@ -576,7 +570,7 @@ class _StatusBadge extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontSize: 11,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -605,7 +599,7 @@ class _ProgressCard extends StatelessWidget {
           const Text(
             'Lease Lifecycle Status',
             style: TextStyle(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               color: AppColors.ink,
               fontSize: 14,
             ),
@@ -653,7 +647,7 @@ class _StepDot extends StatelessWidget {
               label,
               style: TextStyle(
                 color: active ? Colors.white : AppColors.muted,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
             ),
@@ -792,7 +786,7 @@ class _FinStat extends StatelessWidget {
             value,
             style: const TextStyle(
               color: AppColors.teal,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
           ),
@@ -822,7 +816,7 @@ class _PartiesCard extends StatelessWidget {
           const Text(
             'Parties',
             style: TextStyle(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               color: AppColors.ink,
               fontSize: 14,
             ),
@@ -931,7 +925,7 @@ class _TermsCardState extends State<_TermsCard> {
                   Text(
                     'Terms & Conditions',
                     style: TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.ink,
                       fontSize: 14,
                     ),
@@ -996,16 +990,8 @@ class _AiAuditSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.indigo.withAlpha(60)),
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1E1B4B),
-            const Color(0xFF0F172A),
-            const Color(0xFF172554),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        border: Border.all(color: AppColors.surface),
+        color: AppColors.softTeal,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1019,7 +1005,7 @@ class _AiAuditSection extends StatelessWidget {
                   turns: sparkleController,
                   child: const Icon(
                     Icons.auto_awesome,
-                    color: Colors.amberAccent,
+                    color: AppColors.amber,
                     size: 22,
                   ),
                 ),
@@ -1031,14 +1017,14 @@ class _AiAuditSection extends StatelessWidget {
                       Text(
                         'Agreement & Pricing Agent',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
                       ),
                       Text(
                         'Agentic AI · Market Rent + Lease Summary',
-                        style: TextStyle(color: Colors.blue, fontSize: 11),
+                        style: TextStyle(color: AppColors.blue, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1049,14 +1035,14 @@ class _AiAuditSection extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withAlpha(60),
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.indigo.withAlpha(80)),
+                    border: Border.all(color: AppColors.teal.withAlpha(80)),
                   ),
                   child: const Text(
                     'AI Agent',
                     style: TextStyle(
-                      color: Colors.blue,
+                      color: AppColors.blue,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1077,7 +1063,7 @@ class _AiAuditSection extends StatelessWidget {
                   const Text(
                     'Analyse this agreement\'s market pricing and get an AI-generated plain-language summary of all lease terms.',
                     style: TextStyle(
-                      color: Colors.white60,
+                      color: AppColors.muted,
                       fontSize: 12,
                       height: 1.5,
                     ),
@@ -1089,7 +1075,7 @@ class _AiAuditSection extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.shade600,
+                        color: AppColors.teal,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Row(
@@ -1097,7 +1083,7 @@ class _AiAuditSection extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.auto_awesome,
-                            color: Colors.amberAccent,
+                            color: AppColors.onDark,
                             size: 18,
                           ),
                           SizedBox(width: 8),
@@ -1106,8 +1092,8 @@ class _AiAuditSection extends StatelessWidget {
                               'Audit Lease & Evaluate Market Pricing',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
+                                color: AppColors.onDark,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),
                             ),
@@ -1126,13 +1112,13 @@ class _AiAuditSection extends StatelessWidget {
               child: Center(
                 child: Column(
                   children: [
-                    CircularProgressIndicator(color: Colors.amberAccent),
+                    CircularProgressIndicator(color: AppColors.amber),
                     SizedBox(height: 14),
                     Text(
                       'Agentic AI is evaluating lease terms\nand market pricing benchmarks…',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.muted,
                         fontSize: 12,
                         height: 1.5,
                       ),
@@ -1152,7 +1138,7 @@ class _AiAuditSection extends StatelessWidget {
                     const Text(
                       'Local estimate - Live AI unavailable',
                       style: TextStyle(
-                        color: Colors.amberAccent,
+                        color: AppColors.amber,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1183,12 +1169,12 @@ class _AiResultBody extends StatelessWidget {
     final summary = result['plain_language_summary'];
     final disclaimer = result['non_binding_disclaimer']?.toString();
 
-    Color assessmentColor = const Color(0xFF16a34a);
+    Color assessmentColor = AppColors.teal;
     if (assessment != null) {
       final status = (assessment['market_status']?.toString() ?? '')
           .toLowerCase();
-      if (status.contains('above')) assessmentColor = Colors.orange;
-      if (status.contains('below')) assessmentColor = Colors.blue;
+      if (status.contains('above')) assessmentColor = AppColors.amber;
+      if (status.contains('below')) assessmentColor = AppColors.blue;
     }
 
     return Column(
@@ -1214,7 +1200,7 @@ class _AiResultBody extends StatelessWidget {
                       assessment['market_status']?.toString() ?? '',
                       style: TextStyle(
                         color: assessmentColor,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
@@ -1231,7 +1217,7 @@ class _AiResultBody extends StatelessWidget {
                         'Variance: ${assessment['variance_percentage'] ?? '0%'}',
                         style: TextStyle(
                           color: assessmentColor,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 11,
                         ),
                       ),
@@ -1255,7 +1241,7 @@ class _AiResultBody extends StatelessWidget {
                 Text(
                   assessment['pricing_reasoning']?.toString() ?? '',
                   style: TextStyle(
-                    color: assessmentColor.withAlpha(200),
+                    color: AppColors.ink,
                     fontSize: 12,
                     height: 1.5,
                   ),
@@ -1269,9 +1255,9 @@ class _AiResultBody extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(10),
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white24),
+              border: Border.all(color: AppColors.line),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1280,15 +1266,15 @@ class _AiResultBody extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.article_rounded,
-                      color: Colors.white60,
+                      color: AppColors.muted,
                       size: 16,
                     ),
                     SizedBox(width: 8),
                     Text(
                       'Plain-Language Lease Summary',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
@@ -1314,7 +1300,7 @@ class _AiResultBody extends StatelessWidget {
                                 )
                                 .join(' '),
                             style: const TextStyle(
-                              color: Colors.white60,
+                              color: AppColors.muted,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1323,7 +1309,7 @@ class _AiResultBody extends StatelessWidget {
                           Text(
                             e.value?.toString() ?? '',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontSize: 12,
                               height: 1.4,
                             ),
@@ -1336,7 +1322,7 @@ class _AiResultBody extends StatelessWidget {
                   Text(
                     summary.toString(),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 12,
                       height: 1.4,
                     ),
@@ -1351,13 +1337,13 @@ class _AiResultBody extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(8),
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               disclaimer,
               style: const TextStyle(
-                color: Colors.white38,
+                color: AppColors.muted,
                 fontSize: 10,
                 fontStyle: FontStyle.italic,
                 height: 1.5,
@@ -1389,7 +1375,7 @@ class _AiRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
+            style: const TextStyle(color: AppColors.muted, fontSize: 11),
           ),
           const SizedBox(width: 12),
           Flexible(
@@ -1397,7 +1383,7 @@ class _AiRow extends StatelessWidget {
               value,
               textAlign: TextAlign.end,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.ink,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
@@ -1434,20 +1420,20 @@ class _AgreeSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        border: Border.all(color: const Color(0xFFDFE7EA)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(Icons.draw_rounded, color: Color(0xFF2563eb), size: 20),
+              Icon(Icons.draw_rounded, color: Color(0xFF526A78), size: 20),
               SizedBox(width: 8),
               Flexible(
                 child: Text(
                   'Sign & Agree to Lease',
                   style: TextStyle(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.ink,
                     fontSize: 14,
                   ),
@@ -1522,12 +1508,12 @@ class _AgreeSection extends StatelessWidget {
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
-                backgroundColor: const Color(0xFF2563eb),
+                backgroundColor: const Color(0xFF526A78),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 textStyle: const TextStyle(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   fontSize: 14,
                 ),
               ),

@@ -4,21 +4,26 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../shared/utils/api_constants.dart';
+import '../../../shared/services/token_store.dart';
 import '../models/rental_model.dart';
 
 class RentalService {
   final http.Client _client;
-  RentalService({http.Client? client}) : _client = client ?? http.Client();
+  final String? accountEmail;
+  final String? token;
+  RentalService({http.Client? client, this.accountEmail, this.token})
+    : _client = client ?? http.Client();
 
-  static const _agenticBaseUrl = String.fromEnvironment(
-    'AGENTIC_BASE_URL',
-    defaultValue: 'https://rentwise-ai-service.onrender.com',
-  );
-
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+  String _cacheKey(String kind) {
+    final email = accountEmail?.trim().toLowerCase();
+    if (email == null || email.isEmpty) {
+      throw StateError('Sign in before accessing saved rentals.');
+    }
+    return 'rentwise_client_${kind}_${Uri.encodeComponent(email)}';
   }
+
+  Future<String?> _getToken() async =>
+      token ?? await TokenStore.instance.read();
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await _getToken();
@@ -28,13 +33,28 @@ class RentalService {
     };
   }
 
+  Future<Map<String, dynamic>> bankDetails(String agreementId) async {
+    final response = await _client
+        .get(
+          Uri.parse(
+            '${ApiConstants.baseUrl}/bank-details/agreements/$agreementId',
+          ),
+          headers: await _authHeaders(),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) {
+      throw Exception('Could not load owner bank details.');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   // ──────────────────────────────────────────────
   // Local SharedPreferences Storage Helpers
   // ──────────────────────────────────────────────
 
   Future<void> saveLocalAgreement(AgreementModel agreement) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('rentwise_client_agreements');
+    final raw = prefs.getString(_cacheKey('agreements'));
     List<dynamic> list = [];
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -49,12 +69,12 @@ class RentalService {
     } else {
       list.insert(0, agreement.toJson());
     }
-    await prefs.setString('rentwise_client_agreements', jsonEncode(list));
+    await prefs.setString(_cacheKey('agreements'), jsonEncode(list));
   }
 
   Future<void> saveLocalPayment(PaymentModel payment) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('rentwise_client_payments');
+    final raw = prefs.getString(_cacheKey('payments'));
     List<dynamic> list = [];
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -62,7 +82,7 @@ class RentalService {
       } catch (_) {}
     }
     list.insert(0, payment.toJson());
-    await prefs.setString('rentwise_client_payments', jsonEncode(list));
+    await prefs.setString(_cacheKey('payments'), jsonEncode(list));
   }
 
   // ──────────────────────────────────────────────
@@ -94,7 +114,7 @@ class RentalService {
 
     // 2. Load local saved agreements from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    final localRaw = prefs.getString('rentwise_client_agreements');
+    final localRaw = prefs.getString(_cacheKey('agreements'));
     final List<AgreementModel> localAgreements = [];
     if (localRaw != null && localRaw.isNotEmpty) {
       try {
@@ -236,7 +256,7 @@ class RentalService {
     }
 
     // 6. Load local payments from SharedPreferences
-    final localPayRaw = prefs.getString('rentwise_client_payments');
+    final localPayRaw = prefs.getString(_cacheKey('payments'));
     if (localPayRaw != null && localPayRaw.isNotEmpty) {
       try {
         final List pList = jsonDecode(localPayRaw);
@@ -270,7 +290,7 @@ class RentalService {
     // Cache merged result
     try {
       await prefs.setString(
-        'rentwise_client_agreements',
+        _cacheKey('agreements'),
         jsonEncode(resultList.map((a) => a.toJson()).toList()),
       );
     } catch (_) {}
@@ -316,11 +336,10 @@ class RentalService {
     }
     await saveLocalAgreement(saved);
     final prefs = await SharedPreferences.getInstance();
-    final list = jsonDecode(
-      prefs.getString('rentwise_client_agreements') ?? '[]',
-    ) as List;
+    final list =
+        jsonDecode(prefs.getString(_cacheKey('agreements')) ?? '[]') as List;
     list.removeWhere((item) => item is Map && item['id'] == agreement.id);
-    await prefs.setString('rentwise_client_agreements', jsonEncode(list));
+    await prefs.setString(_cacheKey('agreements'), jsonEncode(list));
     return saved;
   }
 
@@ -375,30 +394,48 @@ class RentalService {
     String method,
     String reference, {
     AgreementModel? localAgreement,
+    bool isMonthlyRent = false,
   }) async {
     final headers = await _authHeaders();
     final body = jsonEncode({
       'amount': amount,
+      'isSuccessful': true,
+      'paymentDate': DateTime.now().toUtc().toIso8601String(),
       'paymentMethod': method,
       'paymentReference': reference,
     });
     bool success = false;
+    Map<String, dynamic>? savedPayment;
 
     try {
       final res = await _client
           .post(
-            Uri.parse('${ApiConstants.baseUrl}/agreements/$agreementId/pay'),
+            Uri.parse(
+              '${ApiConstants.baseUrl}/agreements/$agreementId/${isMonthlyRent ? 'payments' : 'pay'}',
+            ),
             headers: headers,
             body: body,
           )
           .timeout(const Duration(seconds: 15));
       success = res.statusCode == 200 || res.statusCode == 201;
-    } catch (_) {}
+      if (success) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        savedPayment = isMonthlyRent
+            ? data
+            : data['payment'] as Map<String, dynamic>?;
+        success = savedPayment?['id']?.toString().isNotEmpty == true;
+      }
+    } catch (_) {
+      success = false;
+    }
 
     if (!success) return false;
 
     final payment = PaymentModel(
-      id: 'pay_${DateTime.now().millisecondsSinceEpoch}',
+      id: savedPayment?['id']?.toString() ?? reference,
+      purpose:
+          savedPayment?['purpose']?.toString() ??
+          (isMonthlyRent ? 'MonthlyRent' : 'SecurityDeposit'),
       agreementId: agreementId,
       amount: amount,
       paymentMethod: method,
@@ -435,8 +472,8 @@ class RentalService {
   // Agentic AI – Agreement & Pricing Agent
   // ──────────────────────────────────────────────
 
-  /// Calls the hosted Agentic AI service to audit an agreement.
-  /// Returns parsed JSON map on success, or null if all endpoints fail.
+  /// Calls ASP.NET Core, which invokes the internal AI service.
+  /// Returns parsed JSON map on success, or null if the API cannot complete the audit.
   Future<Map<String, dynamic>?> auditAgreementWithAi({
     required String propertyId,
     required String agreementId,
@@ -458,15 +495,16 @@ class RentalService {
       'document': document,
     });
 
-    final client = http.Client();
     try {
-      final res = await client
+      final res = await _client
           .post(
-            Uri.parse('$_agenticBaseUrl/workflow/draft-agreement'),
-            headers: {'Content-Type': 'application/json'},
+            Uri.parse(
+              '${ApiConstants.baseUrl}/agentic/workflow/draft-agreement',
+            ),
+            headers: await _authHeaders(),
             body: payload,
           )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 120));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data is Map) {
@@ -482,8 +520,6 @@ class RentalService {
       }
     } catch (_) {
       // The caller offers a clearly labelled local estimate and retry.
-    } finally {
-      client.close();
     }
     return null;
   }

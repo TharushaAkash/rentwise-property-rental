@@ -79,6 +79,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register Module Services
+builder.Services.AddScoped<RentWise.API.Modules.AgenticAI.Services.IRentalWorkflowAgentClient, RentWise.API.Modules.AgenticAI.Services.RentalWorkflowAgentClient>();
+builder.Services.AddScoped<RentWise.API.Modules.AgenticAI.Services.RentalWorkflowService>();
 builder.Services.AddScoped<IPropertyService, PropertyService>();
 builder.Services.AddScoped<IPropertyPhotoService, PropertyPhotoService>();
 builder.Services.AddScoped<IPropertyDocumentService, PropertyDocumentService>();
@@ -107,6 +109,7 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddScoped<IRentalAgreementService, RentalAgreementService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IBookingConfirmationEmailSender, BookingConfirmationEmailSender>();
 builder.Services.AddScoped<IRentReminderService, RentReminderService>();
 
 builder.Services.AddScoped<IMaintenanceRequestService, MaintenanceRequestService>();
@@ -340,7 +343,6 @@ app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 app.UseRateLimiter();
-app.UseMiddleware<RentWise_Backend.Common.Middleware.ApiKeyMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

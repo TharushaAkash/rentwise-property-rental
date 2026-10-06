@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RentWise.API.Data;
+using RentWise.API.Modules.Agreements.Entities;
 using RentWise.API.Modules.PropertyManagement.Entities;
 using RentWise.API.Modules.PropertyManagement.Interfaces;
 using RentWise.API.Modules.PropertyManagement.DTOs;
@@ -35,7 +36,75 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         public async Task<IActionResult> GetProperties()
         {
             var properties = await _propertyService.GetAllPropertiesAsync();
+            if (!(User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin")))
+                properties = properties.Where(p => p.Status == PropertyStatus.Active &&
+                    p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
+            if (!CanManageListings(Guid.Empty))
+            {
+                var reserved = await _context.PropertyApplications
+                    .Where(a => a.Status == "Submitted" || a.Status == "Accepted")
+                    .Select(a => a.PropertyId).ToListAsync();
+                var leased = await _context.RentalAgreements
+                    .Where(a => a.Status != AgreementStatus.Ended && a.EndDate > DateTime.UtcNow)
+                    .Select(a => a.PropertyId).ToListAsync();
+                properties = properties.Where(p => !reserved.Contains(p.Id) && !leased.Contains(p.Id));
+            }
             return Ok(properties);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("unavailable")]
+        public async Task<IActionResult> GetUnavailablePropertyIds()
+        {
+            var reserved = _context.PropertyApplications
+                .Where(a => a.Status == "Submitted" || a.Status == "Accepted")
+                .Select(a => a.PropertyId);
+            var leased = _context.RentalAgreements
+                .Where(a => a.Status != AgreementStatus.Ended && a.EndDate > DateTime.UtcNow)
+                .Select(a => a.PropertyId);
+            return Ok(await reserved.Union(leased).Distinct().ToListAsync());
+        }
+
+        [AllowAnonymous]
+        [HttpGet("browse")]
+        public async Task<IActionResult> Browse([FromQuery] string? location, [FromQuery] decimal? minBudget,
+            [FromQuery] decimal? maxBudget, [FromQuery] int? bedrooms, [FromQuery] bool minimumBedrooms = false,
+            [FromQuery] string? propertyType = null, [FromQuery] string? cursor = null, [FromQuery] int pageSize = 12)
+        {
+            if (pageSize < 1 || pageSize > 48 || minBudget < 0 || maxBudget < 0 || bedrooms < 0)
+                return BadRequest(new { message = "Invalid search filters." });
+            var query = _context.Properties.AsNoTracking().Where(p => p.Status == PropertyStatus.Active && p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
+            query = query.Where(p => !_context.PropertyApplications.Any(a => a.PropertyId == p.Id &&
+                (a.Status == "Submitted" || a.Status == "Accepted")) &&
+                !_context.RentalAgreements.Any(a => a.PropertyId == p.Id && a.Status != AgreementStatus.Ended && a.EndDate > DateTime.UtcNow));
+            if (!string.IsNullOrWhiteSpace(location))
+            {
+                var term = location.Trim().ToLower();
+                query = query.Where(p => p.Address.ToLower().Contains(term) || p.Title.ToLower().Contains(term)
+                    || p.Description.ToLower().Contains(term) || p.Facilities.ToLower().Contains(term));
+            }
+            if (minBudget.HasValue) query = query.Where(p => p.MonthlyRent >= minBudget.Value);
+            if (maxBudget.HasValue) query = query.Where(p => p.MonthlyRent <= maxBudget.Value);
+            if (bedrooms.HasValue) query = minimumBedrooms
+                ? query.Where(p => p.Bedrooms >= bedrooms.Value) : query.Where(p => p.Bedrooms == bedrooms.Value);
+            if (!string.IsNullOrWhiteSpace(propertyType))
+                query = query.Where(p => p.PropertyType.ToLower() == propertyType.Trim().ToLower());
+            if (!string.IsNullOrWhiteSpace(cursor))
+            {
+                if (!Guid.TryParse(cursor, out var after)) return BadRequest(new { message = "Invalid page cursor." });
+                query = query.Where(p => p.Id.CompareTo(after) > 0);
+            }
+            // A unique, stable order keeps pages consistent when listings are removed.
+            var items = await query.OrderBy(p => p.Id).Take(pageSize + 1).Select(p => new {
+                p.Id, p.OwnerId, p.Title, p.Description, p.Address, p.MonthlyRent, p.Bedrooms,
+                p.Bathrooms, p.Sqft, p.PropertyType, p.Facilities, p.FeatureTags, p.Status,
+                documents = p.Documents.Select(document => new { document.DocumentType, document.DocumentUrl }).ToList(),
+                photos = p.Photos.OrderByDescending(photo => photo.IsPrimary).ThenBy(photo => photo.Id)
+                    .Select(photo => new { photo.PhotoUrl, photo.IsPrimary }).ToList()
+            }).ToListAsync();
+            var hasMore = items.Count > pageSize;
+            if (hasMore) items.RemoveAt(pageSize);
+            return Ok(new { items, hasMore, nextCursor = hasMore ? items[^1].Id.ToString() : null });
         }
 
         [AllowAnonymous]
@@ -43,6 +112,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         public async Task<IActionResult> GetPropertiesByOwner(Guid ownerId)
         {
             var properties = await _propertyService.GetPropertiesByOwnerIdAsync(ownerId);
+            if (!CanManageListings(ownerId))
+                properties = properties.Where(p => p.Status == PropertyStatus.Active && p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
             return Ok(properties);
         }
 
@@ -72,12 +143,16 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             if (Guid.TryParse(id, out var guidId))
             {
                 var property = await _propertyService.GetPropertyByIdAsync(guidId);
-                if (property != null) return Ok(property);
+                if (property != null) {
+                    if (!CanManageListings(property.OwnerId) && (property.Status != PropertyStatus.Active || !await HasListingFee(property.Id))) return NotFound();
+                    return Ok(property);
+                }
             }
 
             var allProps = await _propertyService.GetAllPropertiesAsync();
             var matched = allProps.FirstOrDefault(p => p.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
-            if (matched != null) return Ok(matched);
+            if (matched != null && (CanManageListings(matched.OwnerId) ||
+                (matched.Status == PropertyStatus.Active && await HasListingFee(matched.Id)))) return Ok(matched);
 
             return NotFound(new { message = $"Property with ID '{id}' not found." });
         }
@@ -86,6 +161,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [Authorize(Roles = "Owner,Admin,PropertyOwner,Administrator,SystemAdmin")]
         public async Task<IActionResult> CreateProperty([FromBody] CreatePropertyDto dto)
         {
+            if (dto.PhotoUrls == null || dto.PhotoUrls.Any(url => !IsPhotoUrl(url)))
+                return BadRequest(new { message = "Photo links must be valid HTTP or HTTPS URLs." });
             var property = new Property
             {
                 OwnerId = dto.OwnerId,
@@ -103,6 +180,9 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                 Status = PropertyStatus.PendingVerification
             };
 
+            foreach (var url in dto.PhotoUrls.Select(url => url.Trim()).Distinct())
+                property.Photos.Add(new PropertyPhoto { PhotoUrl = url, IsPrimary = property.Photos.Count == 0 });
+            property.PhotoCount = property.Photos.Count;
             var createdProperty = await _propertyService.CreatePropertyAsync(property);
             
             // Explicitly load the Owner so it's included in the response
@@ -115,9 +195,13 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [Authorize(Roles = "Owner,Admin,PropertyOwner,Administrator,SystemAdmin")]
         public async Task<IActionResult> UpdateProperty(Guid id, [FromBody] UpdatePropertyDto dto)
         {
+            if (dto.PhotoUrls == null || dto.PhotoUrls.Any(url => !IsPhotoUrl(url)))
+                return BadRequest(new { message = "Photo links must be valid HTTP or HTTPS URLs." });
             var existingProperty = await _propertyService.GetPropertyByIdAsync(id);
             if (existingProperty == null) return NotFound();
 
+            if (dto.Status == PropertyStatus.Active && !await HasListingFee(id))
+                return Conflict(new { message = "The listing fee must be paid before publication." });
             bool isAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin");
 
             // Map fields from DTO
@@ -140,9 +224,26 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             
             existingProperty.UpdatedAt = DateTime.UtcNow;
 
+            foreach (var url in dto.PhotoUrls.Select(url => url.Trim()).Distinct())
+            {
+                if (existingProperty.Photos.Any(photo => photo.PhotoUrl == url)) continue;
+                var photo = new PropertyPhoto { PropertyId = id, PhotoUrl = url, IsPrimary = existingProperty.Photos.Count == 0 };
+                existingProperty.Photos.Add(photo);
+                _context.PropertyPhotos.Add(photo);
+            }
+            existingProperty.PhotoCount = existingProperty.Photos.Count;
             await _propertyService.UpdatePropertyAsync(existingProperty);
             return NoContent();
         }
+
+        private bool CanManageListings(Guid ownerId) => User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin")
+            || (Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var actor) && actor == ownerId);
+
+        private Task<bool> HasListingFee(Guid id) => _context.VerificationRecords.AnyAsync(v =>
+            v.PropertyId == id && v.Comments.StartsWith("[LISTING_FEE_PAID:"));
+
+        private static bool IsPhotoUrl(string? url) => Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
         [HttpPost("{id}/proof")]
         [Authorize(Roles = "Owner,PropertyOwner,Admin,Administrator,SystemAdmin")]
@@ -189,11 +290,21 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var recommendation = "Needs Review";
             var reasoning = "Proof saved. Automated verification could not be completed; administrator review is required.";
             var verificationCompleted = false;
+            var billAddress = "";
+            var utilityProvider = "";
+            var accountNo = "";
             // Trigger Agentic Service
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
-                var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
+                var workflowKey = Environment.GetEnvironmentVariable("AGENT_WORKFLOW_KEY") ?? _configuration["AgentWorkflowKey"];
+                    if (string.IsNullOrWhiteSpace(workflowKey)) throw new InvalidOperationException("AI service is not configured.");
+                    httpClient.DefaultRequestHeaders.Add("X-Workflow-Key", workflowKey);
+                    // Forward the authenticated caller; an API key must never impersonate an owner.
+                    var authorization = Request.Headers.Authorization.ToString();
+                    if (string.IsNullOrWhiteSpace(authorization)) throw new InvalidOperationException("Authenticated caller token is required.");
+                    httpClient.DefaultRequestHeaders.Add("Authorization", authorization);
+                    var agentUrl = Environment.GetEnvironmentVariable("AGENTIC_SERVICE_URL") ?? _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
                 var aiUrl = $"{agentUrl}/workflow/verify-property";
                 var payload = new { property_id = id.ToString(), document_url = doc.DocumentUrl };
                 var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
@@ -216,7 +327,10 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                         {
                             recommendation = proposedRecommendation;
                             reasoning = reasonElement.GetString()!;
-                            verificationCompleted = true;
+                            billAddress = reportElement.TryGetProperty("billAddress", out var billElement) && billElement.ValueKind == System.Text.Json.JsonValueKind.String ? billElement.GetString() ?? "" : "";
+                            utilityProvider = reportElement.TryGetProperty("utilityProvider", out var providerElement) && providerElement.ValueKind == System.Text.Json.JsonValueKind.String ? providerElement.GetString() ?? "" : "";
+                            accountNo = reportElement.TryGetProperty("accountNo", out var accountElement) && accountElement.ValueKind == System.Text.Json.JsonValueKind.String ? accountElement.GetString() ?? "" : "";
+                            verificationCompleted = recommendation != "Needs Review";
                         }
                     }
                 }
@@ -233,10 +347,10 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             // Recommendations needing review remain unpublished until an administrator decides.
             // Keep a pre-existing suspension when the agent cannot approve the new proof.
             var requiresAdminReview = reviewRequest != null || await _context.DocumentReviewRequests.AnyAsync(r => r.PropertyId == id && r.ResubmittedAt == null);
-            property.Status = recommendation == "Approve-ready" && !requiresAdminReview ? PropertyStatus.Active
+            property.Status = recommendation == "Approve-ready" && !requiresAdminReview && await HasListingFee(id) ? PropertyStatus.Active
                 : property.Status == PropertyStatus.Suspended ? PropertyStatus.Suspended : PropertyStatus.PendingVerification;
             property.UpdatedAt = DateTime.UtcNow;
-            var report = new { recommendation, reasoning, propertyAddress = property.Address, documentUrl = doc.DocumentUrl };
+            var report = new { recommendation, reasoning, propertyAddress = property.Address, documentUrl = doc.DocumentUrl, billAddress, utilityProvider, accountNo };
             _context.VerificationRecords.Add(new VerificationRecord
             {
                 PropertyId = id,
@@ -260,6 +374,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var property = await _context.Properties.FindAsync(id);
             if (property == null) return NotFound(new { message = "Property not found" });
 
+            if (!CanManageListings(property.OwnerId)) return Forbid();
             decimal feeAmount = dto?.Amount ?? 0;
             if (feeAmount < 2500)
             {
@@ -270,18 +385,52 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                 ? $"FEE-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}" 
                 : dto.PaymentReference;
 
+            // Payment after successful verification must complete the same activation flow.
+            var activate = false;
+            if (property.Status == PropertyStatus.PendingVerification &&
+                !await _context.DocumentReviewRequests.AnyAsync(r => r.PropertyId == id))
+            {
+                var decision = await _context.VerificationRecords.Where(v => v.PropertyId == id &&
+                    (v.Comments.StartsWith("[AI_PROPERTY_VERIFICATION]") || v.AdminId != null || v.Comments.StartsWith("[REJECTED:")))
+                    .OrderByDescending(v => v.CreatedAt).FirstOrDefaultAsync();
+                if (decision?.Comments.StartsWith("[AI_PROPERTY_VERIFICATION]") == true)
+                {
+                    try
+                    {
+                        using var parsed = System.Text.Json.JsonDocument.Parse(decision.AgentReport);
+                        var report = parsed.RootElement;
+                        if (report.TryGetProperty("recommendation", out var recommendation) && recommendation.GetString() == "Approve-ready" &&
+                            report.TryGetProperty("propertyAddress", out var address) && address.GetString() == property.Address &&
+                            report.TryGetProperty("documentUrl", out var documentUrl) && documentUrl.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            var proofUrl = documentUrl.GetString();
+                            activate = await _context.PropertyDocuments.AnyAsync(d => d.PropertyId == id && d.DocumentUrl == proofUrl) &&
+                                !await _context.PropertyDocuments.AnyAsync(d => d.PropertyId == id && d.CreatedAt > decision.CreatedAt &&
+                                    (d.DocumentType == "OwnershipProof" || d.DocumentType == "UtilityBill" || d.DocumentType == "Deed"));
+                        }
+                    }
+                    catch (System.Text.Json.JsonException) { }
+                    catch (InvalidOperationException) { }
+                }
+            }
+            if (activate)
+            {
+                property.Status = PropertyStatus.Active;
+                property.UpdatedAt = DateTime.UtcNow;
+            }
+
             var record = new VerificationRecord
             {
                 PropertyId = id,
-                IsApproved = false, // Stays pending until Admin reviews and approves
+                IsApproved = false, // A fee receipt does not replace the verification decision
                 Comments = $"[LISTING_FEE_PAID: LKR {feeAmount:N2} | Ref: {paymentRef} | Method: {dto.PaymentMethod ?? "Card"} | Date: {DateTime.UtcNow:o}]",
-                AgentReport = $"Listing verification fee paid (LKR {feeAmount:N2}). Ready for Admin Approval."
+                AgentReport = $"Listing verification fee paid (LKR {feeAmount:N2})."
             };
 
             _context.VerificationRecords.Add(record);
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Listing fee of Rs. 2,500 successfully paid. Your property is now under Admin Review.", paymentReference = paymentRef });
+            return Ok(new { success = true, message = activate ? "Listing fee recorded. Verification passed and your property is now Active." : "Listing fee recorded. Your property is awaiting verification or administrator review.", paymentReference = paymentRef, status = property.Status.ToString() });
         }
 
         [HttpGet("{id}/verification-status")]
@@ -320,6 +469,7 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
             var property = await _context.Properties.FindAsync(id);
             if (property == null) return NotFound(new { message = "Property not found" });
 
+            if (!await HasListingFee(id)) return Conflict(new { message = "The owner must pay the listing fee before this property can be published." });
             property.Status = PropertyStatus.Active;
             property.UpdatedAt = DateTime.UtcNow;
 
@@ -387,6 +537,8 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [Authorize(Roles = "Admin,Administrator,SystemAdmin")]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdatePropertyStatusDto dto)
         {
+            if (dto.Status == PropertyStatus.Active && !await HasListingFee(id))
+                return Conflict(new { message = "The listing fee must be paid before publication." });
             var result = await _propertyService.UpdatePropertyStatusAsync(id, dto.Status);
             if (!result) return NotFound();
 

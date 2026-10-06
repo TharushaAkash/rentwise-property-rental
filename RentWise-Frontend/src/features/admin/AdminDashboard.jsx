@@ -1,3 +1,5 @@
+import { accountStorage } from '../../utils/accountStorage';
+import { useAdminData } from './useAdminData';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -42,109 +44,15 @@ export const AdminDashboard = () => {
   // ========================================================
   // 1. DATA STATES
   // ========================================================
-  const [properties, setProperties] = useState([]);
-  const [isLoadingProps, setIsLoadingProps] = useState(true);
   const [inspectingProperty, setInspectingProperty] = useState(null);
-
-  const [usersList, setUsersList] = useState([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-
-  const [agreements, setAgreements] = useState([]);
-  const [applications, setApplications] = useState([]);
-  const [isLoadingAgreements, setIsLoadingAgreements] = useState(true);
-
-  // ========================================================
-  // 2. FETCH ALL DATA
-  // ========================================================
-  const fetchAllProperties = async () => {
-    try {
-      setIsLoadingProps(true);
-      const res = await api.get('/properties');
-      let list = Array.isArray(res.data) ? res.data : [];
-      setProperties(list);
-    } catch (err) {
-      console.error('Failed to fetch properties:', err);
-      setProperties([]);
-    } finally {
-      setIsLoadingProps(false);
-    }
-  };
-
-  const fetchAllUsers = async () => {
-    try {
-      setIsLoadingUsers(true);
-      const res = await api.get('/auth/users');
-      const list = Array.isArray(res.data) ? res.data : [];
-      setUsersList(list);
-      try {
-        localStorage.setItem('rentwise_client_users', JSON.stringify(list));
-      } catch {}
-    } catch (err) {
-      console.warn('API /auth/users not available, falling back to local list:', err);
-      // Fallback: build list from current user and stored records
-      const cached = JSON.parse(localStorage.getItem('rentwise_client_users') || '[]');
-      if (user && !cached.some(u => u.email === user.email)) {
-        cached.unshift({
-          id: user.id,
-          name: user.fullName || user.name || 'System Administrator',
-          email: user.email,
-          role: user.role || 'Administrator',
-          phoneNumber: user.phoneNumber || '0771234567',
-          nicNumber: user.nicNumber || '198512345678',
-          isBlocked: false,
-          createdAt: new Date().toISOString()
-        });
-      }
-      setUsersList(cached);
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  };
-
-  const fetchAgreementsAndApplications = async () => {
-    try {
-      setIsLoadingAgreements(true);
-      const [agrRes, appRes] = await Promise.all([
-        api.get('/agreements').catch(() => ({ data: [] })),
-        api.get('/property-applications').catch(() => ({ data: [] }))
-      ]);
-
-      let apiAgreements = Array.isArray(agrRes.data) ? agrRes.data : [];
-      let apiApps = Array.isArray(appRes.data) ? appRes.data : [];
-
-      // Merge cached agreements
-      let localAgreements = [];
-      try {
-        localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
-      } catch {}
-
-      const agrMap = new Map();
-      localAgreements.forEach(a => a?.id && agrMap.set(a.id, a));
-      apiAgreements.forEach(a => a?.id && agrMap.set(a.id, a));
-      setAgreements(Array.from(agrMap.values()));
-
-      // Merge cached bookings
-      let localBookings = [];
-      try {
-        localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
-      } catch {}
-
-      const appMap = new Map();
-      localBookings.forEach(b => b?.id && appMap.set(b.id, b));
-      apiApps.forEach(b => b?.id && appMap.set(b.id, b));
-      setApplications(Array.from(appMap.values()));
-    } catch (err) {
-      console.error('Failed to load agreements/applications:', err);
-    } finally {
-      setIsLoadingAgreements(false);
-    }
-  };
-
+  const {
+    properties, setProperties, usersList, setUsersList, agreements, applications, setApplications,
+    isLoadingProps, isLoadingUsers, isLoadingAgreements, fetchAllProperties, fetchAllUsers,
+    fetchAgreementsAndApplications, error: loadError,
+  } = useAdminData();
   useEffect(() => {
-    fetchAllProperties();
-    fetchAllUsers();
-    fetchAgreementsAndApplications();
-  }, []);
+    if (loadError) setFeedback({ text: `Could not load dashboard data. ${loadError}`, type: 'error' });
+  }, [loadError]);
 
   // ========================================================
   // 3. PROPERTY MANAGEMENT ACTIONS
@@ -171,7 +79,13 @@ export const AdminDashboard = () => {
       setInspectingProperty(prev => prev && String(prev.id || prev.Id).toLowerCase() === cleanId.toLowerCase() ? response.data : prev);
     } catch (err) {
       console.error('Failed to approve or refresh property:', err);
-      setFeedback({ text: 'Could not confirm property approval. Refresh the listing and try again.', type: 'error' });
+      const message = err.response?.data?.message;
+      setFeedback({
+        text: typeof message === 'string' && message.trim()
+          ? message
+          : 'Could not confirm property approval. Refresh the listing and try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -277,6 +191,7 @@ export const AdminDashboard = () => {
           propertyType: data.propertyType || 'House',
           featureTags: Array.isArray(data.featureTags) ? data.featureTags : [],
           photoCount: photoList.length || 1,
+          photoUrls: data.photoUrls || [],
           status: data.status === 'Active' ? 1 : data.status === 'Suspended' ? 2 : 0
         };
 
@@ -322,6 +237,7 @@ export const AdminDashboard = () => {
           propertyType: data.propertyType || 'House',
           featureTags: Array.isArray(data.featureTags) ? data.featureTags : [],
           photoCount: photoList.length || 1,
+          photoUrls: data.photoUrls || [],
           status: data.status === 'Active' ? 1 : 0
         };
 
@@ -534,19 +450,34 @@ export const AdminDashboard = () => {
   const [agreementFilter, setAgreementFilter] = useState('ALL');
   const [confirmingAppId, setConfirmingAppId] = useState(null);
 
+  const [deletingRequestId, setDeletingRequestId] = useState(null);
+  const handleDeleteAgreementRequest = async (app) => {
+    if (!window.confirm('Delete this agreement request? This cannot be undone.')) return;
+    setDeletingRequestId(app.id);
+    try {
+      await api.delete(`/property-applications/${app.id}`);
+      setApplications(current => current.filter(item => item.id !== app.id));
+      try {
+        const cached = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(cached.filter(item => item.id !== app.id)));
+      } catch { /* The server deletion already succeeded. */ }
+      setFeedback({ text: 'Agreement request deleted.', type: 'success' });
+    } catch (error) {
+      setFeedback({ text: error.response?.data?.message || 'Could not delete this request.', type: 'error' });
+    } finally { setDeletingRequestId(null); }
+  };
+
   const handleAdminConfirmAgreement = async (appId) => {
     try {
       setConfirmingAppId(appId);
-      try {
-        await api.post(`/property-applications/${appId}/confirm`);
-      } catch {}
+      await api.post(`/property-applications/${appId}/confirm`);
 
       setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'Accepted' } : a));
 
       // Sync local storage
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(stored.map(b => b.id === appId ? { ...b, status: 'Accepted' } : b)));
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(stored.map(b => b.id === appId ? { ...b, status: 'Accepted' } : b)));
       } catch {}
 
       setFeedback({ text: 'Agreement request approved & active lease registered!', type: 'success' });
@@ -1149,7 +1080,7 @@ export const AdminDashboard = () => {
               />
             </div>
 
-            <div className="inline-flex p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
+            <div className="inline-flex flex-wrap max-w-full p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setPropStatusFilter('ALL')}
@@ -1517,7 +1448,7 @@ export const AdminDashboard = () => {
                           <span className={`text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
                             ver.isManuallyVerified
                               ? 'bg-blue-100 text-blue-800 border-blue-300'
-                              : ver.isVerified 
+                              : (ver.isVerified || ver.automatedChecksPassed)
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
                               : 'bg-rose-100 text-rose-800 border-rose-300'
                           }`}>
@@ -1526,7 +1457,7 @@ export const AdminDashboard = () => {
                                 <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                                 <span>✓ Admin Approved</span>
                               </>
-                            ) : ver.isVerified ? (
+                            ) : (ver.isVerified || ver.automatedChecksPassed) ? (
                               <>
                                 <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>{ver.statusLabel}</span>
@@ -1555,14 +1486,14 @@ export const AdminDashboard = () => {
                                 <strong className="text-gray-900">Entered Property Address:</strong> {ver.propertyAddress || 'N/A'}
                               </p>
                               <p className="text-[11px] text-gray-600">
-                                <strong className="text-gray-900">Detected Bill Address:</strong> <span className={ver.isVerified ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>{ver.billAddress || 'Not provided in the verification report'}</span>
+                                <strong className="text-gray-900">Detected Bill Address:</strong> <span className={(ver.isVerified || ver.automatedChecksPassed) ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>{ver.billAddress || 'Not provided in the verification report'}</span>
                               </p>
                               <p className="text-[10.5px] text-gray-500 font-mono">
                                 Provider: <strong>{ver.utilityProvider || 'Not provided'}</strong> • Acc: <strong>{ver.accountNo || 'Not provided'}</strong>
                               </p>
                             </div>
                             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-                              <span className={`text-[11px] font-semibold ${ver.isVerified ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              <span className={`text-[11px] font-semibold ${(ver.isVerified || ver.automatedChecksPassed) ? 'text-emerald-700' : 'text-rose-700'}`}>
                                 {ver.matchDetails}
                               </span>
                               <div className="flex items-center gap-2">
@@ -1752,7 +1683,7 @@ export const AdminDashboard = () => {
               />
             </div>
 
-            <div className="inline-flex p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
+            <div className="inline-flex flex-wrap max-w-full p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setUserRoleFilter('ALL')}
@@ -2084,7 +2015,7 @@ export const AdminDashboard = () => {
               </p>
             </div>
 
-            <div className="inline-flex p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
+            <div className="inline-flex flex-wrap max-w-full p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setAgreementFilter('ALL')}
@@ -2192,6 +2123,9 @@ export const AdminDashboard = () => {
                     </div>
 
                     <div className="flex items-center lg:flex-col justify-end gap-2 border-t lg:border-t-0 pt-3 lg:pt-0 shrink-0">
+                      {app.status !== 'Accepted' && <Button size="sm" variant="outline"
+                        isLoading={deletingRequestId === app.id} onClick={() => handleDeleteAgreementRequest(app)}
+                        className="text-red-600 border-red-200">Delete request</Button>}
                       {isPending ? (
                         <Button
                           size="sm"

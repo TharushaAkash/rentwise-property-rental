@@ -32,8 +32,16 @@ namespace RentWise.API.Modules.Agreements.Controllers
         public async Task<IActionResult> CreatePayment(Guid agreementId, [FromBody] Payment payment)
         {
             payment.RentalAgreementId = agreementId;
-            var created = await _service.CreatePaymentAsync(payment);
-            return CreatedAtAction(nameof(GetPayment), new { agreementId = agreementId, id = created.Id }, created);
+            payment.Purpose = "MonthlyRent";
+            try
+            {
+                var created = await _service.CreatePaymentAsync(payment);
+                return CreatedAtAction(nameof(GetPayment), new { agreementId = agreementId, id = created.Id }, created);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]

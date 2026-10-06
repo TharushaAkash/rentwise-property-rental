@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using RentWise.API.Data;
 using RentWise.API.Modules.Agreements.Entities;
 using RentWise.API.Modules.Agreements.Interfaces;
+using RentWise.API.Modules.Agreements.Services;
 
 namespace RentWise.API.Modules.Agreements.Controllers
 {
@@ -19,23 +20,37 @@ namespace RentWise.API.Modules.Agreements.Controllers
     {
         private readonly IRentalAgreementService _agreementService;
         private readonly ApplicationDbContext _context;
+        private readonly IBookingConfirmationEmailSender _bookingEmail;
+        private readonly ILogger<RentalAgreementsController> _logger;
 
         public RentalAgreementsController(
             IRentalAgreementService agreementService,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IBookingConfirmationEmailSender bookingEmail,
+            ILogger<RentalAgreementsController> logger)
         {
             _agreementService = agreementService;
             _context = context;
+            _bookingEmail = bookingEmail;
+            _logger = logger;
         }
+
+        private Guid? Actor => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var id) ? id : null;
+        private bool Admin => User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin");
+        private bool CanAccess(RentalAgreement agreement) => Actor != null &&
+            (Admin || agreement.TenantId == Actor || agreement.OwnerId == Actor);
 
         [HttpGet]
         public async Task<IActionResult> GetAgreements()
         {
+            if (Actor == null) return Forbid();
             var agreements = await _context.RentalAgreements
                 .Include(ra => ra.Property)
                     .ThenInclude(p => p.Photos)
                 .Include(ra => ra.Tenant)
                 .Include(ra => ra.Owner)
+                .Where(ra => Admin || ra.TenantId == Actor || ra.OwnerId == Actor)
                 .OrderByDescending(ra => ra.CreatedAt)
                 .ToListAsync();
             return Ok(agreements);
@@ -50,14 +65,7 @@ namespace RentWise.API.Modules.Agreements.Controllers
 
             if (!Guid.TryParse(userIdStr, out var userId))
             {
-                var all = await _context.RentalAgreements
-                    .Include(ra => ra.Property)
-                        .ThenInclude(p => p.Photos)
-                    .Include(ra => ra.Tenant)
-                    .Include(ra => ra.Owner)
-                    .OrderByDescending(ra => ra.CreatedAt)
-                    .ToListAsync();
-                return Ok(all);
+                return Forbid();
             }
 
             var agreements = await _context.RentalAgreements
@@ -88,12 +96,16 @@ namespace RentWise.API.Modules.Agreements.Controllers
                 agreement = await _agreementService.GetAgreementByIdAsync(id);
             }
             if (agreement == null) return NotFound();
+            if (!CanAccess(agreement)) return Forbid();
             return Ok(agreement);
         }
 
         [HttpGet("{id}/payments")]
         public async Task<IActionResult> GetAgreementPayments(Guid id)
         {
+            var agreement = await _context.RentalAgreements.FindAsync(id);
+            if (agreement == null) return NotFound();
+            if (!CanAccess(agreement)) return Forbid();
             var payments = await _context.Payments
                 .Where(p => p.RentalAgreementId == id)
                 .OrderByDescending(p => p.PaymentDate)
@@ -115,31 +127,12 @@ namespace RentWise.API.Modules.Agreements.Controllers
                 agreement.EndDate = agreement.StartDate.AddMonths(6);
             }
 
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                         ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                         ?? User.FindFirst("sub")?.Value;
-            var role = User.FindFirstValue(ClaimTypes.Role);
-
-            if (Guid.TryParse(userIdStr, out var currentUserId))
-            {
-                if (role == "Tenant" && agreement.TenantId == Guid.Empty)
-                {
-                    agreement.TenantId = currentUserId;
-                }
-                else if (agreement.OwnerId == Guid.Empty)
-                {
-                    agreement.OwnerId = currentUserId;
-                }
-            }
-
-            if (agreement.OwnerId == Guid.Empty)
-            {
-                var property = await _context.Properties.FindAsync(agreement.PropertyId);
-                if (property != null)
-                {
-                    agreement.OwnerId = property.OwnerId;
-                }
-            }
+            if (Actor == null) return Forbid();
+            var property = await _context.Properties.FindAsync(agreement.PropertyId);
+            if (property == null) return NotFound();
+            if (!Admin && User.IsInRole("Tenant")) agreement.TenantId = Actor.Value;
+            else if (!Admin && property.OwnerId != Actor) return Forbid();
+            agreement.OwnerId = property.OwnerId;
 
             var createdAgreement = await _agreementService.CreateAgreementAsync(agreement);
             return CreatedAtAction(nameof(GetAgreement), new { id = createdAgreement.Id }, createdAgreement);
@@ -150,6 +143,12 @@ namespace RentWise.API.Modules.Agreements.Controllers
         public async Task<IActionResult> UpdateAgreement(Guid id, [FromBody] RentalAgreement agreement)
         {
             if (id != agreement.Id) return BadRequest();
+            var existing = await _context.RentalAgreements.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+            if (existing == null) return NotFound();
+            if (Actor == null || (!Admin && existing.OwnerId != Actor)) return Forbid();
+            agreement.OwnerId = existing.OwnerId;
+            agreement.TenantId = existing.TenantId;
+            agreement.PropertyId = existing.PropertyId;
             await _agreementService.UpdateAgreementAsync(agreement);
             return NoContent();
         }
@@ -162,6 +161,7 @@ namespace RentWise.API.Modules.Agreements.Controllers
                 .FirstOrDefaultAsync(ra => ra.Id == id);
 
             if (agreement == null) return NotFound(new { message = "Rental agreement not found" });
+            if (Actor == null || agreement.TenantId != Actor) return Forbid();
 
             // Append agreement metadata and timestamp into Terms
             var signatureName = string.IsNullOrWhiteSpace(dto?.SignatureName) ? "Tenant" : dto.SignatureName;
@@ -190,9 +190,12 @@ namespace RentWise.API.Modules.Agreements.Controllers
         {
             var agreement = await _context.RentalAgreements
                 .Include(ra => ra.Property)
+                .Include(ra => ra.Tenant)
+                .Include(ra => ra.Owner)
                 .FirstOrDefaultAsync(ra => ra.Id == id);
 
             if (agreement == null) return NotFound(new { message = "Rental agreement not found" });
+            if (Actor == null || agreement.TenantId != Actor) return Forbid();
 
             decimal payAmount = dto?.Amount > 0 
                 ? dto.Amount 
@@ -206,6 +209,7 @@ namespace RentWise.API.Modules.Agreements.Controllers
             {
                 RentalAgreementId = id,
                 Amount = payAmount,
+                Purpose = agreement.SecurityDeposit > 0 ? "SecurityDeposit" : "MonthlyRent",
                 PaymentDate = DateTime.UtcNow,
                 PaymentReference = paymentRef,
                 IsSuccessful = true
@@ -222,9 +226,22 @@ namespace RentWise.API.Modules.Agreements.Controllers
 
             await _context.SaveChangesAsync();
 
+            // The payment is already saved. Email failure must not make the tenant pay again.
+            var confirmationEmailSent = false;
+            try
+            {
+                await _bookingEmail.SendAsync(agreement, payment, dto?.PaymentMethod ?? "Card");
+                confirmationEmailSent = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Booking email failed for payment {PaymentId} ({ErrorType}). Check SMTP configuration/delivery.", payment.Id, ex.GetType().Name);
+            }
+
             return Ok(new 
             { 
-                success = true, 
+                success = true,
+                confirmationEmailSent,
                 message = "Payment successful! The rental lease is now active and complete.", 
                 agreement, 
                 payment 
@@ -235,6 +252,9 @@ namespace RentWise.API.Modules.Agreements.Controllers
         [Authorize(Roles = "Owner,PropertyOwner,Administrator,Admin,SystemAdmin")]
         public async Task<IActionResult> DeleteAgreement(Guid id)
         {
+            var existing = await _context.RentalAgreements.FindAsync(id);
+            if (existing == null) return NotFound();
+            if (Actor == null || (!Admin && existing.OwnerId != Actor)) return Forbid();
             await _agreementService.DeleteAgreementAsync(id);
             return NoContent();
         }

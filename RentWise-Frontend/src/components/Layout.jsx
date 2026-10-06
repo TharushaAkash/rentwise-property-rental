@@ -1,3 +1,6 @@
+import { Suspense } from 'react';
+import { PageLoading } from './PageLoading';
+import { RouteErrorBoundary } from './RouteErrorBoundary';
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Home, Users, FileText, Wrench, LogOut, Building2, User, Star, HelpCircle, ChevronDown, Heart, Search } from 'lucide-react';
@@ -89,6 +92,7 @@ export const Layout = () => {
       return [
         { name: 'Properties', path: '/properties', icon: <Home className="w-5 h-5" /> },
         { name: 'Find Rentals', path: '/find-rentals', icon: <Search className="w-5 h-5" /> },
+        { name: 'Rental concierge', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
         { name: 'Saved Items', path: '/saved-items', icon: <Heart className="w-5 h-5" /> },
         { name: 'My Profile', path: '/tenants', icon: <Users className="w-5 h-5" /> },
         { name: 'My Agreements', path: '/agreements', icon: <FileText className="w-5 h-5" /> },
@@ -97,6 +101,7 @@ export const Layout = () => {
     } else if (role === 'PropertyOwner') {
       return [
         { name: 'My Properties', path: '/properties', icon: <Home className="w-5 h-5" /> },
+        { name: 'Rental concierge', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
         { name: 'My Profile', path: '/profile', icon: <User className="w-5 h-5" /> },
         { name: 'My Tenants', path: '/tenants', icon: <Users className="w-5 h-5" /> },
         { name: 'Agreements', path: '/agreements', icon: <FileText className="w-5 h-5" /> },
@@ -106,6 +111,7 @@ export const Layout = () => {
     // Administrator
     return [
       { name: 'Manage Properties', path: '/admin?tab=properties', icon: <Building2 className="w-5 h-5" /> },
+      { name: 'Rental concierge', path: '/rental-workflows', icon: <FileText className="w-5 h-5" /> },
       { name: 'Manage Users', path: '/admin?tab=users', icon: <Users className="w-5 h-5" /> },
       { name: 'Agreements Requests', path: '/admin?tab=agreements', icon: <FileText className="w-5 h-5" /> },
       { name: 'Manage Profile', path: '/admin?tab=profile', icon: <User className="w-5 h-5" /> }
@@ -113,13 +119,13 @@ export const Layout = () => {
   }, [user]);
 
   return (
-    <div className={`${isTenant ? 'min-h-screen' : 'flex h-screen'} bg-white selection:bg-emerald-100 selection:text-emerald-900 font-sans`}>
+    <div className={`${isTenant ? 'min-h-screen' : 'flex min-h-screen flex-col lg:h-screen lg:flex-row'} bg-white selection:bg-emerald-100 selection:text-emerald-900 font-sans`}>
       {/* LankaPropertyWeb Inspired Two-Tier Navigation Header for Tenant / User Pages */}
       {isTenant && (
         <header className="sticky top-0 z-40 shadow-sm">
           {/* Tier 1: Main White Bar */}
           <div className="bg-white border-b border-gray-200 px-4 sm:px-8 lg:px-12 py-2.5">
-            <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4">
+            <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3">
               
               {/* Brand Logo (LankaPropertyWeb style green circle + typography) */}
               <Link to={user ? "/properties" : "/"} className="flex items-center gap-2.5 group shrink-0">
@@ -227,6 +233,7 @@ export const Layout = () => {
                 >
                   Find Rentals
                 </Link>
+                {user && <Link to="/rental-workflows" className="px-3 py-1 rounded text-white hover:bg-[#006e2e]">Rental concierge</Link>}
 
                 <Link
                   to="/agreements"
@@ -292,9 +299,9 @@ export const Layout = () => {
         </header>
       )}
       {/* Premium Sidebar */}
-      {!isTenant && <aside className="w-[280px] bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800 relative z-20">
-        <div className="p-8 pb-4">
-          <div className="flex items-center gap-3 mb-8">
+      {!isTenant && <aside className="w-full shrink-0 lg:w-[280px] bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800 relative z-20">
+        <div className="p-4 lg:p-8 lg:pb-4">
+          <div className="flex items-center gap-3 mb-3 lg:mb-8">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_20px_rgb(99,102,241,0.3)]">
               <Building2 className="w-6 h-6 text-white" />
             </div>
@@ -305,7 +312,7 @@ export const Layout = () => {
           <Link 
             to={['Administrator', 'Admin', 'SystemAdmin'].includes(user?.role) ? "/admin?tab=profile" : "/profile"} 
             title="Click to view/edit profile" 
-            className="block px-3 py-2.5 rounded-lg bg-slate-900/70 border border-slate-800/80 mb-2 hover:border-indigo-500/50 hover:bg-slate-900 transition-all duration-200 group"
+            className="hidden lg:block px-3 py-2.5 rounded-lg bg-slate-900/70 border border-slate-800/80 mb-2 hover:border-indigo-500/50 hover:bg-slate-900 transition-all duration-200 group"
           >
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Logged in as</p>
@@ -319,7 +326,7 @@ export const Layout = () => {
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 mt-6 space-y-1.5 overflow-y-auto">
+        <nav className="flex gap-2 overflow-x-auto no-scrollbar px-4 pb-3 lg:block lg:flex-1 lg:mt-6 lg:space-y-1.5 lg:overflow-y-auto">
           {navItems.map((item) => {
             let isActive = false;
             if (item.path.includes('?')) {
@@ -334,7 +341,7 @@ export const Layout = () => {
               <Link
                 key={item.name}
                 to={item.path}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                className={`flex shrink-0 items-center whitespace-nowrap space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive 
                     ? 'bg-indigo-600 text-white shadow-[0_4px_20px_rgb(79,70,229,0.3)]' 
                     : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
@@ -347,7 +354,7 @@ export const Layout = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-800/50">
+        <div className="px-4 py-2 lg:p-4 border-t border-slate-800/50">
           <button
             onClick={logout}
             className="flex items-center space-x-3 px-4 py-3 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 rounded-xl w-full transition-all duration-200 font-medium"
@@ -359,11 +366,13 @@ export const Layout = () => {
       </aside>}
 
       {/* Main Content Area */}
-      <main className={`${isTenant ? '' : 'flex-1 overflow-y-auto relative'}`}>
+      <main className={`${isTenant ? '' : 'min-w-0 flex-1 lg:overflow-y-auto relative'}`}>
         {/* Subtle background gradient for depth */}
         <div className="absolute top-0 inset-x-0 h-[300px] bg-gradient-to-b from-slate-50 to-[#FDFDFD] pointer-events-none" />
-        <div className={`${isTenant ? 'mx-auto max-w-[1440px] px-4 py-0 sm:px-8 lg:px-12' : 'p-8 sm:p-10 lg:p-12 max-w-7xl mx-auto'} relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500`}>
-          <Outlet />
+        <div className={`${isTenant ? 'mx-auto max-w-[1440px] px-4 py-0 sm:px-8 lg:px-12' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto'} relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+          <RouteErrorBoundary key={location.pathname}>
+            <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
+          </RouteErrorBoundary>
         </div>
       </main>
     </div>

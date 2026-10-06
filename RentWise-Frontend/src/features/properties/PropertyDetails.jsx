@@ -1,3 +1,5 @@
+import { PropertyLocationCard } from './PropertyLocationCard';
+import { accountStorage } from '../../utils/accountStorage';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import api from '../../services/api';
@@ -80,7 +82,7 @@ export const PropertyDetails = () => {
         }
       } catch {}
       try {
-        const local = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const local = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const localMatched = local.filter((a) => String(a.propertyId) === String(id));
         const merged = new Map();
         localMatched.forEach((a) => a?.id && merged.set(a.id, a));
@@ -225,6 +227,7 @@ export const PropertyDetails = () => {
         propertyType: formData.propertyType || 'House',
         featureTags: Array.isArray(formData.featureTags) ? formData.featureTags : [],
         photoCount: Number(formData.photoCount || 0),
+        photoUrls: formData.photoUrls || [],
         status: formData.status === 'Active' ? 1 : formData.status === 'Suspended' ? 2 : 0
       };
 
@@ -1079,6 +1082,8 @@ export const PropertyDetails = () => {
               )}
             </div>
           </div>
+
+          <PropertyLocationCard property={currentProperty} address={propertyAddress} />
 
           {/* Card 3: Facilities from Property Model */}
           <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-xs">

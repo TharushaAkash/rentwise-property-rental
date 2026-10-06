@@ -1,3 +1,4 @@
+import { accountStorage } from './accountStorage';
 import { useState, useEffect } from 'react';
 
 export const BOOKINGS_UPDATED_EVENT = 'rentwise_bookings_updated';
@@ -39,7 +40,7 @@ export const getActiveBookingForProperty = (propertyId, serverApplications = [])
   // 1. Read local storage bookings
   let localBookings = [];
   try {
-    localBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+    localBookings = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
   } catch (e) {
     localBookings = [];
   }
@@ -74,7 +75,7 @@ export const getActiveBookingForProperty = (propertyId, serverApplications = [])
 
   // 2. Check local storage agreements (active lease)
   try {
-    const localAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+    const localAgreements = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
     const activeAgreement = localAgreements.find((a) => {
       if (!a || String(a.propertyId) !== pidStr) return false;
       const status = (a.status || '').toLowerCase();

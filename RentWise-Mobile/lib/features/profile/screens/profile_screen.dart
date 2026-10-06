@@ -1,3 +1,9 @@
+import 'edit_profile_screen.dart';
+import 'nic_verification_screen.dart';
+import 'biometric_settings_tile.dart';
+import 'bank_details_screen.dart';
+import '../../properties/saved_properties.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,11 +37,7 @@ class ProfileScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF103D2C), Color(0xFF176B49)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(28),
             ),
             child: Column(
@@ -48,7 +50,7 @@ class ProfileScreen extends ConsumerWidget {
                       height: 70,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD9EFC8),
+                        color: const Color(0xFFE4EBDF),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Text(
@@ -57,8 +59,8 @@ class ProfileScreen extends ConsumerWidget {
                             : user.name.characters.first.toUpperCase(),
                         style: const TextStyle(
                           fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkGreen,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.teal,
                         ),
                       ),
                     ),
@@ -67,7 +69,7 @@ class ProfileScreen extends ConsumerWidget {
                       child: Text(
                         owner ? 'PROPERTY OWNER' : user.role.toUpperCase(),
                         style: const TextStyle(
-                          color: Color(0xFFD9EFC8),
+                          color: AppColors.muted,
                           fontSize: 11,
                           letterSpacing: 1.4,
                           fontWeight: FontWeight.w700,
@@ -81,18 +83,15 @@ class ProfileScreen extends ConsumerWidget {
                   user.name,
                   style: const TextStyle(
                     fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
                     letterSpacing: -.6,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   user.email,
-                  style: const TextStyle(
-                    color: Color(0xFFD1E5DA),
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
               ],
             ),
@@ -121,6 +120,37 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => open(const EditProfileScreen()),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit profile'),
+          ),
+          if (owner) ...[
+            const SizedBox(height: 12),
+            ListTile(
+              leading: Icon(
+                user.isNicVerified ? Icons.verified : Icons.badge_outlined,
+              ),
+              title: Text(
+                user.nicImageUrl?.trim().isNotEmpty == true
+                    ? 'NIC image uploaded'
+                    : 'NIC image not uploaded',
+              ),
+              subtitle: Text(user.isNicVerified ? 'Verified' : 'Not verified'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => open(const NicVerificationScreen()),
+              icon: const Icon(Icons.badge_outlined),
+              label: Text(
+                user.nicImageUrl?.trim().isNotEmpty == true
+                    ? 'View or replace uploaded NIC'
+                    : 'Upload NIC for verification',
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          BiometricSettingsTile(key: ValueKey(user.id)),
           const SizedBox(height: 28),
           const FormHeading(
             'Your workspace',
@@ -132,6 +162,19 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
                 children: [
+                  _ProfileLink(
+                    icon: Icons.favorite_border,
+                    title: 'Saved properties',
+                    subtitle: 'Homes you saved for later',
+                    onTap: () => open(const SavedPropertiesScreen()),
+                  ),
+                  if (owner)
+                    _ProfileLink(
+                      icon: Icons.account_balance_outlined,
+                      title: 'Bank details',
+                      subtitle: 'Your account for tenant transfers',
+                      onTap: () => open(const BankDetailsScreen()),
+                    ),
                   _ProfileLink(
                     icon: Icons.key_outlined,
                     title: 'Rentals & payments',

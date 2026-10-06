@@ -6,6 +6,8 @@ class UserModel {
   final String? phoneNumber;
   final String? nicNumber;
   final String token;
+  final bool isNicVerified;
+  final String? nicImageUrl;
 
   UserModel({
     required this.id,
@@ -15,6 +17,8 @@ class UserModel {
     this.phoneNumber,
     this.nicNumber,
     required this.token,
+    this.isNicVerified = false,
+    this.nicImageUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -28,10 +32,12 @@ class UserModel {
         role: userObj['role'] ?? 'Tenant',
         phoneNumber: userObj['phoneNumber'],
         nicNumber: userObj['nicNumber'],
+        isNicVerified: userObj['isNicVerified'] == true,
+        nicImageUrl: userObj['nicImageUrl'],
         token: json['token'] ?? '',
       );
     }
-    
+
     // Fallback for direct user object
     return UserModel(
       id: json['id']?.toString() ?? '',
@@ -40,6 +46,8 @@ class UserModel {
       role: json['role'] ?? 'Tenant',
       phoneNumber: json['phoneNumber'],
       nicNumber: json['nicNumber'],
+      isNicVerified: json['isNicVerified'] == true,
+      nicImageUrl: json['nicImageUrl'],
       token: json['token'] ?? '',
     );
   }
@@ -53,6 +61,8 @@ class UserModel {
       'phoneNumber': phoneNumber,
       'nicNumber': nicNumber,
       'token': token,
+      'isNicVerified': isNicVerified,
+      'nicImageUrl': nicImageUrl,
     };
   }
 }

@@ -1,3 +1,4 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useFetch } from '../../hooks/useFetch';
@@ -32,13 +33,7 @@ const MAINTENANCE_STATUSES = [
   { value: 'Completed', label: 'Completed', desc: 'Repairs completed, inspected & verified', variant: 'success', color: 'emerald' }
 ];
 
-const DEFAULT_SERVICE_PROVIDERS = [
-  { id: 'sp-1', name: 'Lanka QuickFix Plumbing & Sanitation', category: 'Plumbing', contactNumber: '+94 77 234 5678', serviceArea: 'Colombo & Battaramulla' },
-  { id: 'sp-2', name: 'VoltMaster Electrical & Solar Works', category: 'Electrical', contactNumber: '+94 71 876 5432', serviceArea: 'Western Province' },
-  { id: 'sp-3', name: 'CoolBreeze Air Conditioning Care', category: 'HVAC', contactNumber: '+94 76 345 6789', serviceArea: 'Colombo & Suburbs' },
-  { id: 'sp-4', name: 'MasterPro Carpentry & Structural Services', category: 'Structural', contactNumber: '+94 70 987 6543', serviceArea: 'Colombo & Gampaha' },
-  { id: 'sp-5', name: 'SwiftClean Eco Pest Management', category: 'Pest', contactNumber: '+94 72 456 7890', serviceArea: 'Island-wide' }
-];
+
 
 const extractPropertyPhoto = (p) => {
   if (!p) return null;
@@ -77,7 +72,7 @@ export const RequestDetails = () => {
 
   // Assign Technician Modal
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [serviceProviders, setServiceProviders] = useState(DEFAULT_SERVICE_PROVIDERS);
+  const [serviceProviders, setServiceProviders] = useState([]);
   const [selectedProviderId, setSelectedProviderId] = useState('');
 
   // Photo Lightbox Modal
@@ -105,7 +100,7 @@ export const RequestDetails = () => {
         api.get(`/maintenance-requests/${id}`).catch(() => ({ data: null })),
         api.get(`/maintenance-requests/${id}/logs`).catch(() => ({ data: [] })),
         api.get('/properties').catch(() => ({ data: [] })),
-        api.get('/agreements/mine').catch(() => api.get('/agreements').catch(() => ({ data: [] }))),
+        api.get('/agreements/mine').catch(() => ({ data: [] })),
         api.get('/service-providers').catch(() => ({ data: [] }))
       ]);
 
@@ -114,15 +109,16 @@ export const RequestDetails = () => {
       // Check client-side localStorage fallback if not found from API
       if (!ticketData) {
         try {
-          const localMaint = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+          const localMaint = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
           const foundLocal = localMaint.find((item) => String(item.id) === String(id));
-          if (foundLocal) {
+          if (foundLocal && belongsToAccount(foundLocal, user)) {
             ticketData = foundLocal;
           }
         } catch (e) {}
       }
 
-      if (!ticketData) {
+      if (!ticketData || !belongsToAccount(ticketData, user)) {
+        setRequest(null);
         setError('Maintenance request not found.');
         setIsLoading(false);
         return;
@@ -148,7 +144,7 @@ export const RequestDetails = () => {
       // Populate service providers from Database and local storage
       let provList = Array.isArray(providersRes.data) && providersRes.data.length > 0 ? providersRes.data : [];
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_service_providers') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_service_providers') || '[]');
         if (stored.length > 0) {
           const map = new Map();
           provList.forEach(p => { if (p && p.id) map.set(String(p.id), p); });
@@ -157,9 +153,10 @@ export const RequestDetails = () => {
         }
       } catch (e) {}
 
-      if (provList.length > 0) {
-        setServiceProviders(provList);
-      }
+      const ticketOwnerId = ticketData.property?.ownerId || ticketData.ownerId ||
+        (propsRes.data || []).find(p => p.id === ticketData.propertyId)?.ownerId;
+      provList = provList.filter(p => p.ownerId && p.ownerId === ticketOwnerId);
+      setServiceProviders(provList);
 
       // Enrich Property
       const allProps = Array.isArray(propsRes.data) ? propsRes.data : [];
@@ -180,7 +177,7 @@ export const RequestDetails = () => {
       // Check localStorage agreements fallback
       if (!foundAgr) {
         try {
-          const localAgrs = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+          const localAgrs = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
           foundAgr = localAgrs.find((a) => 
             (a.propertyId && String(a.propertyId) === String(ticketData.propertyId)) ||
             (a.tenantId && String(a.tenantId) === String(ticketData.tenantId))
@@ -307,7 +304,7 @@ export const RequestDetails = () => {
 
       // Update local storage for client resilience
       try {
-        const localList = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+        const localList = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
         const updated = localList.map((item) => {
           if (String(item.id) === String(id)) {
             const currentLogs = item.statusLogs || [];
@@ -329,7 +326,7 @@ export const RequestDetails = () => {
           }
           return item;
         });
-        localStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
       } catch (e) {}
 
@@ -460,14 +457,14 @@ export const RequestDetails = () => {
 
     // Save to local storage
     try {
-      const localList = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+      const localList = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
       const updated = localList.map((item) => {
         if (String(item.id) === String(id)) {
           return { ...item, photoUrl: newPhotoUrl.trim() };
         }
         return item;
       });
-      localStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
+      accountStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
     } catch (e) {}
 
     setIsPhotoModalOpen(false);
@@ -483,9 +480,9 @@ export const RequestDetails = () => {
 
       // Clean up localStorage
       try {
-        const localList = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+        const localList = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
         const updated = localList.filter((item) => String(item.id) !== String(id));
-        localStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
       } catch {}
 
@@ -494,9 +491,9 @@ export const RequestDetails = () => {
       console.error('Failed to delete maintenance request', err);
       // Even if API fails, delete from local storage and navigate back
       try {
-        const localList = JSON.parse(localStorage.getItem('rentwise_client_maintenance') || '[]');
+        const localList = JSON.parse(accountStorage.getItem('rentwise_client_maintenance') || '[]');
         const updated = localList.filter((item) => String(item.id) !== String(id));
-        localStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_maintenance', JSON.stringify(updated));
       } catch {}
       navigate('/maintenance');
     } finally {

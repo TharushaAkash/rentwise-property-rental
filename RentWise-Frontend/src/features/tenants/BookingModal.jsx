@@ -1,3 +1,4 @@
+import { accountStorage } from '../../utils/accountStorage';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, DollarSign, MapPin, CheckCircle2, AlertCircle, Building2, ShieldCheck, Sparkles, X } from 'lucide-react';
@@ -8,8 +9,12 @@ import { getActiveBookingForProperty, dispatchBookingsUpdated } from '../../util
 
 const money = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
-export const BookingModal = ({ isOpen, onClose, property, onSuccess }) => {
-  if (!isOpen || !property) return null;
+export const BookingModal = (props) => {
+  if (!props.isOpen || !props.property) return null;
+  return <BookingForm key={props.property.id} {...props} />;
+};
+
+const BookingForm = ({ onClose, property, onSuccess }) => {
 
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -102,23 +107,17 @@ export const BookingModal = ({ isOpen, onClose, property, onSuccess }) => {
         createdAt: new Date().toISOString()
       };
 
-      try {
-        const payload = { ...clientBooking };
-        delete payload.id; // Let the backend generate the ID
-
-        const res = await api.post('/property-applications', payload);
-        if (res.data?.id) {
-          clientBooking.id = res.data.id;
-        }
-      } catch (apiErr) {
-        console.warn('API booking sync note (saving locally as resilient cache):', apiErr);
-      }
+      const payload = { ...clientBooking };
+      delete payload.id;
+      const res = await api.post('/property-applications', payload);
+      if (!res.data?.id) throw new Error('The server did not confirm this booking. Please refresh.');
+      Object.assign(clientBooking, res.data);
 
       // Persist in localStorage for instant sync across tabs and role switches
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const updated = [clientBooking, ...stored.filter(b => b.propertyId !== property.id || b.status === 'Accepted')];
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
         dispatchBookingsUpdated();
       } catch (storageErr) {
         console.error('LocalStorage write failed:', storageErr);

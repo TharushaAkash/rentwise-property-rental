@@ -1,10 +1,11 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFetch } from '../../hooks/useFetch';
 import { useMutation } from '../../hooks/useMutation';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
-import { parseBookingDetails } from '../tenants/TenantPortal';
+import { parseBookingDetails } from '../tenants/tenantHelpers';
 
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -79,7 +80,7 @@ export const PropertiesDashboard = () => {
       // Retrieve client-side cached bookings
       let clientBookings = [];
       try {
-        clientBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        clientBookings = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
       } catch {}
 
       // Merge: unique by id or propertyId
@@ -109,7 +110,7 @@ export const PropertiesDashboard = () => {
       // Sort newest first
       mergedList.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-      setApplications(mergedList);
+      setApplications(mergedList.filter(a => belongsToAccount(a, user)));
     } catch (err) {
       console.error('Failed to load booked properties:', err);
     } finally {
@@ -138,12 +139,12 @@ export const PropertiesDashboard = () => {
 
       // Update local storage so it persists across page reloads and tenant profile
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const updated = stored.map((b) => (b.id === appId ? { ...b, status: 'Accepted' } : b));
         if (!stored.some((b) => b.id === appId) && targetApp) {
           updated.push({ ...targetApp, status: 'Accepted' });
         }
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
 
         // Create drafted rental agreement in local storage for tenant portal (requires tenant to review, agree, and pay)
         if (targetApp) {
@@ -165,10 +166,10 @@ export const PropertiesDashboard = () => {
             termsAndConditions: `[6-Month Lease Sent to Tenant: ${targetApp.tenantName || 'Tenant'} (${targetApp.tenantEmail || ''}) on ${new Date().toLocaleDateString()}]\nPlease review house photos and terms, then click Review & Agree to proceed to payment.`,
             createdAt: new Date().toISOString()
           };
-          const existingAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+          const existingAgreements = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
           if (!existingAgreements.some((a) => a.id === agreement.id || a.propertyId === agreement.propertyId)) {
             existingAgreements.unshift(agreement);
-            localStorage.setItem('rentwise_client_agreements', JSON.stringify(existingAgreements));
+            accountStorage.setItem('rentwise_client_agreements', JSON.stringify(existingAgreements));
           }
         }
       } catch {}
@@ -206,9 +207,9 @@ export const PropertiesDashboard = () => {
       }
 
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const updated = stored.map((b) => (b.id === appId ? { ...b, status: 'Rejected' } : b));
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
       } catch {}
 
       setApplications((prev) =>
@@ -268,9 +269,9 @@ export const PropertiesDashboard = () => {
     } catch {}
 
     try {
-      const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+      const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
       stored.unshift(sample);
-      localStorage.setItem('rentwise_client_bookings', JSON.stringify(stored));
+      accountStorage.setItem('rentwise_client_bookings', JSON.stringify(stored));
     } catch {}
 
     setApplications((prev) => [sample, ...prev]);
@@ -387,6 +388,7 @@ export const PropertiesDashboard = () => {
         propertyType: data.propertyType || 'House',
         featureTags: Array.isArray(data.featureTags) ? data.featureTags : [],
         photoCount: Number(data.photoCount || 0),
+        photoUrls: data.photoUrls || [],
         status: data.status === 'Active' ? 1 : data.status === 'Suspended' ? 2 : 0
       };
 
@@ -659,12 +661,12 @@ export const PropertiesDashboard = () => {
               <Badge variant={isActive ? 'success' : 'default'} className={!isActive ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold' : ''}>
                 {isActive ? 'Active & Approved' : 'Not Active by Admin'}
               </Badge>
-              {statusStr === 'PendingVerification' && (
+              {!isActive && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate('/agreements');
+                    navigate('/agreements?tab=owner-approvals');
                   }}
                   className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-0.5"
                   title="View proof and verification status"
@@ -761,7 +763,7 @@ export const PropertiesDashboard = () => {
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Properties Count</p>
-            <div className="flex items-baseline gap-2.5 mt-0.5">
+            <div className="flex flex-wrap items-baseline gap-2.5 mt-0.5">
               <span className="text-3xl font-black text-gray-900">{totalPropertiesCount}</span>
               <span className="text-sm font-semibold text-gray-500">Total Properties Listed</span>
             </div>
@@ -843,7 +845,7 @@ export const PropertiesDashboard = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
         <button
           type="button"
           onClick={() => setActiveView('properties')}

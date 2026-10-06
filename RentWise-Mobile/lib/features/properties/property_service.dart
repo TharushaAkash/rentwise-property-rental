@@ -60,6 +60,34 @@ final applicationsProvider = FutureProvider<List<Map<String, dynamic>>>(
           .map((a) => Map<String, dynamic>.from(a))
           .toList(),
 );
+// Older deployed booking APIs may omit the photo; resolve the actual primary image.
+final bookingPhotoProvider = FutureProvider.autoDispose.family<String, String>((
+  ref,
+  id,
+) async {
+  final rows =
+      await ref
+              .watch(propertyServiceProvider)
+              .request('GET', '/properties/$id/photos')
+          as List;
+  final photos = rows.whereType<Map>().toList();
+  photos.sort((a, b) {
+    final aPrimary = a['isPrimary'] == true || a['IsPrimary'] == true;
+    final bPrimary = b['isPrimary'] == true || b['IsPrimary'] == true;
+    if (aPrimary != bPrimary) return aPrimary ? -1 : 1;
+    return (a['createdAt'] ?? a['CreatedAt'] ?? '').toString().compareTo(
+      (b['createdAt'] ?? b['CreatedAt'] ?? '').toString(),
+    );
+  });
+  for (final photo in photos) {
+    final url = (photo['photoUrl'] ?? photo['PhotoUrl'] ?? '')
+        .toString()
+        .trim();
+    if (url.isNotEmpty) return url;
+  }
+  return '';
+});
+
 final verificationProvider =
     FutureProvider.family<Map<String, dynamic>, String>(
       (ref, id) async => Map<String, dynamic>.from(

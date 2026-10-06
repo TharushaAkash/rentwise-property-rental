@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/providers/auth_provider.dart';
-import '../../home/models/property_model.dart';
 import '../../home/providers/property_provider.dart';
 import '../../properties/property_service.dart';
 import '../../shared/theme/app_theme.dart';
@@ -35,7 +34,10 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
   }
 
   bool _isOwnerOrAdmin(String? role) =>
-      role == 'PropertyOwner' || role == 'Owner' || role == 'Administrator' || role == 'Admin';
+      role == 'PropertyOwner' ||
+      role == 'Owner' ||
+      role == 'Administrator' ||
+      role == 'Admin';
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +67,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                     'Rentals & Agreements',
                     style: TextStyle(
                       fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.ink,
                     ),
                   ),
@@ -84,13 +86,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
               background: Stack(
                 children: [
                   Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF005C27), Color(0xFF008037)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
+                    decoration: const BoxDecoration(color: AppColors.softTeal),
                   ),
                   Positioned(
                     right: -30,
@@ -100,7 +96,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                       height: 180,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withAlpha(15),
+                        color: AppColors.teal.withAlpha(12),
                       ),
                     ),
                   ),
@@ -110,7 +106,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                     child: Icon(
                       Icons.description_rounded,
                       size: 64,
-                      color: Colors.white.withAlpha(25),
+                      color: AppColors.teal.withAlpha(35),
                     ),
                   ),
                 ],
@@ -127,7 +123,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                   indicatorColor: AppColors.teal,
                   indicatorWeight: 3,
                   labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
                   tabs: isManager
@@ -135,10 +131,7 @@ class _MyRentalsScreenState extends ConsumerState<MyRentalsScreen>
                           Tab(text: 'Tenant & Owner Leases'),
                           Tab(text: 'Listing Approvals'),
                         ]
-                      : const [
-                          Tab(text: 'Agreements'),
-                          Tab(text: 'Payments'),
-                        ],
+                      : const [Tab(text: 'Agreements'), Tab(text: 'Payments')],
                 ),
               ),
             ),
@@ -218,9 +211,7 @@ class _OwnerLeasesTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF005C27), Color(0xFF008037)],
-              ),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
@@ -229,22 +220,31 @@ class _OwnerLeasesTab extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('OWNER LEASE MANAGEMENT',
-                        style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2)),
+                    const Text(
+                      'OWNER LEASE MANAGEMENT',
+                      style: TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('${agreements.length} Total Tenant Leases',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18)),
+                    Text(
+                      '${agreements.length} Total Tenant Leases',
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
                   ],
                 ),
-                const Icon(Icons.verified_user_rounded,
-                    color: Colors.white, size: 28),
+                const Icon(
+                  Icons.verified_user_rounded,
+                  color: AppColors.ink,
+                  size: 28,
+                ),
               ],
             ),
           ),
@@ -325,7 +325,7 @@ class _ListingApprovalsTab extends ConsumerWidget {
                           child: Text(
                             p.title,
                             style: const TextStyle(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               fontSize: 15,
                               color: AppColors.ink,
                             ),
@@ -335,20 +335,24 @@ class _ListingApprovalsTab extends ConsumerWidget {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: active
-                                ? const Color(0xFFDCFCE7)
+                                ? AppColors.softTeal
                                 : const Color(0xFFFEF9C3),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            active ? 'Approved • Active' : 'Pending Verification',
+                            active
+                                ? 'Approved • Active'
+                                : 'Pending Verification',
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: active
-                                  ? const Color(0xFF166534)
+                                  ? const Color(0xFF385345)
                                   : const Color(0xFF854D0E),
                             ),
                           ),
@@ -359,7 +363,9 @@ class _ListingApprovalsTab extends ConsumerWidget {
                     Text(
                       '${p.address} • LKR ${p.monthlyRent.toStringAsFixed(0)}/mo',
                       style: const TextStyle(
-                          color: AppColors.muted, fontSize: 12),
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -376,9 +382,13 @@ class _ListingApprovalsTab extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Ownership Proof',
-                                    style: TextStyle(
-                                        fontSize: 10, color: AppColors.muted)),
+                                const Text(
+                                  'Ownership Proof',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
@@ -396,7 +406,7 @@ class _ListingApprovalsTab extends ConsumerWidget {
                                       active ? 'Verified' : 'Pending Review',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                         color: active
                                             ? AppColors.teal
                                             : Colors.amber.shade800,
@@ -408,17 +418,23 @@ class _ListingApprovalsTab extends ConsumerWidget {
                             ),
                           ),
                           Container(
-                              width: 1, height: 28, color: AppColors.line),
+                            width: 1,
+                            height: 28,
+                            color: AppColors.line,
+                          ),
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(left: 12),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Listing Fee (LKR 2,500)',
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          color: AppColors.muted)),
+                                  const Text(
+                                    'Listing Fee (LKR 2,500)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
                                   const SizedBox(height: 2),
                                   Row(
                                     children: [
@@ -436,7 +452,7 @@ class _ListingApprovalsTab extends ConsumerWidget {
                                         active ? 'Paid ✓' : 'Recorded',
                                         style: TextStyle(
                                           fontSize: 11,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                           color: active
                                               ? AppColors.teal
                                               : Colors.amber.shade800,
@@ -461,13 +477,16 @@ class _ListingApprovalsTab extends ConsumerWidget {
                           onPressed: () async {
                             final api = ref.read(propertyServiceProvider);
                             await api.request(
-                                'PUT', '/properties/${p.id}/approve', {});
-                            ref.refresh(propertiesProvider.future);
+                              'PUT',
+                              '/properties/${p.id}/approve',
+                              {},
+                            );
+                            ref.invalidate(propertiesProvider);
                           },
                           icon: const Icon(Icons.verified_rounded, size: 16),
                           label: const Text('Approve & Publish Listing'),
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF16a34a),
+                            backgroundColor: AppColors.ink,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -602,7 +621,7 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
+        border: Border.all(color: AppColors.line),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -620,12 +639,12 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
                 width: 42,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
+                  color: AppColors.softTeal,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.home_work_rounded,
-                  color: Color(0xFF16a34a),
+                  color: AppColors.teal,
                   size: 22,
                 ),
               ),
@@ -637,7 +656,7 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
                     Text(
                       agreement.propertyTitle,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: AppColors.ink,
                       ),
@@ -647,7 +666,7 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
                     Text(
                       'Monthly Rent: LKR ${_fmtMoney(rent)}/month',
                       style: const TextStyle(
-                        color: Color(0xFF16a34a),
+                        color: AppColors.teal,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -675,13 +694,13 @@ class _ActiveLeaseMonthlyRentCard extends StatelessWidget {
               icon: const Icon(Icons.payment_rounded, size: 16),
               label: const Text('Pay Monthly Rent'),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF16a34a),
+                backgroundColor: AppColors.ink,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 textStyle: const TextStyle(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
               ),
@@ -718,15 +737,15 @@ class _AgreementCard extends ConsumerWidget {
 
     switch (step) {
       case 3:
-        stepColor = const Color(0xFF16a34a);
+        stepColor = AppColors.teal;
         stepLabel = 'Active Lease ✓';
         stepIcon = Icons.verified_rounded;
       case 2:
-        stepColor = const Color(0xFFd97706);
+        stepColor = const Color(0xFF916622);
         stepLabel = 'Payment Required';
         stepIcon = Icons.payment_rounded;
       default:
-        stepColor = const Color(0xFF2563eb);
+        stepColor = const Color(0xFF526A78);
         stepLabel = 'Pending Review';
         stepIcon = Icons.pending_actions_rounded;
     }
@@ -812,7 +831,7 @@ class _AgreementCard extends ConsumerWidget {
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -864,7 +883,7 @@ class _AgreementCard extends ConsumerWidget {
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           shadows: [
                             Shadow(blurRadius: 4, color: Colors.black54),
                           ],
@@ -956,10 +975,10 @@ class _AgreementCard extends ConsumerWidget {
                           backgroundColor: AppColors.line,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             step == 3
-                                ? const Color(0xFF16a34a)
+                                ? AppColors.teal
                                 : step == 2
-                                ? const Color(0xFFd97706)
-                                : const Color(0xFF2563eb),
+                                ? const Color(0xFF916622)
+                                : const Color(0xFF526A78),
                           ),
                         ),
                       ),
@@ -1045,14 +1064,14 @@ class _AgreementCard extends ConsumerWidget {
                             ),
                             style: FilledButton.styleFrom(
                               backgroundColor: step == 1
-                                  ? const Color(0xFF2563eb)
-                                  : const Color(0xFF16a34a),
+                                  ? const Color(0xFF526A78)
+                                  : AppColors.teal,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               textStyle: const TextStyle(
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),
                             ),
@@ -1082,13 +1101,13 @@ class _AgreementCard extends ConsumerWidget {
                             icon: const Icon(Icons.payment_rounded, size: 16),
                             label: const Text('Pay Monthly Rent'),
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF16a34a),
+                              backgroundColor: AppColors.ink,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               textStyle: const TextStyle(
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),
                             ),
@@ -1117,19 +1136,18 @@ class _PaymentSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalPaid = agreements.where((a) => a.hasPaid).fold<double>(0, (
-      sum,
-      a,
-    ) {
-      final depositPaid = a.securityDeposit > 0
-          ? a.securityDeposit
-          : a.agreedMonthlyRent * 2;
-      return sum +
-          a.payments.fold<double>(
-            depositPaid > 0 && a.payments.isEmpty ? depositPaid : 0,
-            (s, p) => s + p.amount,
-          );
-    });
+    final receipts = {
+      for (final p
+          in agreements.expand((a) => a.payments).where((p) => p.isSuccessful))
+        p.id: p,
+    }.values;
+    final totalPaid = receipts.fold<double>(0, (sum, p) => sum + p.amount);
+    final deposits = receipts
+        .where((p) => p.purpose == 'SecurityDeposit')
+        .fold<double>(0, (sum, p) => sum + p.amount);
+    final rentPaid = receipts
+        .where((p) => p.purpose == 'MonthlyRent')
+        .fold<double>(0, (sum, p) => sum + p.amount);
 
     final activeLeases = agreements.where((a) => a.lifecycleStep == 3).length;
     final pendingPayment = agreements.where((a) => a.lifecycleStep == 2).length;
@@ -1137,15 +1155,11 @@ class _PaymentSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF005C27), Color(0xFF008037)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.softTeal,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.teal.withAlpha(60),
+            color: AppColors.line.withAlpha(100),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -1157,7 +1171,7 @@ class _PaymentSummaryCard extends StatelessWidget {
           const Text(
             'Payment Overview',
             style: TextStyle(
-              color: Colors.white70,
+              color: AppColors.muted,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -1166,15 +1180,23 @@ class _PaymentSummaryCard extends StatelessWidget {
           Text(
             'LKR ${_fmtMoney(totalPaid)}',
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 32,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
             ),
           ),
+          Text(
+            'Security deposits: LKR ${_fmtMoney(deposits)}',
+            style: const TextStyle(color: AppColors.muted),
+          ),
+          Text(
+            'Monthly rent: LKR ${_fmtMoney(rentPaid)}',
+            style: const TextStyle(color: AppColors.muted),
+          ),
           const Text(
             'Total amount paid',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
           ),
           const SizedBox(height: 20),
           Row(
@@ -1218,13 +1240,17 @@ class _StatChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(25),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withAlpha(40)),
+          border: Border.all(color: AppColors.line),
         ),
         child: Row(
           children: [
-            Icon(icon, color: warning ? Colors.amber : Colors.white, size: 18),
+            Icon(
+              icon,
+              color: warning ? AppColors.amber : AppColors.teal,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1232,14 +1258,14 @@ class _StatChip extends StatelessWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 18,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   label,
-                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
                 ),
               ],
             ),
@@ -1271,7 +1297,7 @@ class _PaymentTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFE6F5EC),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -1286,9 +1312,7 @@ class _PaymentTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  payment.paymentMethod.isNotEmpty
-                      ? payment.paymentMethod
-                      : 'Lease Payment',
+                  payment.purposeLabel,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -1314,7 +1338,7 @@ class _PaymentTile extends StatelessWidget {
               Text(
                 'LKR ${_fmtMoney(payment.amount)}',
                 style: const TextStyle(
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                   fontSize: 14,
                   color: AppColors.teal,
                 ),
@@ -1324,7 +1348,7 @@ class _PaymentTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: payment.isSuccessful
-                      ? const Color(0xFFDCFCE7)
+                      ? AppColors.softTeal
                       : const Color(0xFFFEF9C3),
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -1334,7 +1358,7 @@ class _PaymentTile extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: payment.isSuccessful
-                        ? const Color(0xFF166534)
+                        ? const Color(0xFF385345)
                         : const Color(0xFF854D0E),
                   ),
                 ),
@@ -1360,7 +1384,7 @@ class _ActivatedLeaseTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         children: [
@@ -1368,12 +1392,12 @@ class _ActivatedLeaseTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFDCFCE7),
+              color: AppColors.softTeal,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.verified_rounded,
-              color: Color(0xFF16a34a),
+              color: AppColors.teal,
               size: 22,
             ),
           ),
@@ -1394,7 +1418,7 @@ class _ActivatedLeaseTile extends StatelessWidget {
                 ),
                 const Text(
                   'Lease Activated',
-                  style: TextStyle(color: Color(0xFF16a34a), fontSize: 11),
+                  style: TextStyle(color: AppColors.teal, fontSize: 11),
                 ),
               ],
             ),
@@ -1402,9 +1426,9 @@ class _ActivatedLeaseTile extends StatelessWidget {
           Text(
             'LKR ${_fmtMoney(agreement.securityDeposit > 0 ? agreement.securityDeposit : agreement.agreedMonthlyRent * 2)}',
             style: const TextStyle(
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               fontSize: 14,
-              color: Color(0xFF16a34a),
+              color: AppColors.teal,
             ),
           ),
         ],
@@ -1449,7 +1473,7 @@ class _EmptyState extends StatelessWidget {
               title,
               style: const TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
                 color: AppColors.ink,
               ),
             ),
@@ -1477,7 +1501,7 @@ class _SectionHeader extends StatelessWidget {
       text,
       style: const TextStyle(
         fontSize: 15,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         color: AppColors.ink,
       ),
     );
@@ -1511,7 +1535,7 @@ class _FinancialStat extends StatelessWidget {
             value,
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               color: color,
             ),
           ),
@@ -1550,13 +1574,7 @@ class _PlaceholderBanner extends StatelessWidget {
     return Container(
       height: 160,
       width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF005C27), Color(0xFF008037)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      decoration: const BoxDecoration(color: AppColors.darkGreen),
       child: Center(
         child: Icon(
           Icons.home_work_rounded,

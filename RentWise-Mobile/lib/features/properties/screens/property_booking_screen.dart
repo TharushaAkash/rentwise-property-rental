@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../home/models/property_model.dart';
+import '../../home/providers/property_provider.dart';
 import '../property_service.dart';
 
 DateTime leaseEndDate(DateTime start, int months) {
@@ -91,6 +92,8 @@ class _PropertyBookingScreenState extends ConsumerState<PropertyBookingScreen> {
             'Duration: $months months | Start: $date | End: $end | Rent: ${p.monthlyRent} | Note: ${_message.text.trim().isEmpty ? 'Standard lease request under published terms.' : _message.text.trim()}',
       });
       ref.invalidate(applicationsProvider);
+      ref.invalidate(propertiesProvider);
+      ref.invalidate(bookedPropertiesProvider);
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(

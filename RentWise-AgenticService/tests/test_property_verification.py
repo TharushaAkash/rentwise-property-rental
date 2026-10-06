@@ -54,6 +54,34 @@ class PropertyVerificationTests(unittest.TestCase):
             with self.subTest(messages=messages):
                 self.assertEqual(self.run_workflow(messages)["recommendation"], "Needs Review")
 
+    def test_extracted_bill_details_survive_validation(self):
+        report = self.run_workflow(tool_messages(document_result=json.dumps({
+            "status": "Consistent", "reasoning": "House number and address match.",
+            "billAddress": ADDRESS, "utilityProvider": "CEB", "accountNo": "123456"})))
+        self.assertEqual(report["recommendation"], "Approve-ready")
+        self.assertEqual(report["billAddress"], ADDRESS)
+        self.assertEqual(report["utilityProvider"], "CEB")
+        self.assertEqual(report["accountNo"], "123456")
+
+    def test_structured_match_without_readable_address_needs_review(self):
+        report = self.run_workflow(tool_messages(document_result=json.dumps({
+            "status": "Consistent", "reasoning": "Matches", "billAddress": ""})))
+        self.assertEqual(report["recommendation"], "Needs Review")
+
+    def test_caller_authorization_is_forwarded_and_cleared(self):
+        def invoke(*args, **kwargs):
+            with patch.object(verification.requests, "get") as get:
+                get.return_value.json.return_value = {"exists": False}
+                verification.check_duplicate_property.invoke({"address": ADDRESS, "exclude_property_id": PROPERTY_ID})
+                self.assertEqual(get.call_args.kwargs["headers"], {"Authorization": "Bearer caller-token"})
+            return {"messages": tool_messages()}
+        with patch.object(verification, "get_property_verification_agent") as factory:
+            factory.return_value.invoke.side_effect = invoke
+            verification.run_property_verification_agent({
+                "property_id": PROPERTY_ID, "document_url": DOCUMENT,
+                "backend_authorization": "Bearer caller-token"})
+        self.assertEqual(verification._backend_headers(), {})
+
     def test_wrong_document_cannot_approve(self):
         with self.assertRaises(ValueError):
             verification._validated_report(tool_messages(), PROPERTY_ID, "https://example.test/new.jpg")

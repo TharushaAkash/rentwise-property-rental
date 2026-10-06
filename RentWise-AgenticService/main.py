@@ -7,6 +7,34 @@ load_dotenv()
 
 app = FastAPI(title="RentWise Agentic Service")
 
+# Separate, authenticated endpoint: existing single-agent routes remain compatible.
+from agents.rental_workflow import StepRequest, run_step
+from fastapi import Header, HTTPException
+import secrets
+import os
+
+@app.middleware("http")
+async def require_internal_caller(request, call_next):
+    if request.url.path.startswith("/workflow/"):
+        from fastapi.responses import JSONResponse
+        expected = os.getenv("AGENT_WORKFLOW_KEY", "")
+        supplied = request.headers.get("X-Workflow-Key", "")
+        if not expected or not secrets.compare_digest(expected, supplied):
+            return JSONResponse(status_code=403, content={"message": "Internal service access required"})
+    return await call_next(request)
+
+
+@app.post("/internal/rental-step")
+def rental_step(req: StepRequest, x_workflow_key: str = Header(default="")):
+    configured_key = os.getenv("AGENT_WORKFLOW_KEY", "")
+    if not configured_key or not secrets.compare_digest(x_workflow_key, configured_key):
+        raise HTTPException(status_code=403, detail="Internal workflow access required")
+    try:
+        return run_step(req)
+    except Exception:
+        # Provider payloads may contain private context. Only a safe error leaves this boundary.
+        raise HTTPException(status_code=502, detail="Rental agent failed safely; no business action was executed")
+
 class WorkflowRequest(BaseModel):
     objective: str = ""
     tenant_profile: dict = None
@@ -23,25 +51,24 @@ def run_matching_workflow(req: WorkflowRequest):
     if not req.objective:
         return {"error": "objective is required"}
         
-    from agents.orchestrator import build_matching_graph
-    graph = build_matching_graph()
-    
-    initial_state = {
-        "objective": req.objective,
-        "tenant_profile": req.tenant_profile or {},
-        "current_agent": "MatchingLocation",
-        "matching_results": []
-    }
-    
-    result = graph.invoke(initial_state)
-    
-    return {
-        "status": "completed",
-        "matching_results": result.get("matching_results", [])
-    }
+    from agents.MatchingLocation.matching_location_agent import public_matching_error
+    from fastapi.responses import JSONResponse
+    try:
+        from agents.orchestrator import build_matching_graph
+        result = build_matching_graph().invoke({
+            "objective": req.objective, "tenant_profile": req.tenant_profile or {},
+            "current_agent": "MatchingLocation", "matching_results": []
+        })
+        return {"status": "completed", "matching_results": result.get("matching_results", []),
+                "destination_landmark": result.get("destination_landmark", ""),
+                "summary_recommendation": result.get("summary_recommendation", ""),
+                "extracted_filters": result.get("extracted_filters", {})}
+    except Exception as exc:
+        error = public_matching_error(exc)
+        return JSONResponse(status_code=error.status, content={"status": "failed", "code": error.code, "message": str(error)})
 
 @app.post("/workflow/verify-property")
-def run_verification_workflow(req: WorkflowRequest):
+def run_verification_workflow(req: WorkflowRequest, authorization: str = Header(default="")):
     if not req.property_id:
         return {"error": "property_id is required"}
     
@@ -52,6 +79,7 @@ def run_verification_workflow(req: WorkflowRequest):
     initial_state = {
         "property_id": req.property_id,
         "verification_report": {},
+        "backend_authorization": authorization,
         "document_url": req.document_url,
         "current_agent": "PropertyVerification"
     }

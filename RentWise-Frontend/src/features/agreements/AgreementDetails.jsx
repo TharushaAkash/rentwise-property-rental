@@ -1,3 +1,5 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
+import { validateCard } from '../../utils/paymentValidation';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFetch } from '../../hooks/useFetch';
@@ -37,6 +39,21 @@ export const AgreementDetails = () => {
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvc, setCardCvc] = useState('');
   const [payError, setPayError] = useState('');
+  const [emailNotice, setEmailNotice] = useState('');
+
+  const showEmailStatus = (sent) => {
+    setEmailNotice(sent === true
+      ? 'Your payment is recorded. The confirmation email was sent; please check your inbox and spam folder.'
+      : sent === false
+        ? 'Your payment is recorded, but the confirmation email could not be sent. Contact support with your payment reference. Do not pay again.'
+        : 'Your payment is recorded. Email delivery was not confirmed. Contact support if no email arrives; do not pay again.');
+  };
+
+  const requireSavedBooking = () => {
+    if (String(agreement.id).startsWith('agr_')) {
+      throw new Error('This booking has not been saved to the server. Please reopen a saved booking before making payment.');
+    }
+  };
 
   // Card Brand Detection
   const getCardBrand = (num) => {
@@ -78,16 +95,16 @@ export const AgreementDetails = () => {
   };
 
   useEffect(() => {
-    if (agreementData) {
+    if (agreementData && belongsToAccount(agreementData, user)) {
       setLocalAgreement(agreementData);
     } else {
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
-        const found = stored.find(a => String(a.id) === String(id));
-        if (found) setLocalAgreement(found);
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
+        const found = stored.find(a => String(a.id) === String(id) && belongsToAccount(a, user));
+        setLocalAgreement(found || null);
       } catch {}
     }
-  }, [agreementData, id]);
+  }, [agreementData, id, user]);
 
   // Fetch payments
   const fetchPayments = async () => {
@@ -157,17 +174,9 @@ export const AgreementDetails = () => {
     }
 
     if (paymentMethod === 'card') {
-      const cleanNum = cardNumber.replace(/\s/g, '');
-      if (cleanNum.length < 15) {
-        setPayError('Please enter a valid 16-digit card number (or click Autofill Test Card).');
-        return;
-      }
-      if (cardExpiry.length < 5) {
-        setPayError('Please enter a valid expiry date (MM/YY).');
-        return;
-      }
-      if (cardCvc.length < 3) {
-        setPayError('Please enter a valid 3 or 4-digit CVV/CVC.');
+      const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+      if (cardError) {
+        setPayError(cardError);
         return;
       }
     }
@@ -181,27 +190,18 @@ export const AgreementDetails = () => {
         ? `${brand.name} Card (•••• ${cardNumber.slice(-4) || '4242'})`
         : 'Bank Transfer (Escrow Account)';
 
-      // 1. Try sending agree to backend (graceful fallback if local or offline)
-      try {
-        if (!String(agreement.id).startsWith('agr_')) {
-          await api.put(`/agreements/${agreement.id}/agree`, { signatureName });
-        }
-      } catch (agreeErr) {
-        console.warn('Backend agree note (syncing locally):', agreeErr);
+      // Only show payment success after the server confirms it.
+      requireSavedBooking();
+      await api.put(`/agreements/${agreement.id}/agree`, { signatureName });
+      const paymentResponse = await api.post(`/agreements/${agreement.id}/pay`, {
+        amount: payAmount,
+        paymentReference: ref,
+        paymentMethod: paymentMethodName
+      });
+      if (paymentResponse.data?.success !== true) {
+        throw new Error('Payment was not confirmed. Refresh payment history before retrying.');
       }
-
-      // 2. Try sending payment to backend (graceful fallback if local or offline)
-      try {
-        if (!String(agreement.id).startsWith('agr_')) {
-          await api.post(`/agreements/${agreement.id}/pay`, {
-            amount: payAmount,
-            paymentReference: ref,
-            paymentMethod: paymentMethodName
-          });
-        }
-      } catch (payErr) {
-        console.warn('Backend pay note (syncing locally):', payErr);
-      }
+      showEmailStatus(paymentResponse.data.confirmationEmailSent);
 
       // 3. Update agreement state with both signature and payment confirmation
       const updated = {
@@ -213,10 +213,10 @@ export const AgreementDetails = () => {
 
       // 4. Update local storage
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         const next = stored.map(a => a.id === updated.id ? { ...a, ...updated } : a);
         if (!stored.some(a => a.id === updated.id)) next.unshift(updated);
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
       } catch {}
 
       // 5. Add payment record so receipt displays instantly
@@ -232,9 +232,9 @@ export const AgreementDetails = () => {
       setPayments(prev => [newPayment, ...prev]);
 
       try {
-        const localPay = JSON.parse(localStorage.getItem('rentwise_client_payments') || '[]');
+        const localPay = JSON.parse(accountStorage.getItem('rentwise_client_payments') || '[]');
         localPay.unshift(newPayment);
-        localStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
+        accountStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
       } catch {}
 
       setIsAgreeModalOpen(false);
@@ -242,7 +242,9 @@ export const AgreementDetails = () => {
       fetchPayments();
     } catch (err) {
       console.error('Agree and payment process failed:', err);
-      setPayError('Failed to process payment. Please verify your details or use the demo autofill card.');
+      setPayError(err.response?.data?.message || (err.isAxiosError
+        ? 'Payment was not confirmed. Refresh payment history before retrying.'
+        : err.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -254,17 +256,9 @@ export const AgreementDetails = () => {
     setPayError('');
 
     if (paymentMethod === 'card') {
-      const cleanNum = cardNumber.replace(/\s/g, '');
-      if (cleanNum.length < 15) {
-        setPayError('Please enter a valid 16-digit card number.');
-        return;
-      }
-      if (cardExpiry.length < 5) {
-        setPayError('Please enter a valid expiry date (MM/YY).');
-        return;
-      }
-      if (cardCvc.length < 3) {
-        setPayError('Please enter a valid 3 or 4-digit CVV/CVC.');
+      const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+      if (cardError) {
+        setPayError(cardError);
         return;
       }
     }
@@ -278,13 +272,16 @@ export const AgreementDetails = () => {
         ? `${brand.name} Card (•••• ${cardNumber.slice(-4) || '4242'})`
         : 'Bank Transfer (Escrow Account)';
 
-      if (!String(agreement.id).startsWith('agr_')) {
-        await api.post(`/agreements/${agreement.id}/pay`, {
-          amount: payAmount,
-          paymentReference: ref,
-          paymentMethod: paymentMethodName
-        });
+      requireSavedBooking();
+      const paymentResponse = await api.post(`/agreements/${agreement.id}/pay`, {
+        amount: payAmount,
+        paymentReference: ref,
+        paymentMethod: paymentMethodName
+      });
+      if (paymentResponse.data?.success !== true) {
+        throw new Error('Payment was not confirmed. Refresh payment history before retrying.');
       }
+      showEmailStatus(paymentResponse.data.confirmationEmailSent);
 
       const updated = {
         ...agreement,
@@ -293,10 +290,10 @@ export const AgreementDetails = () => {
       };
       setLocalAgreement(updated);
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         const next = stored.map(a => a.id === updated.id ? { ...a, ...updated } : a);
         if (!stored.some(a => a.id === updated.id)) next.unshift(updated);
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
       } catch {}
 
       // Add to local payment list so receipt renders immediately
@@ -313,16 +310,18 @@ export const AgreementDetails = () => {
 
       // Cache payment in rentwise_client_payments for tenant dashboard sync
       try {
-        const localPay = JSON.parse(localStorage.getItem('rentwise_client_payments') || '[]');
+        const localPay = JSON.parse(accountStorage.getItem('rentwise_client_payments') || '[]');
         localPay.unshift(newPayment);
-        localStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
+        accountStorage.setItem('rentwise_client_payments', JSON.stringify(localPay));
       } catch {}
 
       setIsPayModalOpen(false);
       fetchPayments();
     } catch (err) {
       console.error('Payment failed:', err);
-      setPayError('Payment processing failed. Please check your card details or try again.');
+      setPayError(err.response?.data?.message || (err.isAxiosError
+        ? 'Payment was not confirmed. Refresh payment history before retrying.'
+        : err.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -341,6 +340,11 @@ export const AgreementDetails = () => {
       </button>
 
       {/* House Hero Banner */}
+      {emailNotice && (
+        <div role="status" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          {emailNotice}
+        </div>
+      )}
       <div className="relative rounded-3xl overflow-hidden shadow-lg border border-gray-200 bg-slate-900 text-white">
         <div className="relative aspect-[21/9] w-full max-h-[340px] overflow-hidden bg-slate-800">
           <img

@@ -12,7 +12,7 @@ var nextCalls = 0;
 var middleware = new ApiKeyMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
 
 foreach (var (header, expected) in new (StringValues, bool)[] {
-    ("test-service-key", true), ("wrong-key", false), ("", false),
+    ("test-service-key", false), ("wrong-key", false), ("", false),
     (new StringValues(new[] { "test-service-key", "other" }), false)
 })
 {
@@ -20,14 +20,17 @@ foreach (var (header, expected) in new (StringValues, bool)[] {
     context.Request.Headers["X-Api-Key"] = header;
     await middleware.InvokeAsync(context, configuration);
     if ((context.User.Identity?.IsAuthenticated == true) != expected)
-        throw new Exception("API key authentication regression.");
+        throw new Exception("API key must not bypass user authentication.");
 }
 
 var jwtContext = new DefaultHttpContext();
 var jwtUser = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "existing-user") }, "Bearer"));
 jwtContext.User = jwtUser;
+jwtContext.Request.Headers["X-Api-Key"] = "test-service-key";
 await middleware.InvokeAsync(jwtContext, configuration);
 if (!ReferenceEquals(jwtUser, jwtContext.User)) throw new Exception("Existing JWT authentication was changed.");
+if (jwtContext.User.IsInRole("Admin") || jwtContext.User.IsInRole("Owner"))
+    throw new Exception("API key elevated an existing user's roles.");
 
 var unconfigured = new DefaultHttpContext();
 unconfigured.Request.Headers["X-Api-Key"] = "test-service-key";

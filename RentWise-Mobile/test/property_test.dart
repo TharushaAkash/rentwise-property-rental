@@ -14,6 +14,7 @@ import 'package:rentwise_mobile/features/properties/screens/property_detail_scre
 import 'package:rentwise_mobile/features/auth/providers/auth_provider.dart';
 import 'package:rentwise_mobile/features/auth/models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rentwise_mobile/features/shared/theme/app_theme.dart';
 
 class TestAuth extends AuthNotifier {
   TestAuth(this.role);
@@ -91,20 +92,23 @@ void main() {
                 },
               ),
             ],
-            child: MaterialApp(home: PropertyDetailScreen(property: listing)),
+            child: MaterialApp(
+              theme: buildAppTheme(),
+              home: PropertyDetailScreen(property: listing),
+            ),
           ),
         );
         await tester.pumpAndSettle();
         if (role == 'Tenant') {
-          expect(find.text('Book Property Now'), findsOneWidget);
-          expect(find.text('Delete Property'), findsNothing);
+          expect(find.text('Request Booking'), findsOneWidget);
+          expect(find.text('Delete'), findsNothing);
         } else {
-          expect(find.text('Delete Property'), findsOneWidget);
-          expect(find.text('Book Property Now'), findsNothing);
+          expect(find.text('Delete'), findsOneWidget);
+          expect(find.text('Request Booking'), findsNothing);
         }
         expect(
-          find.text('Approve & Activate'),
-          role == 'Administrator' ? findsOneWidget : findsNothing,
+          find.text('Edit Listing Details'),
+          role == 'Tenant' ? findsNothing : findsOneWidget,
         );
         expect(tester.takeException(), isNull);
       },
@@ -208,7 +212,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
     await tester.pumpAndSettle();
-    expect(find.text('Enter at least 3 characters'), findsOneWidget);
+    expect(find.text('Enter Property Title.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

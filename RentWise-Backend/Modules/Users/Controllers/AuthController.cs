@@ -280,77 +280,66 @@ namespace RentWise.API.Modules.Users.Controllers
         }
         [HttpPost("{id}/verify-nic")]
         [Authorize]
-        public async Task<IActionResult> VerifyNic(Guid id, IFormFile file)
+        [RequestSizeLimit(12 * 1024 * 1024)]
+        public async Task<IActionResult> VerifyNic(Guid id, [FromForm] IFormFile file)
         {
-            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userIdStr != id.ToString() && User.FindFirst(ClaimTypes.Role)?.Value != "Administrator")
-            {
-                return Forbid();
-            }
-
+            var actor = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var admin = User.IsInRole("Administrator") || User.IsInRole("Admin") || User.IsInRole("SystemAdmin");
+            if (!Guid.TryParse(actor, out var actorId) || (actorId != id && !admin)) return Forbid();
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound("User not found.");
-            }
-
-            if (file == null || file.Length == 0)
-            {
-                return BadRequest("No file uploaded.");
-            }
-            
+            if (user == null) return NotFound(new { message = "User not found." });
+            if (string.IsNullOrWhiteSpace(user.NicNumber)) return BadRequest(new { message = "Add your NIC number to your profile before uploading." });
+            if (file == null || file.Length == 0 || file.Length > 10 * 1024 * 1024)
+                return BadRequest(new { message = "Choose a NIC image smaller than 10 MB." });
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(extension) || !file.ContentType.StartsWith("image/"))
+                return BadRequest(new { message = "Upload a JPG, PNG or WebP image." });
+            string imageUrl;
             try
             {
-                // 1. Upload to Supabase NICs bucket
-                var fileExtension = System.IO.Path.GetExtension(file.FileName);
-                var fileName = $"nic_{id}_{Guid.NewGuid().ToString().Substring(0,8)}{fileExtension}";
-                var imageUrl = await _storageService.UploadFileAsync(file, "NICs", fileName);
-
+                imageUrl = await _storageService.UploadFileAsync(file, "NICs", $"nic_{id}_{Guid.NewGuid():N}{extension}");
                 user.NicImageUrl = imageUrl;
-                
-                // 2. Call Python Agent via HTTP
-                if (!string.IsNullOrEmpty(user.NicNumber))
-                {
-                    var httpClient = _httpClientFactory.CreateClient();
-                    var requestPayload = new
-                    {
-                        nic_number = user.NicNumber,
-                        image_url = imageUrl
-                    };
-                    
-                    var agentUrl = _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
-                    var agentRes = await httpClient.PostAsJsonAsync($"{agentUrl}/workflow/verify-nic", requestPayload);
-                    if (agentRes.IsSuccessStatusCode)
-                    {
-                        var result = await agentRes.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                        if (result.TryGetProperty("isVerified", out var isVerifiedProp) && isVerifiedProp.GetBoolean())
-                        {
-                            user.IsNicVerified = true;
-                        }
-                        else
-                        {
-                            user.IsNicVerified = false;
-                        }
-                    }
-                    else
-                    {
-                        user.IsNicVerified = false;
-                    }
-                }
-                else 
-                {
-                    user.IsNicVerified = false;
-                }
-                
+                user.IsNicVerified = false;
+                user.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
-                
-                return Ok(new { message = "NIC verification process completed.", isNicVerified = user.IsNicVerified, nicImageUrl = user.NicImageUrl });
             }
-            catch (Exception ex)
+            catch
             {
-                return StatusCode(500, new { message = "Failed to process NIC verification.", error = ex.Message });
+                return StatusCode(503, new { message = "NIC upload failed. Please retry or contact support if storage is unavailable." });
             }
+            var nicNumber = user.NicNumber;
+            var message = "NIC image uploaded. Verification is unavailable; please retry later.";
+            var verified = false;
+            try
+            {
+                var workflowKey = Environment.GetEnvironmentVariable("AGENT_WORKFLOW_KEY") ?? _configuration["AgentWorkflowKey"];
+                if (!string.IsNullOrWhiteSpace(workflowKey))
+                {
+                    var client = _httpClientFactory.CreateClient();
+                    client.Timeout = TimeSpan.FromSeconds(60);
+                    client.DefaultRequestHeaders.Add("X-Workflow-Key", workflowKey);
+                    var agentUrl = Environment.GetEnvironmentVariable("AgenticServiceUrl") ?? _configuration["AgenticServiceUrl"] ?? "https://rentwise-ai-service.onrender.com";
+                    var response = await client.PostAsJsonAsync($"{agentUrl.TrimEnd('/')}/workflow/verify-nic", new { nic_number = nicNumber, image_url = imageUrl });
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                        verified = result.TryGetProperty("isVerified", out var value) && value.ValueKind == System.Text.Json.JsonValueKind.True;
+                        message = verified ? "Your NIC is verified." : "NIC image uploaded, but verification failed. Choose a clear image matching your profile NIC number.";
+                    }
+                }
+            }
+            catch (HttpRequestException) { }
+            catch (TaskCanceledException) { }
+            catch (System.Text.Json.JsonException) { }
+            await _context.Entry(user).ReloadAsync();
+            if (user.NicNumber != nicNumber || user.NicImageUrl != imageUrl)
+                return Conflict(new { message = "Your NIC details changed during verification. Upload the matching image again." });
+            user.IsNicVerified = verified;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return Ok(new { message, isNicVerified = user.IsNicVerified, nicImageUrl = user.NicImageUrl });
         }
+
 
         [Authorize(Roles = "Administrator,Admin,SystemAdmin")]
         [HttpDelete("users/{userId}")]
@@ -368,6 +357,23 @@ namespace RentWise.API.Modules.Users.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                // Booking references restrict both user and property deletion.
+                var ownedPropertyIds = await _context.Properties.Where(p => p.OwnerId == userId)
+                    .Select(p => p.Id).ToListAsync();
+                var bookings = await _context.PropertyApplications.Where(a =>
+                    a.TenantId == userId || ownedPropertyIds.Contains(a.PropertyId)).ToListAsync();
+                _context.PropertyApplications.RemoveRange(bookings);
+                var savedProperties = await _context.SavedProperties.Where(s =>
+                    s.TenantProfileId == userId || ownedPropertyIds.Contains(s.PropertyId)).ToListAsync();
+                _context.SavedProperties.RemoveRange(savedProperties);
+                var documentReviews = await _context.DocumentReviewRequests.Where(r =>
+                    ownedPropertyIds.Contains(r.PropertyId)).ToListAsync();
+                _context.DocumentReviewRequests.RemoveRange(documentReviews);
+
+                // Keep other owners' verification history when deleting its administrator.
+                var adminVerifications = await _context.VerificationRecords.Where(v => v.AdminId == userId).ToListAsync();
+                foreach (var verification in adminVerifications) verification.AdminId = null;
+
                 // 1. Maintenance Requests (as tenant)
                 var maintenanceReqs = await _context.MaintenanceRequests.Where(m => m.TenantId == userId).ToListAsync();
                 foreach (var req in maintenanceReqs)
@@ -430,10 +436,15 @@ namespace RentWise.API.Modules.Users.Controllers
 
                 return Ok(new { message = "User and all related data successfully deleted." });
             }
-            catch (Exception ex)
+            catch (DbUpdateException)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, new { message = "Failed to force delete user. An error occurred while removing related data.", error = ex.Message });
+                return Conflict(new { message = "User deletion was blocked by related records. No changes were saved. Review the account's linked records before retrying." });
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Failed to delete user. No changes were saved." });
             }
         }
     }

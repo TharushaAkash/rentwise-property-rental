@@ -1,43 +1,20 @@
-import { useState } from 'react';
+import { useMutation as useQueryMutation } from '@tanstack/react-query';
 import api from '../services/api';
-import { AxiosError } from 'axios';
 
-
-
-
-
-
-
-
-
-export function useMutation(
-url,
-method = 'POST')
-{
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const mutateAsync = async (variables) => {
-    setIsLoading(true);
-    setError(null);
-    try {
+export function useMutation(url, method = 'POST') {
+  const mutation = useQueryMutation({
+    mutationFn: async (variables) => {
       const targetUrl = typeof url === 'function' ? url(variables) : url;
-      let response;
-      if (method === 'POST') response = await api.post(targetUrl, variables);else
-      if (method === 'PUT') response = await api.put(targetUrl, variables);else
-      if (method === 'DELETE') response = await api.delete(targetUrl);else
-      throw new Error('Unsupported method');
-
+      if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) throw new Error('Unsupported method');
+      const response = await api.request({
+        url: targetUrl, method, data: method === 'DELETE' ? undefined : variables,
+      });
       return response.data;
-    } catch (err) {
-      const axiosError = err;
-      const errorMsg = axiosError.response?.data?.message || axiosError.message || 'An error occurred';
-      setError(errorMsg);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    },
+  });
+  return {
+    mutateAsync: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    error: mutation.error?.response?.data?.message || mutation.error?.message || null,
   };
-
-  return { mutateAsync, isLoading, error };
 }

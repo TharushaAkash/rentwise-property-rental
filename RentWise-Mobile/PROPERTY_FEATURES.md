@@ -1,6 +1,6 @@
 # Mobile property features
 
-The mobile property screens follow the frontend's `PropertiesDashboard`, `PropertyForm`, `PropertyDetails`, `PropertyInspectModal`, and `BookingModal`. Only mobile files are changed.
+The mobile property screens follow the frontend's `PropertiesDashboard`, `PropertyForm`, `PropertyDetails`, `PropertyInspectModal`, and `BookingModal`. Related API booking persistence is documented in `../ARCHITECTURE_REVIEW.md`.
 
 ## Entry points
 
@@ -24,7 +24,7 @@ The mobile property screens follow the frontend's `PropertiesDashboard`, `Proper
 
 - `POST /properties/{id}/proof` invokes the agentic verification workflow. Mobile displays returned listing state; it does not assume an attached document is verified.
 - `/listing-fee` records fee metadata. It does not process a card payment, so mobile requests a payment method/reference rather than card credentials.
-- `/property-applications` uses an in-memory backend collection. Requests can be lost after a backend restart. Availability is rechecked before submission, but atomic prevention of simultaneous bookings requires backend support.
+- `/property-applications` now persists in PostgreSQL with authenticated ownership checks and a unique active-booking constraint. Apply the `PersistPropertyBookings` migration before using the updated clients.
 - Confirming an application changes its status to `Accepted`. The frontend additionally creates a browser-local draft agreement. That browser storage is not shared with mobile, and the existing confirm endpoint does not create a persisted lease or send one to the tenant. Mobile reports the actual booking status without claiming a lease was sent.
 - Existing profile, maintenance, and rentals implementations are outside the property feature work. A subsequent analyzer cleanup fixes rental string interpolation and theme references, and removes unused maintenance/matching code; it does not implement the rental demo's payment or lease workflow.
 

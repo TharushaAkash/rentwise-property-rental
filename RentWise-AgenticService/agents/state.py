@@ -11,11 +11,15 @@ class AgentWorkflowState(TypedDict):
     # Matching & Location Agent State
     candidate_properties: List[dict]
     matching_results: List[dict]
+    destination_landmark: str
+    summary_recommendation: str
+    extracted_filters: dict
     tenant_profile: dict
     recommended_property: dict
     agreement_draft: dict
     
     # Property Verification Agent State
+    backend_authorization: str
     verification_report: dict
     document_url: str
     

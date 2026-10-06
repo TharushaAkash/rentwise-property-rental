@@ -1,35 +1,114 @@
+import '../../properties/property_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+
 import '../../shared/theme/app_theme.dart';
 import '../../../shared/utils/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/maintenance_model.dart';
 import '../providers/maintenance_provider.dart';
 
-
 class MaintenanceDetailScreen extends ConsumerWidget {
   final MaintenanceModel model;
 
   const MaintenanceDetailScreen({super.key, required this.model});
+
+  Future<void> _updateStatus(
+    BuildContext context,
+    WidgetRef ref,
+    MaintenanceModel current,
+  ) async {
+    const statuses = ['Reported', 'Assigned', 'InProgress', 'Completed'];
+    var selected = statuses.contains(current.status)
+        ? current.status
+        : 'Reported';
+    final notes = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Update maintenance status'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selected,
+                items: statuses
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s == 'InProgress' ? 'In Progress' : s),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => selected = value!),
+              ),
+              TextField(
+                controller: notes,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (optional)',
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Save status'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final text = notes.text.trim();
+    notes.dispose();
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await ref.read(propertyServiceProvider).request(
+        'PUT',
+        '/maintenance-requests/${current.id}/status',
+        {'status': selected, 'notes': text},
+      );
+      ref.invalidate(maintenanceProvider);
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Maintenance status updated.')),
+        );
+    } catch (e) {
+      if (context.mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
 
   Future<void> _deleteRequest(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Request'),
-        content: const Text('Are you sure you want to delete this maintenance request?'),
+        content: const Text(
+          'Are you sure you want to delete this maintenance request?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
-    
+
     if (confirm != true) return;
 
     try {
@@ -42,20 +121,26 @@ class MaintenanceDetailScreen extends ConsumerWidget {
         ref.invalidate(maintenanceProvider);
         if (context.mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request deleted successfully')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Request deleted successfully')),
+          );
         }
       } else {
         throw Exception('Failed to delete');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final requests = ref.watch(maintenanceProvider).value;
+    final model =
+        requests?.where((r) => r.id == this.model.id).firstOrNull ?? this.model;
     Color statusColor;
     Color statusBg;
 
@@ -100,11 +185,19 @@ class MaintenanceDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Maintenance Center', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+        title: const Text(
+          'Maintenance Center',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
         backgroundColor: Colors.white,
         scrolledUnderElevation: 0,
         centerTitle: true,
         actions: [
+          IconButton(
+            tooltip: 'Update status',
+            icon: const Icon(Icons.edit_note),
+            onPressed: () => _updateStatus(context, ref, model),
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
             onPressed: () => _deleteRequest(context, ref),
@@ -120,17 +213,49 @@ class MaintenanceDetailScreen extends ConsumerWidget {
             Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Icon(Icons.arrow_back_rounded, size: 14, color: Colors.blue),
+                const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 14,
+                  color: Colors.blue,
+                ),
                 const SizedBox(width: 4),
-                const Text('Maintenance Center', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Maintenance Center',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(width: 8),
-                const Text('/', style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                const Text(
+                  '/',
+                  style: TextStyle(color: AppColors.muted, fontSize: 12),
+                ),
                 const SizedBox(width: 8),
-                const Text('Tickets', style: TextStyle(color: AppColors.muted, fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Tickets',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(width: 8),
-                const Text('/', style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                const Text(
+                  '/',
+                  style: TextStyle(color: AppColors.muted, fontSize: 12),
+                ),
                 const SizedBox(width: 8),
-                Text('#${model.id.toString().substring(0, 8)}', style: const TextStyle(fontFamily: 'monospace', color: AppColors.ink, fontSize: 12, fontWeight: FontWeight.bold)),
+                Text(
+                  '#${model.id.toString().substring(0, 8)}',
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    color: AppColors.ink,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             const Padding(
@@ -145,7 +270,13 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: AppColors.line),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +288,10 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                     children: [
                       // Category
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blueGrey[50],
                           borderRadius: BorderRadius.circular(20),
@@ -167,75 +301,153 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Text('🛠️ ', style: TextStyle(fontSize: 12)),
-                            Text(model.aiCategory.isNotEmpty ? model.aiCategory : 'General Issue', style: TextStyle(color: Colors.blueGrey[800], fontSize: 11, fontWeight: FontWeight.bold)),
+                            Text(
+                              model.aiCategory.isNotEmpty
+                                  ? model.aiCategory
+                                  : 'General Issue',
+                              style: TextStyle(
+                                color: Colors.blueGrey[800],
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       // Priority
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: priorityBg,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: priorityColor.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: priorityColor.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (model.priority.toLowerCase() == 'high' || model.priority.toLowerCase() == 'emergency')
-                              Icon(Icons.warning_rounded, size: 12, color: priorityColor)
+                            if (model.priority.toLowerCase() == 'high' ||
+                                model.priority.toLowerCase() == 'emergency')
+                              Icon(
+                                Icons.warning_rounded,
+                                size: 12,
+                                color: priorityColor,
+                              )
                             else
-                              Icon(Icons.flag_rounded, size: 12, color: priorityColor),
+                              Icon(
+                                Icons.flag_rounded,
+                                size: 12,
+                                color: priorityColor,
+                              ),
                             const SizedBox(width: 4),
-                            Text('${model.priority.toUpperCase()} PRIORITY', style: TextStyle(color: priorityColor, fontSize: 11, fontWeight: FontWeight.w900)),
+                            Text(
+                              '${model.priority.toUpperCase()} PRIORITY',
+                              style: TextStyle(
+                                color: priorityColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       // Status
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: statusBg,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: statusColor.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(width: 6, height: 6, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
                             const SizedBox(width: 4),
-                            Text(model.status.toUpperCase(), style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w900)),
+                            Text(
+                              model.status.toUpperCase(),
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Title
-                  const Text('Maintenance Ticket Details', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.ink, height: 1.2)),
+                  const Text(
+                    'Maintenance Ticket Details',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink,
+                      height: 1.2,
+                    ),
+                  ),
                   const SizedBox(height: 8),
 
                   // Ticket ID row
                   Row(
                     children: [
-                      const Text('Ticket Reference: ', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Ticket Reference: ',
+                        style: TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.canvas, borderRadius: BorderRadius.circular(6)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.canvas,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Flexible(
                                 child: Text(
                                   model.id.toString(),
-                                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.copy, size: 10, color: AppColors.muted),
+                              const Icon(
+                                Icons.copy,
+                                size: 10,
+                                color: AppColors.muted,
+                              ),
                             ],
                           ),
                         ),
@@ -248,7 +460,10 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                   // Property Details Box
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: AppColors.canvas, borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(
+                      color: AppColors.canvas,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -258,20 +473,42 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                             color: AppColors.teal,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.home_rounded, color: Colors.white, size: 20),
+                          child: const Icon(
+                            Icons.home_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(model.propertyTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                              Text(
+                                model.propertyTitle,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.ink,
+                                ),
+                              ),
                               const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  const Icon(Icons.location_on_rounded, size: 10, color: AppColors.muted),
+                                  const Icon(
+                                    Icons.location_on_rounded,
+                                    size: 10,
+                                    color: AppColors.muted,
+                                  ),
                                   const SizedBox(width: 2),
-                                  const Text('Colombo, Sri Lanka', style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w600)),
+                                  const Text(
+                                    'Colombo, Sri Lanka',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.muted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -282,11 +519,26 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                   ),
 
                   const SizedBox(height: 24),
-                  
+
                   // Description
-                  const Text('ISSUE DESCRIPTION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                  const Text(
+                    'ISSUE DESCRIPTION',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(model.description, style: const TextStyle(fontSize: 14, color: AppColors.ink, height: 1.5)),
+                  Text(
+                    model.description,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.ink,
+                      height: 1.5,
+                    ),
+                  ),
 
                   if (model.photoUrl.isNotEmpty) ...[
                     const SizedBox(height: 16),
@@ -301,14 +553,26 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                           width: double.infinity,
                           height: 200,
                           color: AppColors.line,
-                          child: const Icon(Icons.broken_image_rounded, color: AppColors.muted, size: 40),
+                          child: const Icon(
+                            Icons.broken_image_rounded,
+                            color: AppColors.muted,
+                            size: 40,
+                          ),
                         ),
                       ),
                     ),
                   ],
 
                   const SizedBox(height: 32),
-                  const Text('PROGRESS TRACKING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5)),
+                  const Text(
+                    'PROGRESS TRACKING',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _buildProgressTrack(model.status),
                 ],
@@ -322,12 +586,28 @@ class MaintenanceDetailScreen extends ConsumerWidget {
 
   Widget _buildProgressTrack(String currentStatus) {
     final stages = [
-      {'label': 'Ticket Submitted', 'desc': 'Ticket submitted and awaiting review.', 'status': 'Reported'},
-      {'label': 'Technician Dispatched', 'desc': 'Technician assigned to evaluate/repair.', 'status': 'Assigned'},
-      {'label': 'Repairs Underway', 'desc': 'Repairs underway at property.', 'status': 'In Progress'},
-      {'label': 'Resolved', 'desc': 'Verified & resolved.', 'status': 'Completed'}
+      {
+        'label': 'Ticket Submitted',
+        'desc': 'Ticket submitted and awaiting review.',
+        'status': 'Reported',
+      },
+      {
+        'label': 'Technician Dispatched',
+        'desc': 'Technician assigned to evaluate/repair.',
+        'status': 'Assigned',
+      },
+      {
+        'label': 'Repairs Underway',
+        'desc': 'Repairs underway at property.',
+        'status': 'In Progress',
+      },
+      {
+        'label': 'Resolved',
+        'desc': 'Verified & resolved.',
+        'status': 'Completed',
+      },
     ];
-    
+
     int currentIndex = 0;
     switch (currentStatus.toLowerCase()) {
       case 'reported':
@@ -353,10 +633,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
           left: 11,
           top: 10,
           bottom: 10,
-          child: Container(
-            width: 2,
-            color: AppColors.line,
-          ),
+          child: Container(width: 2, color: AppColors.line),
         ),
         Column(
           children: List.generate(currentIndex + 1, (index) {
@@ -382,7 +659,15 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                         color: isLatest ? Colors.blue[600]! : AppColors.line,
                         width: isLatest ? 3 : 2,
                       ),
-                      boxShadow: isLatest ? [BoxShadow(color: Colors.blue.withValues(alpha: 0.2), blurRadius: 8, spreadRadius: 2)] : [],
+                      boxShadow: isLatest
+                          ? [
+                              BoxShadow(
+                                color: Colors.blue.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                          : [],
                     ),
                     child: Center(
                       child: Container(
@@ -396,7 +681,7 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Content
                   Expanded(
                     child: Column(
@@ -410,26 +695,43 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   'Status Update',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.ink,
+                                  ),
                                 ),
                                 if (isLatest) ...[
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.blue[50],
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.blue[100]!),
+                                      border: Border.all(
+                                        color: Colors.blue[100]!,
+                                      ),
                                     ),
-                                    child: Text('LATEST', style: TextStyle(color: Colors.blue[600], fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                    child: Text(
+                                      'LATEST',
+                                      style: TextStyle(
+                                        color: Colors.blue[600],
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                                   ),
-                                ]
+                                ],
                               ],
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        
+
                         // Note Box
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -444,27 +746,84 @@ class MaintenanceDetailScreen extends ConsumerWidget {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6), border: Border.all(color: AppColors.line)),
-                                    child: Text(actualIndex > 0 ? stages[actualIndex-1]['status']! : 'Draft', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.muted)),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppColors.line),
+                                    ),
+                                    child: Text(
+                                      actualIndex > 0
+                                          ? stages[actualIndex - 1]['status']!
+                                          : 'Draft',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
                                   ),
                                   const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 6),
-                                    child: Text('→', style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.bold, fontSize: 12)),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    child: Text(
+                                      '→',
+                                      style: TextStyle(
+                                        color: AppColors.muted,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: stage['status'] == 'Completed' ? Colors.green[50] : stage['status'] == 'In Progress' ? Colors.blue[50] : Colors.orange[50],
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: stage['status'] == 'Completed' ? Colors.green[200]! : stage['status'] == 'In Progress' ? Colors.blue[200]! : Colors.orange[200]!),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
                                     ),
-                                    child: Text(stage['status']!, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: stage['status'] == 'Completed' ? Colors.green[800] : stage['status'] == 'In Progress' ? Colors.blue[800] : Colors.orange[800])),
+                                    decoration: BoxDecoration(
+                                      color: stage['status'] == 'Completed'
+                                          ? Colors.green[50]
+                                          : stage['status'] == 'In Progress'
+                                          ? Colors.blue[50]
+                                          : Colors.orange[50],
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: stage['status'] == 'Completed'
+                                            ? Colors.green[200]!
+                                            : stage['status'] == 'In Progress'
+                                            ? Colors.blue[200]!
+                                            : Colors.orange[200]!,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      stage['status']!,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: stage['status'] == 'Completed'
+                                            ? Colors.green[800]
+                                            : stage['status'] == 'In Progress'
+                                            ? Colors.blue[800]
+                                            : Colors.orange[800],
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text(stage['desc']!, style: const TextStyle(fontSize: 13, color: AppColors.ink, fontWeight: FontWeight.w500, height: 1.4)),
+                              Text(
+                                stage['desc']!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.ink,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.4,
+                                ),
+                              ),
                             ],
                           ),
                         ),

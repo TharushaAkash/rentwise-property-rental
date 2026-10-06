@@ -1,3 +1,4 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,7 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { TenantProfileForm } from './TenantProfileForm';
-import { parseBookingDetails } from './TenantPortal';
+import { parseBookingDetails } from './tenantHelpers';
 import { PROPERTY_PLACEHOLDER_IMAGE, handleImageError } from '../../utils/imagePlaceholder';
 import { dispatchBookingsUpdated } from '../../utils/bookingStatus';
 import { Users, Home, Calendar, CheckCircle2, XCircle, Clock, Plus, Search, Check, X, FileText, Mail, Phone, AlertCircle, Building2, DollarSign, LayoutGrid, List, ArrowRight, ExternalLink, ShieldCheck, Sparkles, FileCheck } from 'lucide-react';
@@ -30,7 +31,7 @@ export const TenantsDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'Administrator';
+  const isAdmin = ['Admin', 'Administrator', 'SystemAdmin'].includes(user?.role);
 
   // Active tab: 'bookings' | 'renting' | 'directory'
   const [activeTab, setActiveTab] = useState('bookings');
@@ -67,8 +68,8 @@ export const TenantsDashboard = () => {
     setIsLoading(true);
     try {
       const [appsRes, agreementsRes, directoryRes, propsRes] = await Promise.all([
-        api.get('/property-applications').catch(() => ({ data: [] })),
-        api.get('/agreements').catch(() => ({ data: [] })),
+        api.get('/property-applications'),
+        api.get(isAdmin ? '/agreements' : '/agreements/mine').catch(() => ({ data: [] })),
         api.get(isAdmin ? '/users' : '/tenant-profiles').catch(() => ({ data: [] })),
         api.get('/properties').catch(() => ({ data: [] }))
       ]);
@@ -77,33 +78,15 @@ export const TenantsDashboard = () => {
       let apiAgreements = Array.isArray(agreementsRes.data) ? agreementsRes.data : [];
       let apiProps = Array.isArray(propsRes.data) ? propsRes.data : [];
 
-      // Merge with client-side cached bookings
-      let clientBookings = [];
-      try {
-        clientBookings = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
-      } catch {}
-
-      const mergedAppsMap = new Map();
-      for (const b of clientBookings) {
-        if (b && b.id) mergedAppsMap.set(b.id, b);
-      }
-      for (const a of apiBookings) {
-        if (a && a.id) {
-          const local = mergedAppsMap.get(a.id);
-          if (local && local.status === 'Accepted') {
-            mergedAppsMap.set(a.id, { ...a, status: 'Accepted' });
-          } else {
-            mergedAppsMap.set(a.id, a);
-          }
-        }
-      }
-      const mergedApps = Array.from(mergedAppsMap.values());
+      // The server is authoritative; browser-only entries are not booking records.
+      const mergedApps = [...apiBookings];
+      accountStorage.setItem('rentwise_client_bookings', JSON.stringify(apiBookings));
       mergedApps.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
       // Merge agreements
       let clientAgreements = [];
       try {
-        const rawAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const rawAgreements = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         clientAgreements = rawAgreements.map(a => {
           const terms = a?.termsAndConditions || a?.terms || '';
           const isPaid = terms.includes('[PAYMENT_SUCCESS') || Boolean(a?.isPaid);
@@ -116,7 +99,7 @@ export const TenantsDashboard = () => {
           }
           return a;
         });
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(clientAgreements));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(clientAgreements));
       } catch {}
       const mergedAgrMap = new Map();
       for (const ag of clientAgreements) {
@@ -127,8 +110,8 @@ export const TenantsDashboard = () => {
       }
       const mergedAgrs = Array.from(mergedAgrMap.values());
 
-      setApplications(mergedApps);
-      setAgreements(mergedAgrs);
+      setApplications(mergedApps.filter(a => belongsToAccount(a, user)));
+      setAgreements(mergedAgrs.filter(a => belongsToAccount(a, user)));
       setUsersOrProfiles(directoryRes.data || []);
       setProperties(apiProps);
     } catch (err) {
@@ -140,7 +123,7 @@ export const TenantsDashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, [isAdmin]);
+  }, [isAdmin, user?.id]);
 
   // Handle Approve / Confirm Booking Request
   const handleApprove = async (id, e) => {
@@ -151,20 +134,16 @@ export const TenantsDashboard = () => {
 
       const targetApp = applications.find((a) => a.id === id);
 
-      try {
-        await api.post(`/property-applications/${id}/confirm`);
-      } catch (apiErr) {
-        console.warn('Backend approve call note (syncing locally):', apiErr);
-      }
+      await api.post(`/property-applications/${id}/confirm`);
 
       // Update local storage so it persists across page reloads and tenant profile
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const updated = stored.map((b) => (b.id === id ? { ...b, status: 'Accepted' } : b));
         if (!stored.some((b) => b.id === id) && targetApp) {
           updated.push({ ...targetApp, status: 'Accepted' });
         }
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
 
         // Create confirmed rental agreement in local storage for tenant portal
         if (targetApp) {
@@ -175,6 +154,7 @@ export const TenantsDashboard = () => {
             propertyTitle: targetApp.propertyTitle,
             propertyAddress: targetApp.propertyAddress,
             tenantId: targetApp.tenantId,
+            ownerId: targetApp.ownerId || user?.id,
             tenantName: targetApp.tenantName,
             tenantEmail: targetApp.tenantEmail,
             monthlyRent: targetApp.monthlyRent,
@@ -185,10 +165,10 @@ export const TenantsDashboard = () => {
             status: 'Drafted',
             termsAndConditions: `[6-Month Lease Sent to Tenant: ${targetApp.tenantName} (${targetApp.tenantEmail}) on ${new Date().toLocaleDateString()}]\nPlease review house photos and terms, then click Review & Agree to proceed to payment.`
           };
-          const existingAgreements = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+          const existingAgreements = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
           if (!existingAgreements.some((a) => a.id === agreement.id || a.propertyId === agreement.propertyId)) {
             existingAgreements.unshift(agreement);
-            localStorage.setItem('rentwise_client_agreements', JSON.stringify(existingAgreements));
+            accountStorage.setItem('rentwise_client_agreements', JSON.stringify(existingAgreements));
           }
         }
       } catch (storageErr) {
@@ -200,8 +180,7 @@ export const TenantsDashboard = () => {
       setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'Accepted' } : a)));
       await fetchData();
     } catch (err) {
-      setFeedbackMessage({ text: 'Booking approved & 6-month lease sent to tenant! Awaiting tenant agreement & payment.', type: 'success' });
-      setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'Accepted' } : a)));
+      setFeedbackMessage({ text: err.response?.data?.message || 'Could not approve this booking. Refresh and retry.', type: 'error' });
     } finally {
       setActionLoadingId(null);
     }
@@ -214,23 +193,19 @@ export const TenantsDashboard = () => {
       setActionLoadingId(id);
       setFeedbackMessage({ text: '', type: '' });
 
-      try {
-        await api.post(`/property-applications/${id}/reject`);
-      } catch (apiErr) {
-        console.warn('Backend reject call note (updating locally):', apiErr);
-      }
+      await api.post(`/property-applications/${id}/reject`);
 
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
         const updated = stored.map((b) => (b.id === id ? { ...b, status: 'Rejected' } : b));
-        localStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
+        accountStorage.setItem('rentwise_client_bookings', JSON.stringify(updated));
         dispatchBookingsUpdated();
       } catch {}
 
       setFeedbackMessage({ text: 'Booking request rejected.', type: 'info' });
       setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'Rejected' } : a)));
     } catch (err) {
-      setFeedbackMessage({ text: 'Booking request rejected.', type: 'info' });
+      setFeedbackMessage({ text: err.response?.data?.message || 'Could not reject this booking. Refresh and retry.', type: 'error' });
     } finally {
       setActionLoadingId(null);
     }
@@ -276,9 +251,9 @@ export const TenantsDashboard = () => {
     } catch {}
 
     try {
-      const stored = JSON.parse(localStorage.getItem('rentwise_client_bookings') || '[]');
+      const stored = JSON.parse(accountStorage.getItem('rentwise_client_bookings') || '[]');
       stored.unshift(sample);
-      localStorage.setItem('rentwise_client_bookings', JSON.stringify(stored));
+      accountStorage.setItem('rentwise_client_bookings', JSON.stringify(stored));
     } catch {}
 
     setApplications((prev) => [sample, ...prev]);
@@ -448,10 +423,10 @@ export const TenantsDashboard = () => {
 
       {/* Navigation Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-6 sm:space-x-8">
+        <nav className="-mb-px flex overflow-x-auto space-x-6 sm:space-x-8">
           <button
             onClick={() => setActiveTab('bookings')}
-            className={`pb-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors ${
+            className={`shrink-0 whitespace-nowrap pb-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors ${
               activeTab === 'bookings'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -468,7 +443,7 @@ export const TenantsDashboard = () => {
 
           <button
             onClick={() => setActiveTab('renting')}
-            className={`pb-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors ${
+            className={`shrink-0 whitespace-nowrap pb-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors ${
               activeTab === 'renting'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -483,7 +458,7 @@ export const TenantsDashboard = () => {
 
           <button
             onClick={() => setActiveTab('directory')}
-            className={`pb-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors ${
+            className={`shrink-0 whitespace-nowrap pb-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors ${
               activeTab === 'directory'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

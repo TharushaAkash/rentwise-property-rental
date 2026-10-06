@@ -78,6 +78,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
     resolver: zodResolver(propertySchema),
+    mode: 'onBlur',
     defaultValues: {
       title: initialData?.title || initialData?.Title || '',
       description: initialData?.description || initialData?.Description || '',
@@ -207,6 +208,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
       featureTags: selectedTags,
       photoCount: totalPhotos > 0 ? totalPhotos : 1,
       photoUrl: primaryUrl,
+      photoUrls: urlPhotos,
       photos: allAddedUrls.map((url, idx) => ({ id: `p_${idx}`, photoUrl: url, isPrimary: idx === 0 })),
       utilityBillUrl: billUrl
     };

@@ -17,7 +17,7 @@ class MaintenanceScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Maintenance Requests', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('Maintenance Requests', style: TextStyle(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.white,
         scrolledUnderElevation: 0,
       ),
@@ -56,7 +56,7 @@ class MaintenanceScreen extends ConsumerWidget {
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateMaintenanceScreen()));
         },
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.ink,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('New Request', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -194,7 +194,7 @@ class MaintenanceScreen extends ConsumerWidget {
                       ),
                       child: Text(
                         model.priority,
-                        style: TextStyle(color: priorityColor, fontSize: 11, fontWeight: FontWeight.w900),
+                        style: TextStyle(color: priorityColor, fontSize: 11, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
@@ -208,7 +208,7 @@ class MaintenanceScreen extends ConsumerWidget {
                       children: [
                         Text(
                           model.propertyTitle,
-                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -257,7 +257,7 @@ class MaintenanceScreen extends ConsumerWidget {
                         children: [
                           const Text(
                             'ISSUE REPORTED',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.muted, letterSpacing: 0.5),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.muted, letterSpacing: 0.5),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -314,18 +314,18 @@ class MaintenanceScreen extends ConsumerWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Colors.indigo, Colors.blueGrey]),
+                        color: AppColors.darkGreen,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
-                      child: Text(userInitials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                      child: Text(userInitials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(userName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.ink)),
+                          Text(userName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink)),
                           const SizedBox(height: 2),
                           Text(userEmail, style: const TextStyle(color: AppColors.muted, fontSize: 11)),
                         ],
@@ -368,7 +368,7 @@ class MaintenanceScreen extends ConsumerWidget {
                           children: [
                             Text(
                               'View Details',
-                              style: TextStyle(color: AppColors.teal, fontWeight: FontWeight.w800, fontSize: 12),
+                              style: TextStyle(color: AppColors.teal, fontWeight: FontWeight.w700, fontSize: 12),
                             ),
                             SizedBox(width: 4),
                             Icon(Icons.arrow_forward_rounded, size: 12, color: AppColors.teal),

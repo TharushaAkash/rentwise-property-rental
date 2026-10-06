@@ -1,5 +1,7 @@
+import { accountStorage, belongsToAccount } from '../../utils/accountStorage';
+import { validateCard } from '../../utils/paymentValidation';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import { Button } from '../../components/ui/Button';
@@ -12,6 +14,7 @@ const formatLKR = (val) => `LKR ${Number(val || 0).toLocaleString()}`;
 
 export const AgreementsDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
   const isTenant = user?.role === 'Tenant' || !user;
@@ -19,7 +22,9 @@ export const AgreementsDashboard = () => {
   const isAdmin = ['Administrator', 'Admin', 'SystemAdmin'].includes(user?.role);
 
   // Active Tab: 'tenant-leases' | 'owner-approvals'
-  const [activeTab, setActiveTab] = useState('tenant-leases');
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'owner-approvals' ? 'owner-approvals' : 'tenant-leases'
+  );
 
   // Agreements State
   const [agreements, setAgreements] = useState([]);
@@ -149,12 +154,12 @@ export const AgreementsDashboard = () => {
   const fetchAgreements = async () => {
     setIsLoadingAgreements(true);
     try {
-      const res = await api.get('/agreements/mine').catch(() => api.get('/agreements'));
+      const res = await api.get(isAdmin ? '/agreements' : '/agreements/mine');
       let list = Array.isArray(res.data) ? res.data : [];
 
       // Merge and normalize local cache
       try {
-        const local = JSON.parse(localStorage.getItem('rentwise_client_agreements') || '[]');
+        const local = JSON.parse(accountStorage.getItem('rentwise_client_agreements') || '[]');
         const cleaned = local.map(a => {
           const terms = a?.termsAndConditions || a?.terms || '';
           const isPaid = terms.includes('[PAYMENT_SUCCESS') || Boolean(a?.isPaid);
@@ -167,7 +172,7 @@ export const AgreementsDashboard = () => {
           }
           return a;
         });
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(cleaned));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(cleaned));
 
         const map = new Map();
         cleaned.forEach(a => a?.id && map.set(a.id, a));
@@ -175,7 +180,7 @@ export const AgreementsDashboard = () => {
         list = Array.from(map.values());
       } catch {}
 
-      setAgreements(list);
+      setAgreements(list.filter(a => belongsToAccount(a, user)));
     } catch (err) {
       console.error('Failed to load agreements:', err);
     } finally {
@@ -186,7 +191,8 @@ export const AgreementsDashboard = () => {
   const fetchProperties = async () => {
     setIsLoadingProps(true);
     try {
-      const res = await api.get('/properties');
+      if (!isAdmin && !(isOwner && user?.id)) return;
+      const res = await api.get(isOwner ? `/properties/owner/${user.id}` : '/properties');
       let list = Array.isArray(res.data) ? res.data : [];
 
       // If owner, filter by owner
@@ -197,6 +203,7 @@ export const AgreementsDashboard = () => {
       setProperties(list);
     } catch (err) {
       console.error('Failed to load properties:', err);
+      setFeedback({ text: 'Could not load listing verification details. Please refresh and try again.', type: 'error' });
     } finally {
       setIsLoadingProps(false);
     }
@@ -212,7 +219,7 @@ export const AgreementsDashboard = () => {
     setAgreements(prev => {
       const next = prev.map(a => a.id === updated.id ? { ...a, ...updated } : a);
       try {
-        localStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
+        accountStorage.setItem('rentwise_client_agreements', JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -620,7 +627,7 @@ export const AgreementsDashboard = () => {
                 
                 // Inspect verification documents
                 const hasProof = Array.isArray(property.documents) && property.documents.length > 0;
-                const hasFee = (Array.isArray(property.verificationRecords) && property.verificationRecords.some(v => v.comments?.includes('FEE_PAID') || v.agentReport?.includes('fee paid'))) || isApproved;
+                const hasFee = Array.isArray(property.verificationRecords) && property.verificationRecords.some(v => v.comments?.startsWith('[LISTING_FEE_PAID:'));
 
                 let statusBadge = {
                   text: 'Pending Proof & Fee',
@@ -720,7 +727,7 @@ export const AgreementsDashboard = () => {
                     {/* Actions Footer */}
                     <div className="p-3 pt-0 space-y-1.5">
                       {/* Owner Actions */}
-                      {isOwner && !isApproved && (
+                      {isOwner && (!isApproved || !hasFee) && (
                         <div className="flex flex-col gap-1.5">
                           {!hasProof && (
                             <button
@@ -822,7 +829,9 @@ export const AgreementsDashboard = () => {
             syncAgreementUpdate(updated);
             setPayingAgreement(null);
             setFeedback({ 
-              text: 'Payment successful! The lease agreement is active and the process is complete!', 
+              text: updated.confirmationEmailSent === true
+                ? 'Payment successful! Confirmation email sent. Check your inbox and spam folder.'
+                : 'Payment successful. Email delivery was not confirmed. Contact support with your payment reference; do not pay again.',
               type: 'success' 
             });
             fetchAgreements();
@@ -1406,17 +1415,9 @@ const TenantPaymentModal = ({ isOpen, onClose, agreement, onPaymentSuccess }) =>
     setPayError('');
 
     if (paymentMethod === 'Card') {
-      const cleanNum = cardNumber.replace(/\s/g, '');
-      if (cleanNum.length < 15) {
-        setPayError('Please enter a valid 16-digit card number.');
-        return;
-      }
-      if (cardExpiry.length < 5) {
-        setPayError('Please enter a valid expiry date (MM/YY).');
-        return;
-      }
-      if (cardCvc.length < 3) {
-        setPayError('Please enter a valid 3 or 4-digit CVV/CVC.');
+      const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+      if (cardError) {
+        setPayError(cardError);
         return;
       }
     }
@@ -1434,14 +1435,14 @@ const TenantPaymentModal = ({ isOpen, onClose, agreement, onPaymentSuccess }) =>
         paymentReference: `PAY-${Date.now().toString().slice(-6)}`
       };
 
-      let res = { data: { success: true, agreement: { ...agreement, status: 'Active' } } };
-      if (!String(agreement.id).startsWith('agr_')) {
-        res = await api.post(`/agreements/${agreement.id}/pay`, payload).catch(() => ({
-          data: { success: true, agreement: { ...agreement, status: 'Active' } }
-        }));
+      if (String(agreement.id).startsWith('agr_')) {
+        throw new Error('This booking is not saved on the server. Reopen a saved booking before paying.');
       }
+      const res = await api.post(`/agreements/${agreement.id}/pay`, payload);
+      if (res.data?.success !== true) throw new Error('Payment was not confirmed. Refresh payment history before retrying.');
       const updated = {
         ...agreement,
+        confirmationEmailSent: res.data.confirmationEmailSent,
         status: 'Active',
         termsAndConditions: `${agreement.termsAndConditions || ''}\n[PAYMENT_SUCCESS: LKR ${totalPayable} | Ref: ${payload.paymentReference} | Date: ${new Date().toISOString()} | Method: ${paymentMethodName}]`
       };
@@ -1449,7 +1450,7 @@ const TenantPaymentModal = ({ isOpen, onClose, agreement, onPaymentSuccess }) =>
       onPaymentSuccess(updated);
     } catch (err) {
       console.error('Payment failed:', err);
-      setPayError('Payment failed. Please check your card details or try again.');
+      setPayError(err.isAxiosError ? 'Payment was not confirmed. Refresh payment history before retrying.' : err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -1769,26 +1770,29 @@ const UploadProofModal = ({ isOpen, onClose, property, onSuccess }) => {
 // =============================================================================
 const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+
 
   const handlePay = async (e) => {
     e.preventDefault();
+    setError('');
+    const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+    if (cardError) { setError(cardError); return; }
     setIsProcessing(true);
     try {
       await api.post(`/properties/${property.id}/listing-fee`, {
         amount: 2500,
-        paymentMethod: 'Card',
+        paymentMethod: 'Demo Card',
         paymentReference: `FEE-${Date.now().toString().slice(-6)}`
       });
       onSuccess();
     } catch (err) {
       console.error('Failed to pay listing fee:', err);
-      // Local fallback
-      property.verificationRecords = property.verificationRecords || [];
-      property.verificationRecords.push({
-        comments: '[LISTING_FEE_PAID: LKR 2500.00]',
-        agentReport: 'Listing fee paid (LKR 2,500)'
-      });
-      onSuccess();
+      setError(err.response?.data?.message || 'Could not confirm your listing fee payment. Refresh the listing status before trying again.');
     } finally {
       setIsProcessing(false);
     }
@@ -1797,6 +1801,7 @@ const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Pay Listing Fee — ${property.title}`}>
       <form onSubmit={handlePay} className="space-y-4 text-xs sm:text-sm">
+        {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
         <div className="bg-gradient-to-br from-amber-700 to-amber-900 rounded-2xl p-5 text-white shadow-md">
           <span className="text-xs uppercase tracking-wider font-semibold text-amber-200">
             Mandatory Listing Verification Fee
@@ -1824,6 +1829,16 @@ const PayListingFeeModal = ({ isOpen, onClose, property, onSuccess }) => {
           </div>
         </div>
 
+        <div className="rounded-xl border border-gray-200 p-4 space-y-3">
+          <p className="font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4" />Card checkout</p>
+          <p className="text-xs text-gray-600">Demo checkout, matching booking payments. No real money is charged. Use test card details.</p>
+          <label className="block">Cardholder name<input required value={cardHolder} onChange={e => setCardHolder(e.target.value)} className="mt-1 block w-full rounded-lg border p-3" /></label>
+          <label className="block">Card number<input required inputMode="numeric" value={cardNumber} onChange={e => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 '))} placeholder="4242 4242 4242 4242" className="mt-1 block w-full rounded-lg border p-3" /></label>
+          <div className="grid grid-cols-2 gap-3">
+            <label>Expiry<input required inputMode="numeric" value={cardExpiry} onChange={e => { const digits = e.target.value.replace(/\D/g, '').slice(0, 4); setCardExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits); }} placeholder="MM/YY" className="mt-1 block w-full rounded-lg border p-3" /></label>
+            <label>CVV<input required type="password" inputMode="numeric" maxLength={4} value={cardCvc} onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))} className="mt-1 block w-full rounded-lg border p-3" /></label>
+          </div>
+        </div>
         <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
           <button
             type="button"

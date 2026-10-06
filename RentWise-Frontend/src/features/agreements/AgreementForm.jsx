@@ -13,6 +13,7 @@ import { agreementSchema } from './types';
 
 export function AgreementForm({ initialData, onSubmit, isLoading }) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     resolver: zodResolver(agreementSchema),
     defaultValues: {
       propertyId: initialData?.propertyId || '',

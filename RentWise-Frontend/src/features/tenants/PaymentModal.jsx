@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import { accountStorage } from '../../utils/accountStorage';
+import { validateCard } from '../../utils/paymentValidation';
+import React, { useEffect, useState } from 'react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import api from '../../services/api';
@@ -8,6 +10,25 @@ const money = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
 export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [bankDetails, setBankDetails] = useState(null);
+  const [bankLoading, setBankLoading] = useState(false);
+  const [bankError, setBankError] = useState('');
+  const [bankRetry, setBankRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setBankDetails(null); setBankError(''); setBankLoading(false);
+    if (!isOpen || paymentMethod !== 'bank') return;
+    if (!agreement?.id || String(agreement.id).startsWith('agr_')) {
+      setBankError('A saved rental agreement is required to view the owner’s bank details.');
+      return;
+    }
+    setBankLoading(true);
+    api.get(`/bank-details/agreements/${agreement.id}`)
+      .then(({ data }) => { if (active) setBankDetails(data); })
+      .catch(() => { if (active) setBankError('Unable to load the owner’s bank details. Use Refresh details to try again.'); })
+      .finally(() => { if (active) setBankLoading(false); });
+    return () => { active = false; };
+  }, [isOpen, paymentMethod, agreement?.id, bankRetry]);
   const [cardHolder, setCardHolder] = useState(agreement?.tenantName || agreement?.tenant?.fullName || 'Tenant User');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -67,19 +88,15 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
   const handlePay = async (e) => {
     e.preventDefault();
     setError('');
+    if (paymentMethod === 'bank' && (bankLoading || !bankDetails?.configured || bankError)) {
+      setError('The owner’s saved bank details are required before recording a transfer.');
+      return;
+    }
 
     if (paymentMethod === 'card') {
-      const cleanNum = cardNumber.replace(/\s/g, '');
-      if (cleanNum.length < 15) {
-        setError('Please enter a valid 16-digit card number.');
-        return;
-      }
-      if (cardExpiry.length < 5) {
-        setError('Please enter a valid expiry date (MM/YY).');
-        return;
-      }
-      if (cardCvc.length < 3) {
-        setError('Please enter a valid 3 or 4-digit CVV/CVC.');
+      const cardError = validateCard({ cardHolder, cardNumber, cardExpiry, cardCvc });
+      if (cardError) {
+        setError(cardError);
         return;
       }
     }
@@ -98,6 +115,7 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
         propertyId: agreement.propertyId,
         propertyTitle: propTitle,
         propertyAddress: propAddress,
+        purpose: 'MonthlyRent',
         amount: Number(rentAmount),
         paymentDate: now.toISOString(),
         paymentReference: txnRef,
@@ -106,40 +124,41 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
         paymentMethod: methodName
       };
 
-      // 1. Try sending to backend
-      try {
-        let finalAgreementId = agreement.id;
+      // Save the payment on the server before displaying success.
+      let finalAgreementId = agreement.id;
 
-        // If it's a mock agreement from the UI, we must persist it to the database first!
-        if (String(finalAgreementId).startsWith('agr_')) {
-          const createRes = await api.post('/agreements', {
-             propertyId: agreement.propertyId,
-             ownerId: agreement.ownerId || "00000000-0000-0000-0000-000000000000",
-             agreedMonthlyRent: Number(rentAmount),
-             securityDeposit: agreement.securityDeposit || Number(rentAmount) * 2,
-             termsAndConditions: agreement.termsAndConditions || agreement.terms || '',
-             status: 'Active'
-          });
-          if (createRes.data && createRes.data.id) {
-             finalAgreementId = createRes.data.id;
-          }
-        }
-
-        await api.post(`/agreements/${finalAgreementId}/payments`, {
-          amount: Number(rentAmount),
-          paymentDate: now.toISOString(),
-          paymentReference: txnRef,
-          isSuccessful: true
+      // If it's a mock agreement from the UI, we must persist it to the database first!
+      if (String(finalAgreementId).startsWith('agr_')) {
+        const createRes = await api.post('/agreements', {
+           propertyId: agreement.propertyId,
+           ownerId: agreement.ownerId || "00000000-0000-0000-0000-000000000000",
+           agreedMonthlyRent: Number(rentAmount),
+           securityDeposit: agreement.securityDeposit || Number(rentAmount) * 2,
+           termsAndConditions: agreement.termsAndConditions || agreement.terms || '',
+           status: 'Active'
         });
-      } catch (backendErr) {
-        console.warn('Backend payment note (persisting locally):', backendErr);
+        if (createRes.data && createRes.data.id) {
+           finalAgreementId = createRes.data.id;
+        }
       }
+
+      const paymentResponse = await api.post(`/agreements/${finalAgreementId}/payments`, {
+        purpose: 'MonthlyRent',
+        amount: Number(rentAmount),
+        paymentDate: now.toISOString(),
+        paymentReference: txnRef,
+        isSuccessful: true,
+        paymentMethod: methodName
+      });
+      newPayment.id = paymentResponse.data.id;
+      newPayment.rentalAgreementId = finalAgreementId;
+      newPayment.confirmationEmailSent = paymentResponse.data.confirmationEmailSent;
 
       // 2. Persist in local storage
       try {
-        const stored = JSON.parse(localStorage.getItem('rentwise_client_payments') || '[]');
+        const stored = JSON.parse(accountStorage.getItem('rentwise_client_payments') || '[]');
         stored.unshift(newPayment);
-        localStorage.setItem('rentwise_client_payments', JSON.stringify(stored));
+        accountStorage.setItem('rentwise_client_payments', JSON.stringify(stored));
       } catch (e) {
         console.error('LocalStorage save error:', e);
       }
@@ -149,7 +168,7 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
       }
       onClose();
     } catch (err) {
-      setError('Payment failed. Please try again or check details.');
+      setError('Payment was not confirmed. Refresh payment history before retrying.');
     } finally {
       setIsLoading(false);
     }
@@ -392,13 +411,13 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
           </div>
         ) : (
           <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-2 text-xs text-gray-600">
-            <p className="font-bold text-gray-900">Landlord Designated Escrow Account:</p>
-            <div className="font-mono bg-white p-2.5 rounded-xl border border-gray-200 space-y-1">
-              <div>Bank: Commercial Bank of Ceylon</div>
-              <div>Account Name: RentWise Escrow - {propTitle.slice(0, 15)}</div>
-              <div>Account No: 8004 9281 9201</div>
-              <div>Branch: Colombo City Centre</div>
-            </div>
+            <div className="flex items-center justify-between"><p className="font-bold text-gray-900">Property owner’s bank account</p><button type="button" disabled={bankLoading} onClick={() => setBankRetry(value => value + 1)} className="text-emerald-700 underline">Refresh details</button></div>
+            {bankLoading ? <p role="status">Loading transfer details...</p> : bankError ? <p role="alert" className="text-red-700">{bankError}</p> : bankDetails?.configured ? <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-2">
+              <div>Bank: <strong>{bankDetails.bankName}</strong></div>
+              <div>Account holder: <strong>{bankDetails.accountName}</strong></div>
+              <div>Account number: <strong className="font-mono select-all">{bankDetails.accountNumber}</strong></div>
+              <div>Branch: <strong>{bankDetails.branch}</strong></div>
+            </div> : <p className="text-amber-800">The owner has not added bank details yet. Contact the owner before making a transfer.</p>}
             <p className="text-[11px] text-gray-500 italic">Clicking Confirm will record your bank transfer payment receipt.</p>
           </div>
         )}
@@ -417,6 +436,7 @@ export function PaymentModal({ isOpen, onClose, agreement, onSuccess }) {
           <Button
             type="submit"
             isLoading={isLoading}
+            disabled={paymentMethod === 'bank' && (bankLoading || !bankDetails?.configured || Boolean(bankError))}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md shadow-emerald-600/20"
           >
             <CheckCircle2 className="w-4 h-4 mr-2" />

@@ -29,13 +29,23 @@ namespace RentWise.API.Modules.Users
         public string? PhoneNumber { get; set; }
 
         [MaxLength(20)]
+        [System.Text.Json.Serialization.JsonIgnore]
         public string? NicNumber { get; set; }
 
         public bool IsNicVerified { get; set; } = false;
 
         [MaxLength(500)]
+        [System.Text.Json.Serialization.JsonIgnore]
         public string? NicImageUrl { get; set; }
 
         public bool IsBlocked { get; set; } = false;
+        [MaxLength(120), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankName { get; set; }
+        [MaxLength(150), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankAccountName { get; set; }
+        [MaxLength(40), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankAccountNumber { get; set; }
+        [MaxLength(120), System.Text.Json.Serialization.JsonIgnore]
+        public string? BankBranch { get; set; }
     }
 }

@@ -11,6 +11,7 @@ import '../../../shared/utils/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/property_provider.dart';
 import '../providers/maintenance_provider.dart';
+import '../../properties/property_service.dart';
 
 import 'dart:async';
 
@@ -52,6 +53,7 @@ class _CreateMaintenanceScreenState
 
   Future<void> _runAiTriage(String text, {bool showToast = false}) async {
     if (text.isEmpty) return;
+    final propertyId = _selectedPropertyId;
 
     String cat = 'General';
     String prio = 'Medium';
@@ -106,11 +108,20 @@ class _CreateMaintenanceScreenState
       );
       if (res.statusCode == 200) {
         final List<dynamic> providers = jsonDecode(res.body);
+        final property = propertyId == null
+            ? null
+            : await ref
+                  .read(propertyServiceProvider)
+                  .request('GET', '/properties/$propertyId');
+        final ownerId = property?['ownerId'];
         final matches = providers
             .where(
-              (p) => p['category'].toString().toLowerCase().contains(
-                cat.toLowerCase(),
-              ),
+              (p) =>
+                  ownerId != null &&
+                  p['ownerId'] == ownerId &&
+                  p['category'].toString().toLowerCase().contains(
+                    cat.toLowerCase(),
+                  ),
             )
             .toList();
         if (matches.isNotEmpty) {
@@ -122,7 +133,7 @@ class _CreateMaintenanceScreenState
       debugPrint('Failed to fetch providers: $e');
     }
 
-    if (mounted) {
+    if (mounted && _selectedPropertyId == propertyId && !_isLoading) {
       setState(() {
         _category = cat;
         _priority = prio;
@@ -160,6 +171,25 @@ class _CreateMaintenanceScreenState
     final token = authState.value?.token;
 
     try {
+      final api = ref.read(propertyServiceProvider);
+      final property = await api.request(
+        'GET',
+        '/properties/$_selectedPropertyId',
+      );
+      if (_assignedProviderId != null) {
+        final providers =
+            await api.request('GET', '/service-providers') as List;
+        final valid = providers.any(
+          (p) =>
+              p['id'] == _assignedProviderId &&
+              p['ownerId'] != null &&
+              p['ownerId'] == property['ownerId'],
+        );
+        if (!valid) {
+          _assignedProviderId = null;
+          _assignedProviderName = null;
+        }
+      }
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}/maintenance-requests'),
         headers: {
@@ -188,7 +218,12 @@ class _CreateMaintenanceScreenState
           );
         }
       } else {
-        throw Exception('Failed to create request: ${response.body}');
+        final data = jsonDecode(response.body);
+        throw Exception(
+          data is Map
+              ? data['message'] ?? 'Failed to create request.'
+              : 'Failed to create request.',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -211,7 +246,7 @@ class _CreateMaintenanceScreenState
       appBar: AppBar(
         title: const Text(
           'New Maintenance Request',
-          style: TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.canvas,
         scrolledUnderElevation: 0,
@@ -233,20 +268,23 @@ class _CreateMaintenanceScreenState
                   ),
                   const SizedBox(height: 28),
                   // 1. Property Context
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text(
                         'TARGET PROPERTY',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.muted,
                           letterSpacing: 0.5,
                         ),
                       ),
                       if (_selectedPropertyId != null)
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.check_circle_rounded,
@@ -276,6 +314,7 @@ class _CreateMaintenanceScreenState
                         border: Border.all(color: Colors.orange[200]!),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.info_outline,
@@ -297,6 +336,7 @@ class _CreateMaintenanceScreenState
                     )
                   else
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _selectedPropertyId,
                       decoration: InputDecoration(
                         filled: true,
@@ -313,13 +353,16 @@ class _CreateMaintenanceScreenState
                           horizontal: 16,
                           vertical: 12,
                         ),
-                        hintText: '-- Choose your booked property --',
+                        hintText: 'Choose your booked property',
+                        hintMaxLines: 2,
                       ),
                       items: properties.map((prop) {
                         return DropdownMenuItem(
                           value: prop.id,
                           child: Text(
                             prop.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
@@ -327,8 +370,11 @@ class _CreateMaintenanceScreenState
                           ),
                         );
                       }).toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedPropertyId = val),
+                      onChanged: (val) => setState(() {
+                        _selectedPropertyId = val;
+                        _assignedProviderId = null;
+                        _assignedProviderName = null;
+                      }),
                       validator: (val) =>
                           val == null ? 'Please select a property' : null,
                     ),
@@ -344,19 +390,22 @@ class _CreateMaintenanceScreenState
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               const Text(
                                 'CATEGORY',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                   color: AppColors.muted,
                                   letterSpacing: 0.5,
                                 ),
                               ),
                               Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.auto_awesome,
@@ -378,6 +427,7 @@ class _CreateMaintenanceScreenState
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
+                            isExpanded: true,
                             initialValue: _category,
                             decoration: InputDecoration(
                               filled: true,
@@ -427,7 +477,7 @@ class _CreateMaintenanceScreenState
                             'URGENCY / PRIORITY',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.muted,
                               letterSpacing: 0.5,
                             ),
@@ -475,7 +525,7 @@ class _CreateMaintenanceScreenState
                                           ? Colors.white
                                           : AppColors.muted,
                                       fontWeight: isSelected
-                                          ? FontWeight.w900
+                                          ? FontWeight.w700
                                           : FontWeight.w600,
                                       fontSize: 11,
                                     ),
@@ -501,6 +551,7 @@ class _CreateMaintenanceScreenState
                         border: Border.all(color: Colors.blue[200]!),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.handyman_rounded,
@@ -525,7 +576,7 @@ class _CreateMaintenanceScreenState
                                   style: TextStyle(
                                     color: Colors.blue[900],
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -558,29 +609,27 @@ class _CreateMaintenanceScreenState
                   const SizedBox(height: 24),
 
                   // 3. Issue Description
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Row(
-                        children: [
-                          Text(
-                            'ISSUE DESCRIPTION',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.muted,
-                              letterSpacing: 0.5,
+                      const Text.rich(
+                        TextSpan(
+                          text: 'ISSUE DESCRIPTION ',
+                          children: [
+                            TextSpan(
+                              text: '*',
+                              style: TextStyle(color: Colors.red),
                             ),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '*',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.muted,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -613,6 +662,7 @@ class _CreateMaintenanceScreenState
                             ],
                           ),
                           child: const Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.auto_awesome,
@@ -625,7 +675,7 @@ class _CreateMaintenanceScreenState
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -684,7 +734,7 @@ class _CreateMaintenanceScreenState
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _submitRequest,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.teal,
+                        backgroundColor: AppColors.ink,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -703,7 +753,7 @@ class _CreateMaintenanceScreenState
                           : const Text(
                               'Submit Request',
                               style: TextStyle(
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 16,
                               ),
                             ),

@@ -170,6 +170,12 @@ class AgreementModel {
 }
 
 class PaymentModel {
+  final String purpose;
+  String get purposeLabel => purpose == "SecurityDeposit"
+      ? "Security deposit"
+      : purpose == "MonthlyRent"
+      ? "Monthly rent"
+      : "Other payment";
   final String id;
   final String agreementId;
   final double amount;
@@ -179,6 +185,7 @@ class PaymentModel {
   final String paidAt;
 
   PaymentModel({
+    this.purpose = "Unspecified",
     required this.id,
     required this.agreementId,
     required this.amount,
@@ -198,6 +205,15 @@ class PaymentModel {
     }
     num toNum(dynamic v) => num.tryParse(v?.toString() ?? '') ?? 0;
     return PaymentModel(
+      purpose:
+          raw["purpose"]?.toString().isNotEmpty == true &&
+              raw["purpose"] != "Unspecified"
+          ? raw["purpose"].toString()
+          : (raw["paymentReference"]?.toString().startsWith("RENT-") == true
+                ? "MonthlyRent"
+                : raw["paymentReference"]?.toString().startsWith("PAY-") == true
+                ? "SecurityDeposit"
+                : "Unspecified"),
       id: raw['id']?.toString() ?? '',
       agreementId:
           (raw['rentalAgreementId'] ?? raw['agreementId'])?.toString() ?? '',
@@ -213,6 +229,7 @@ class PaymentModel {
   }
 
   Map<String, dynamic> toJson() => {
+    'purpose': purpose,
     'id': id,
     'agreementId': agreementId,
     'amount': amount,

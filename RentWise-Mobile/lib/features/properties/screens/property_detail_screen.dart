@@ -1,7 +1,11 @@
+import '../widgets/property_location_card.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../saved_properties.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../home/models/property_model.dart';
@@ -27,41 +31,9 @@ class PropertyDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
-  bool _busy = false, _saved = false, _expanded = false;
+  bool _busy = false, _expanded = false;
   String? _error;
   int _photoIndex = 0;
-
-  String get _savedKey =>
-      'saved_properties_${ref.read(authStateProvider).value?.id}';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSaved();
-  }
-
-  Future<void> _loadSaved() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(
-        () => _saved = (prefs.getStringList(_savedKey) ?? []).contains(
-          widget.property.id,
-        ),
-      );
-    }
-  }
-
-  Future<void> _saveFavorite() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ids = prefs.getStringList(_savedKey) ?? [];
-      _saved ? ids.remove(widget.property.id) : ids.add(widget.property.id);
-      await prefs.setStringList(_savedKey, ids);
-      if (mounted) setState(() => _saved = !_saved);
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
-    }
-  }
 
   Future<void> _open(Uri uri) async {
     try {
@@ -161,10 +133,10 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
 
   Widget _sectionCard(String title, IconData icon, List<Widget> children) =>
       Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(18),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.line),
           boxShadow: const [
@@ -182,17 +154,19 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
               children: [
                 Icon(icon, color: AppColors.teal, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: AppColors.ink,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppColors.ink,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             ...children,
           ],
         ),
@@ -211,8 +185,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     final photos = p.photos.isNotEmpty
         ? p.photos
         : p.photoUrl.isNotEmpty
-            ? [p.photoUrl]
-            : <String>[];
+        ? [p.photoUrl]
+        : <String>[];
     final apps = ref.watch(applicationsProvider);
     final booked =
         apps.value?.any(
@@ -227,40 +201,39 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
       backgroundColor: AppColors.canvas,
       body: CustomScrollView(
         slivers: [
+          if (_error != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.rose),
+                ),
+              ),
+            ),
           // ── Hero Photo Carousel AppBar ────────────────────────────────
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 255,
             pinned: true,
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.canvas,
+            surfaceTintColor: Colors.transparent,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(120),
+                  color: AppColors.canvas,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back_ios_rounded,
-                    color: Colors.white, size: 18),
+                child: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  color: AppColors.ink,
+                  size: 18,
+                ),
               ),
             ),
             actions: [
-              GestureDetector(
-                onTap: _saveFavorite,
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(120),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: _saved ? Colors.redAccent : Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
+              SavePropertyButton(propertyId: widget.property.id),
               GestureDetector(
                 onTap: () async {
                   await Clipboard.setData(
@@ -279,11 +252,14 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                   margin: const EdgeInsets.only(right: 12),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(120),
+                    color: AppColors.canvas,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.share_rounded,
-                      color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.ios_share_rounded,
+                    color: AppColors.ink,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -296,25 +272,31 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           child: Image.network(
                             photos[_photoIndex.clamp(0, photos.length - 1)],
                             width: double.infinity,
-                            height: 320,
+                            height: 315,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
                               color: AppColors.teal,
-                              child: const Icon(Icons.apartment_rounded,
-                                  size: 80, color: Colors.white38),
+                              child: const Icon(
+                                Icons.apartment_rounded,
+                                size: 80,
+                                color: AppColors.onDarkMuted,
+                              ),
                             ),
                           ),
                         )
                       : Container(
                           color: AppColors.teal,
-                          child: const Icon(Icons.apartment_rounded,
-                              size: 80, color: Colors.white38),
+                          child: const Icon(
+                            Icons.apartment_rounded,
+                            size: 80,
+                            color: AppColors.onDarkMuted,
+                          ),
                         ),
                   Positioned.fill(
                     child: Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.transparent, Color(0xCC000000)],
+                          colors: [Colors.transparent, Color(0x26000000)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
@@ -327,7 +309,9 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       right: 16,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withAlpha(160),
                           borderRadius: BorderRadius.circular(12),
@@ -349,8 +333,12 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
 
           // ── Main Content ──────────────────────────────────────────────
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+              decoration: const BoxDecoration(
+                color: AppColors.canvas,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -389,191 +377,239 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     ),
                   const SizedBox(height: 16),
 
-                  // Title & Address
-                  Text(
-                    p.title,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.ink,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.location_on_rounded,
-                          size: 16, color: AppColors.muted),
-                      const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          p.address,
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Price Banner
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF005C27), Color(0xFF008037)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Monthly Rent',
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 11)),
                             Text(
-                              'LKR ${p.monthlyRent.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')}',
+                              p.title,
                               style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
+                                fontSize: 24,
+                                height: 1.1,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink,
+                                letterSpacing: -.7,
                               ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 15,
+                                  color: AppColors.muted,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    p.address,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(30),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            p.propertyType,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'LKR',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.muted,
                             ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            p.monthlyRent
+                                .toStringAsFixed(0)
+                                .replaceAllMapped(
+                                  RegExp(r'\B(?=(\d{3})+(?!\d))'),
+                                  (_) => ',',
+                                ),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          const Text(
+                            '/ month',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Chip(
+                      label: Text(p.propertyType),
+                      backgroundColor: AppColors.softTeal,
+                      side: BorderSide.none,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
                   // Owner Management Controls (if owner/admin)
                   if (manage)
-                    _sectionCard('Owner Management Access', Icons.admin_panel_settings_rounded, [
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          FilledButton.icon(
-                            onPressed: _busy
-                                ? null
-                                : () => Navigator.push(
+                    _sectionCard(
+                      'Owner Management Access',
+                      Icons.admin_panel_settings_rounded,
+                      [
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: _busy
+                                  ? null
+                                  : () => Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             PropertyFormScreen(property: p),
                                       ),
                                     ),
-                            icon: const Icon(Icons.edit_rounded, size: 16),
-                            label: const Text('Edit Listing Details'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.teal,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              icon: const Icon(Icons.edit_rounded, size: 16),
+                              label: const Text('Edit Listing Details'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.ink,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: _busy
-                                ? null
-                                : () => _action('Delete Property', 'DELETE', ''),
-                            icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                            label: const Text('Delete'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                            OutlinedButton.icon(
+                              onPressed: _busy
+                                  ? null
+                                  : () => _action(
+                                      'Delete Property',
+                                      'DELETE',
+                                      '',
+                                    ),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 16,
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ]),
-
-                  // Specs Grid
-                  _sectionCard('Property Specs', Icons.space_dashboard_rounded, [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _SpecItem(Icons.bed_rounded, '${p.bedrooms} Beds'),
-                        _SpecItem(Icons.bathtub_rounded, '${p.bathrooms} Baths'),
-                        _SpecItem(Icons.square_foot_rounded, '${p.sqft} sqft'),
-                      ],
-                    ),
-                  ]),
-
-                  // Agentic AI Matching Insights (if came from search)
-                  if (widget.aiResult != null)
-                    _sectionCard('Agentic AI Matching Insights', Icons.auto_awesome_rounded, [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0F9FF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFBAE6FD)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${widget.aiResult.distanceKm} km • ~${widget.aiResult.travelTimeMins} mins commute to ${widget.aiResult.destinationLandmark}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF0369A1),
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            ...widget.aiResult.matchReasons.map<Widget>(
-                              (r) => Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Text('• $r',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: AppColors.ink)),
+                              label: const Text('Delete'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ],
                         ),
+                      ],
+                    ),
+
+                  // Compact facts keep the important details together.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SpecItem(
+                          Icons.bed_outlined,
+                          '${p.bedrooms} Beds',
+                        ),
                       ),
-                    ]),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _SpecItem(
+                          Icons.bathtub_outlined,
+                          '${p.bathrooms} Baths',
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _SpecItem(Icons.square_foot, '${p.sqft} sqft'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Agentic AI Matching Insights (if came from search)
+                  if (widget.aiResult != null)
+                    _sectionCard(
+                      'Agentic AI Matching Insights',
+                      Icons.auto_awesome_rounded,
+                      [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F4F1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.line),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.aiResult.distanceKm == null
+                                    ? 'Commute estimate unavailable'
+                                    : '${widget.aiResult.estimateSource == 'openrouteservice' ? 'ORS driving route' : 'AI estimate'}: ${widget.aiResult.distanceKm} km / ~${widget.aiResult.travelTimeMins ?? "?"} mins to ${widget.aiResult.destinationLandmark} (not live traffic)',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF385345),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              ...widget.aiResult.matchReasons.map<Widget>(
+                                (r) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Text(
+                                    '• $r',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
 
                   // Description
-                  _sectionCard('About Property', Icons.description_rounded, [
-                    Text(
-                      p.description,
-                      maxLines: _expanded ? null : 4,
-                      overflow: _expanded ? null : TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: AppColors.ink, fontSize: 13, height: 1.5),
-                    ),
-                    if (p.description.length > 120)
-                      TextButton(
-                        onPressed: () => setState(() => _expanded = !_expanded),
-                        child: Text(_expanded ? 'Show Less' : 'Read More'),
+                  _sectionCard(
+                    'About this property',
+                    Icons.description_rounded,
+                    [
+                      Text(
+                        p.description,
+                        maxLines: _expanded ? null : 4,
+                        overflow: _expanded ? null : TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.ink,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
                       ),
-                  ]),
+                      if (p.description.length > 120)
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _expanded = !_expanded),
+                          child: Text(_expanded ? 'Show Less' : 'Read More'),
+                        ),
+                    ],
+                  ),
 
                   // Facilities
                   _sectionCard('Facilities & Amenities', Icons.star_rounded, [
@@ -586,7 +622,9 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           .map(
                             (f) => Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.softTeal,
                                 borderRadius: BorderRadius.circular(10),
@@ -594,8 +632,11 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.check_circle_rounded,
-                                      color: AppColors.teal, size: 14),
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.teal,
+                                    size: 14,
+                                  ),
                                   const SizedBox(width: 5),
                                   Text(
                                     f,
@@ -618,7 +659,9 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     Text(
                       '${owner['name'] ?? owner['Name'] ?? 'Verified Landlord'}',
                       style: const TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 14),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -626,7 +669,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         if (owner['phoneNumber'] != null)
                           OutlinedButton.icon(
                             onPressed: () => _open(
-                                Uri(scheme: 'tel', path: owner['phoneNumber'])),
+                              Uri(scheme: 'tel', path: owner['phoneNumber']),
+                            ),
                             icon: const Icon(Icons.phone_rounded, size: 16),
                             label: const Text('Call'),
                             style: OutlinedButton.styleFrom(
@@ -639,8 +683,12 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         if (owner['email'] != null)
                           OutlinedButton.icon(
                             onPressed: () => _open(
-                                Uri(scheme: 'mailto', path: owner['email'])),
-                            icon: const Icon(Icons.mail_outline_rounded, size: 16),
+                              Uri(scheme: 'mailto', path: owner['email']),
+                            ),
+                            icon: const Icon(
+                              Icons.mail_outline_rounded,
+                              size: 16,
+                            ),
                             label: const Text('Email'),
                             style: OutlinedButton.styleFrom(
                               shape: RoundedRectangleBorder(
@@ -651,6 +699,9 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       ],
                     ),
                   ]),
+
+                  PropertyLocationCard(property: p),
+                  const SizedBox(height: 12),
 
                   // View Location on Map
                   OutlinedButton.icon(
@@ -670,7 +721,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -687,27 +738,28 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                   onPressed: p.status != 'Active' || booked
                       ? null
                       : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PropertyBookingScreen(property: p),
-                            ),
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PropertyBookingScreen(property: p),
                           ),
-                  icon: const Icon(Icons.calendar_today_rounded),
+                        ),
+                  icon: const Icon(Icons.arrow_forward_rounded),
                   label: Text(
                     booked
                         ? 'Booking Pending / Leased'
                         : p.status != 'Active'
-                            ? 'Listing Not Available'
-                            : 'Submit Rental Booking Request',
+                        ? 'Listing Not Available'
+                        : 'Request Booking',
                   ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(54),
-                    backgroundColor: const Color(0xFF16a34a),
+                    backgroundColor: AppColors.ink,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     textStyle: const TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
                   ),
@@ -727,19 +779,31 @@ class _SpecItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: AppColors.teal, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
-            color: AppColors.ink,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.softTeal,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.ink, size: 17),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.ink,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

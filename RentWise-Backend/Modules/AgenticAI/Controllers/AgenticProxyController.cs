@@ -46,6 +46,16 @@ namespace RentWise.API.Modules.AgenticAI.Controllers
 
         private async Task<IActionResult> ForwardRequest(HttpMethod method, string path)
         {
+            // Public search is intentional. Other public AI tools require a signed-in user.
+            var allowed = method == HttpMethod.Get ? path == "health"
+                : path is "workflow/match-location" or "workflow/draft-agreement" or "workflow/maintenance-triage";
+            if (!allowed) return NotFound();
+            if (method == HttpMethod.Post && path != "workflow/match-location" && User.Identity?.IsAuthenticated != true)
+                return Unauthorized();
+            var workflowKey = Environment.GetEnvironmentVariable("AGENT_WORKFLOW_KEY") ?? _configuration["AgentWorkflowKey"];
+            if (method == HttpMethod.Post && string.IsNullOrWhiteSpace(workflowKey))
+                return StatusCode(503, new { message = "AI service is not configured. Please contact support." });
+
             // Read AI service URL from env/config — defaults to Render deployment URL
             var agenticBaseUrl = Environment.GetEnvironmentVariable("AgenticServiceUrl")
                 ?? _configuration["AgenticServiceUrl"]
@@ -60,7 +70,8 @@ namespace RentWise.API.Modules.AgenticAI.Controllers
             {
                 var client = _httpClientFactory.CreateClient("AgenticProxy");
 
-                var requestMessage = new HttpRequestMessage(method, targetUrl);
+                using var requestMessage = new HttpRequestMessage(method, targetUrl);
+                if (method == HttpMethod.Post) requestMessage.Headers.Add("X-Workflow-Key", workflowKey);
 
                 // Forward request body for POST requests
                 if (method == HttpMethod.Post)
@@ -76,7 +87,7 @@ namespace RentWise.API.Modules.AgenticAI.Controllers
                 _logger.LogInformation("[AgenticProxy] Response {StatusCode}", response.StatusCode);
 
                 // Return raw JSON from Python service with same status code
-                return Content(responseBody, "application/json", Encoding.UTF8);
+                return new ContentResult { Content = responseBody, ContentType = "application/json", StatusCode = (int)response.StatusCode };
             }
             catch (TaskCanceledException)
             {
@@ -86,7 +97,7 @@ namespace RentWise.API.Modules.AgenticAI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[AgenticProxy] Failed to reach AI service: {Url}", targetUrl);
-                return StatusCode(502, $"{{\"error\":\"Could not reach AI service.\",\"detail\":\"{ex.Message}\"}}");
+                return StatusCode(502, new { message = "Could not reach AI service. Please try again later." });
             }
         }
     }

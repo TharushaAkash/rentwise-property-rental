@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
+import { OwnerBankDetails } from './OwnerBankDetails';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -317,6 +318,7 @@ export const OwnerProfileSection = () => {
       </div>
 
       {/* Grid: 2 Columns on Desktop */}
+      {['PropertyOwner', 'Owner'].includes(user?.role) && <OwnerBankDetails />}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Profile Details */}
         <div className="lg:col-span-7 space-y-6">

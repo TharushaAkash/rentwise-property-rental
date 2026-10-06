@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,11 +30,41 @@ class RentalTestAuth extends AuthNotifier {
 
 class RentalTestService extends RentalService {
   @override
+  Future<Map<String, dynamic>> bankDetails(String agreementId) async => {
+    'configured': false,
+  };
+  @override
   Future<List<AgreementModel>> fetchAgreements() async => [];
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  test('Agreement AI uses the authenticated ASP.NET proxy', () async {
+    SharedPreferences.setMockInitialValues({'auth_token': 'fixture-token'});
+    var called = false;
+    final api = RentalService(
+      accountEmail: 'test@example.com',
+      client: MockClient((request) async {
+        called = true;
+        expect(request.url.path, '/api/agentic/workflow/draft-agreement');
+        expect(request.headers['Authorization'], 'Bearer fixture-token');
+        return http.Response('{"draft":{"plain_language_summary":{}}}', 200);
+      }),
+    );
+    final result = await api.auditAgreementWithAi(
+      propertyId: 'p1',
+      agreementId: 'a1',
+      rent: 50000,
+      location: 'Malabe',
+      propertyType: 'House',
+      bedrooms: 2,
+      document: 'Draft terms',
+    );
+    expect(called, isTrue);
+    expect(result, isNotNull);
+  });
+
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('payment form fits a narrow mobile viewport', (tester) async {
@@ -111,6 +143,7 @@ void main() {
     'booking draft is replaced by the server lease before signing',
     () async {
       final service = RentalService(
+        accountEmail: 'test@example.com',
         client: MockClient((request) async {
           expect(request.url.path, '/api/agreements');
           expect(jsonDecode(request.body)['id'], isNull);
@@ -130,9 +163,40 @@ void main() {
       expect(saved.id, 'server-lease');
       expect(saved.propertyTitle, 'Garden House');
       final prefs = await SharedPreferences.getInstance();
-      final cached =
-          jsonDecode(prefs.getString('rentwise_client_agreements')!) as List;
+      final cached = jsonDecode(
+        prefs.getString('rentwise_client_agreements_test%40example.com')!,
+      ) as List;
       expect(cached.map((item) => item['id']), ['server-lease']);
+    },
+  );
+
+  test(
+    'saved rentals are isolated by normalized email and ignore legacy cache',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'rentwise_client_agreements': '[{"id":"legacy"}]',
+      });
+      final client = MockClient((_) async => http.Response('[]', 200));
+      final first = RentalService(
+        accountEmail: ' FIRST@example.com ',
+        client: client,
+      );
+      final second = RentalService(
+        accountEmail: 'second@example.com',
+        client: client,
+      );
+      await first.saveLocalAgreement(
+        AgreementModel.fromJson({'id': 'first-lease'}),
+      );
+      expect((await first.fetchAgreements()).map((a) => a.id), ['first-lease']);
+      expect(await second.fetchAgreements(), isEmpty);
+      final returning = RentalService(
+        accountEmail: 'first@example.com',
+        client: client,
+      );
+      expect((await returning.fetchAgreements()).map((a) => a.id), [
+        'first-lease',
+      ]);
     },
   );
 
@@ -150,19 +214,65 @@ void main() {
 
   test('rejected payment never creates a successful local receipt', () async {
     final service = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((_) async => http.Response('', 500)),
     );
     expect(await service.payAgreement('lease', 50000, 'Card', 'ref'), false);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('rentwise_client_payments'), isNull);
+    expect(prefs.getString('rentwise_client_payments_test%40example.com'), isNull);
+  });
+
+  test('monthly rent uses the monthly endpoint and preserves the server receipt ID', () async {
+    SharedPreferences.setMockInitialValues({});
+    final service = RentalService(
+      accountEmail: 'test@example.com',
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/agreements/lease/payments');
+        return http.Response(
+          '{"id":"server-payment","purpose":"MonthlyRent"}',
+          201,
+        );
+      }),
+    );
+    expect(
+      await service.payAgreement(
+        'lease',
+        50000,
+        'Card',
+        'RENT-test',
+        isMonthlyRent: true,
+      ),
+      true,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('rentwise_client_payments_test%40example.com');
+    expect(cached, isNotNull, reason: 'A successful receipt must be saved for the signed-in account.');
+    final saved = jsonDecode(cached!) as List;
+    expect(saved.single['id'], 'server-payment');
+    expect(saved.single['purpose'], 'MonthlyRent');
+  });
+  test('payment purpose survives a cache round trip', () {
+    final payment = PaymentModel.fromJson({
+      'id': 'p',
+      'purpose': 'SecurityDeposit',
+      'paymentReference': 'RENT-old',
+    });
+    expect(
+      PaymentModel.fromJson(payment.toJson()).purposeLabel,
+      'Security deposit',
+    );
   });
 
   test('successful payment is submitted exactly once', () async {
     final paths = <String>[];
     final service = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((request) async {
         paths.add(request.url.path);
-        return http.Response('{}', 200);
+        return http.Response(
+          '{"success":true,"payment":{"id":"saved-deposit","purpose":"SecurityDeposit"}}',
+          200,
+        );
       }),
     );
     expect(await service.payAgreement('lease', 50000, 'Card', 'ref'), true);
@@ -171,6 +281,7 @@ void main() {
 
   test('failed signing does not cache an agreed lease', () async {
     final service = RentalService(
+      accountEmail: 'test@example.com',
       client: MockClient((_) async => http.Response('', 403)),
     );
     final agreement = AgreementModel.fromJson({
@@ -186,7 +297,7 @@ void main() {
       false,
     );
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('rentwise_client_agreements'), isNull);
+    expect(prefs.getString('rentwise_client_agreements_test%40example.com'), isNull);
   });
 
   test('offline estimate identifies its source and actual deposit', () {

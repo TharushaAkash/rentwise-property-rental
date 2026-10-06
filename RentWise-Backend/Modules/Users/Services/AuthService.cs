@@ -49,7 +49,8 @@ namespace RentWise.API.Modules.Users.Services
                 Name = dto.Name.Trim(),
                 Email = normalizedEmail,
                 PasswordHash = passwordHash,
-                Role = string.IsNullOrWhiteSpace(dto.Role) ? "Tenant" : dto.Role,
+                Role = string.IsNullOrWhiteSpace(dto.Role) ? "Tenant" :
+                    (dto.Role.Trim() == "Owner" || dto.Role.Trim() == "Property Owner" ? "PropertyOwner" : dto.Role.Trim()),
                 PhoneNumber = dto.PhoneNumber?.Trim(),
                 NicNumber = dto.NicNumber?.Trim().ToUpperInvariant(),
                 CreatedAt = DateTime.UtcNow,
@@ -83,6 +84,13 @@ namespace RentWise.API.Modules.Users.Services
             if (user.IsBlocked)
             {
                 throw new UnauthorizedAccessException("Your account has been suspended or blocked by an administrator. Please contact RentWise support.");
+            }
+
+            if (user.Role == "Owner" || user.Role == "Property Owner")
+            {
+                user.Role = "PropertyOwner";
+                user.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
 
             var token = GenerateJwtToken(user);
@@ -129,7 +137,13 @@ namespace RentWise.API.Modules.Users.Services
 
             if (dto.NicNumber != null)
             {
-                user.NicNumber = dto.NicNumber.Trim().ToUpperInvariant();
+                var nicNumber = dto.NicNumber.Trim().ToUpperInvariant();
+                if (user.NicNumber != nicNumber)
+                {
+                    user.IsNicVerified = false;
+                    user.NicImageUrl = null;
+                }
+                user.NicNumber = nicNumber;
             }
 
             user.UpdatedAt = DateTime.UtcNow;

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { usePropertyBrowse } from '../../hooks/usePropertyBrowse';
+import { BrowseMore } from '../../components/BrowseMore';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { 
@@ -26,7 +28,7 @@ import {
 import { formatLankaPrice } from '../../data/lankaProperties';
 import { LankaPropertyCard } from '../../components/LankaPropertyCard';
 import { PROPERTY_PLACEHOLDER_IMAGE } from '../../utils/imagePlaceholder';
-import { matchPropertiesWithAi, AI_SUGGESTED_PROMPTS } from '../../utils/aiPropertyMatcher';
+import { AI_SUGGESTED_PROMPTS } from '../../utils/aiPropertyMatcher';
 import { getActiveBookingForProperty } from '../../utils/bookingStatus';
 
 
@@ -69,19 +71,22 @@ const formatMoney = (val) => `Rs. ${Number(val || 0).toLocaleString()}`;
 
 export const Landing = () => {
   const navigate = useNavigate();
-  const [properties, setProperties] = useState([]);
-  const [loadingProperties, setLoadingProperties] = useState(true);
 
   // Search & Filter States
   const [searchLocation, setSearchLocation] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [bedrooms, setBedrooms] = useState('');
+  const browse = usePropertyBrowse({ location: searchLocation, maxBudget: minPrice || undefined,
+    propertyType, bedrooms: bedrooms || undefined, minimumBedrooms: true });
+  const properties = browse.items;
+  const loadingProperties = browse.loading;
 
   // AI Matching States
   const [searchMode, setSearchMode] = useState('standard'); // 'standard' | 'ai'
   const [aiPrompt, setAiPrompt] = useState('');
   const [activeAiPrompt, setActiveAiPrompt] = useState('');
+  const [aiError, setAiError] = useState('');
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [aiMatchedProperties, setAiMatchedProperties] = useState(null);
 
@@ -106,22 +111,6 @@ export const Landing = () => {
       return next;
     });
   };
-
-  // Fetch real properties added to the system
-  useEffect(() => {
-    setLoadingProperties(true);
-    api.get('/properties')
-      .then((res) => {
-        setProperties(res.data || []);
-      })
-      .catch((err) => {
-        console.error('Failed to load properties', err);
-        setProperties([]);
-      })
-      .finally(() => {
-        setLoadingProperties(false);
-      });
-  }, []);
 
   // Map ONLY real added properties from the system
   const realProperties = useMemo(() => {
@@ -160,37 +149,51 @@ export const Landing = () => {
     });
   }, [properties]);
 
-  // Filter ONLY real properties dynamically by standard filters
-  const filteredProperties = useMemo(() => {
-    return realProperties.filter((p) => {
-      const text = `${p.title || ''} ${p.address || ''} ${p.city || ''} ${p.facilities || ''} ${p.description || ''}`.toLowerCase();
-      const matchesQuery = !searchLocation || text.includes(searchLocation.toLowerCase());
-      const matchesPrice = !minPrice || Number(p.monthlyRent || 0) <= Number(minPrice);
-      const matchesBeds = !bedrooms || Number(p.bedrooms || 0) >= Number(bedrooms);
-      const matchesType = !propertyType || (p.propertyType && p.propertyType.toLowerCase() === propertyType.toLowerCase()) || text.includes(propertyType.toLowerCase());
-      return matchesQuery && matchesPrice && matchesBeds && matchesType;
-    });
-  }, [realProperties, searchLocation, minPrice, propertyType, bedrooms]);
+  const filteredProperties = realProperties;
 
   // Execute AI semantic matching search
-  const handleAiSearch = (promptOverride) => {
+  const handleAiSearch = async (promptOverride) => {
     const target = typeof promptOverride === 'string' ? promptOverride : aiPrompt;
-    if (!target || !target.trim()) return;
+    if (!target || !target.trim() || isAiSearching || loadingProperties) return;
 
     setAiPrompt(target);
     setIsAiSearching(true);
+    setAiError('');
+    setAiMatchedProperties(null);
+    setActiveAiPrompt('');
 
-    setTimeout(() => {
-      const results = matchPropertiesWithAi(target, realProperties);
+    try {
+      const res = await api.post('/agentic/workflow/match-location', {
+        objective: target.trim(),
+        tenant_profile: { name: 'Prospective Tenant', role: 'Tenant' }
+      });
+      const rankedProperties = res.data?.ranked_properties || res.data?.matching_results;
+      if (!Array.isArray(rankedProperties)) {
+        throw new Error('Invalid AI matching response');
+      }
+      const results = rankedProperties.flatMap((p) => {
+        const existing = realProperties.find((property) => String(property.id) === String(p.property_id || p.id));
+        if (!existing || getActiveBookingForProperty(existing.id).isBooked) return [];
+        return [{
+          ...existing,
+          aiScore: p.match_score,
+          aiMatchPercentage: p.match_score,
+          aiReasons: p.match_reasons || []
+        }];
+      });
       setAiMatchedProperties(results);
       setActiveAiPrompt(target);
+    } catch (err) {
+      setAiError(err.response?.data?.message || err.response?.data?.error || err.message || 'AI search is unavailable. Please retry.');
+    } finally {
       setIsAiSearching(false);
       document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
-    }, 350);
+    }
   };
 
   // Clear AI active search filter
   const handleClearAiSearch = () => {
+    setAiError('');
     setActiveAiPrompt('');
     setAiMatchedProperties(null);
     setAiPrompt('');
@@ -207,6 +210,7 @@ export const Landing = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     handleClearAiSearch();
+    browse.refresh();
     document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -237,7 +241,7 @@ export const Landing = () => {
               Home
             </button>
             <button onClick={() => navigate('/properties')} className="hover:text-white transition-colors">
-              Properties ({properties.length})
+              Properties
             </button>
             <a href="#about" className="hover:text-white transition-colors">
               About
@@ -339,7 +343,7 @@ export const Landing = () => {
                   RENT
                 </span>
                 <span className="text-xs text-slate-400 font-medium">
-                  {properties.length > 0 ? `${properties.length} listings available` : 'MLS Catalog'}
+                  {properties.length > 0 ? `${properties.length} listings loaded` : 'MLS Catalog'}
                 </span>
               </div>
             </div>
@@ -356,7 +360,7 @@ export const Landing = () => {
                     <input
                       type="text"
                       value={searchLocation}
-                      onChange={(e) => setSearchLocation(e.target.value)}
+                      onChange={(e) => { handleClearAiSearch(); setSearchLocation(e.target.value); }}
                       placeholder="Type a city, district, or property title (e.g. Colombo, Kandy, Galle)..."
                       className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/15 transition-all"
                     />
@@ -375,7 +379,7 @@ export const Landing = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <select
                     value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
+                    onChange={(e) => { handleClearAiSearch(); setMinPrice(e.target.value); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
                   >
                     <option value="" className="bg-slate-900 text-white">Max Rent (Any)</option>
@@ -387,7 +391,7 @@ export const Landing = () => {
 
                   <select
                     value={propertyType}
-                    onChange={(e) => setPropertyType(e.target.value)}
+                    onChange={(e) => { handleClearAiSearch(); setPropertyType(e.target.value); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
                   >
                     <option value="" className="bg-slate-900 text-white">Property Keyword (All)</option>
@@ -399,7 +403,7 @@ export const Landing = () => {
 
                   <select
                     value={bedrooms}
-                    onChange={(e) => setBedrooms(e.target.value)}
+                    onChange={(e) => { handleClearAiSearch(); setBedrooms(e.target.value); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
                   >
                     <option value="" className="bg-slate-900 text-white">Bedrooms (Any)</option>
@@ -467,7 +471,7 @@ export const Landing = () => {
 
                     <button
                       type="submit"
-                      disabled={isAiSearching || !aiPrompt.trim()}
+                      disabled={isAiSearching || loadingProperties || !aiPrompt.trim()}
                       className="px-7 py-3 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-95"
                     >
                       {isAiSearching ? (
@@ -496,6 +500,7 @@ export const Landing = () => {
                         key={prompt}
                         type="button"
                         onClick={() => handleAiSearch(prompt)}
+                        disabled={isAiSearching || loadingProperties}
                         className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-xs text-slate-300 hover:text-white transition-all text-left flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
                         <span>{prompt}</span>
@@ -661,6 +666,7 @@ export const Landing = () => {
               </div>
             </div>
 
+            {aiError && <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{aiError}</div>}
             {/* Active AI Search Status Banner */}
             {activeAiPrompt && (
               <div className="rounded-xl bg-gradient-to-r from-violet-900 via-indigo-900 to-slate-900 text-white p-4 shadow-sm border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
@@ -951,6 +957,7 @@ export const Landing = () => {
                   })}
                 </div>
               )}
+              {!activeAiPrompt && <BrowseMore browse={browse} />}
             </div>
 
             {/* Right Sidebar: Featured Projects, Other Top Cities, Ad Banner, Top Searches */}
