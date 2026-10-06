@@ -1,3 +1,5 @@
+import '../widgets/property_location_card.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -697,6 +699,9 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       ],
                     ),
                   ]),
+
+                  PropertyLocationCard(property: p),
+                  const SizedBox(height: 12),
 
                   // View Location on Map
                   OutlinedButton.icon(

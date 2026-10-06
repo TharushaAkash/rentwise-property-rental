@@ -31,6 +31,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _tab = 0;
+  final Set<int> _visitedTabs = {0};
 
   @override
   Widget build(BuildContext context) {
@@ -69,8 +70,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             )
           : null,
       body: KeyedSubtree(
-        key: ValueKey('${userState.value?.id}:$_tab'),
-        child: pages[_tab],
+        key: ValueKey('${userState.value?.id}:${userState.value?.role}'),
+        child: IndexedStack(
+          index: _tab,
+          children: [
+            for (var index = 0; index < pages.length; index++)
+              TickerMode(
+                enabled: index == _tab,
+                child: _visitedTabs.contains(index)
+                    ? pages[index]
+                    : const SizedBox.shrink(),
+              ),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: const Color(0xFFFAFBF5),
@@ -78,7 +90,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         height: 70,
         labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
         selectedIndex: _tab,
-        onDestinationSelected: (index) => setState(() => _tab = index),
+        onDestinationSelected: (index) => setState(() {
+          _visitedTabs.add(index);
+          _tab = index;
+        }),
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
@@ -138,7 +153,7 @@ class _DiscoverPropertiesTabState extends ConsumerState<_DiscoverPropertiesTab>
       if (mounted &&
           !_isAiSearching &&
           WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-        _catalog.load();
+        _catalog.refreshAvailability();
       }
     });
     _catalog.addListener(_catalogChanged);
@@ -147,14 +162,15 @@ class _DiscoverPropertiesTabState extends ConsumerState<_DiscoverPropertiesTab>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _catalog.load();
+    if (state == AppLifecycleState.resumed) _catalog.refreshAvailability();
   }
 
   void _catalogChanged() {
     if (mounted) setState(() {});
   }
 
-  Future<void> _loadBrowse({bool more = false}) => _catalog.load(more: more);
+  Future<void> _loadBrowse({bool more = false}) =>
+      _catalog.load(more: more, background: _catalog.data.value != null);
   void _normalSearchChanged() =>
       _catalog.search(_isAiSearch ? '' : _searchQuery);
 
@@ -591,7 +607,7 @@ class _DiscoverPropertiesTabState extends ConsumerState<_DiscoverPropertiesTab>
                           (context, index) => _MobilePropertyCard(
                             property: displayed[index],
                             aiResult: matches?[index],
-                            onReturn: () => _catalog.load(),
+                            onReturn: () => _catalog.refreshAvailability(),
                           ),
                           childCount: displayed.length,
                         ),

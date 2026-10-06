@@ -26,6 +26,7 @@ public class PropertyApplicationsController(ApplicationDbContext db) : Controlle
         if (!Admin) query = query.Where(a => a.TenantId == Actor || (Owner && a.Property.OwnerId == Actor));
         return Ok(await query.OrderByDescending(a => a.CreatedAt).Select(a => new {
             a.Id, a.PropertyId, ownerId = a.Property.OwnerId, propertyTitle = a.Property.Title, propertyAddress = a.Property.Address,
+            propertyPhotoUrl = a.Property.Photos.OrderByDescending(p => p.IsPrimary).ThenBy(p => p.CreatedAt).Select(p => p.PhotoUrl).FirstOrDefault(),
             a.TenantId, tenantName = a.Tenant.Name, tenantEmail = a.Tenant.Email,
             a.Status, a.MonthlyRent, a.DurationMonths, a.StartDate, a.EndDate, a.Message, a.CreatedAt, a.UpdatedAt
         }).ToListAsync());

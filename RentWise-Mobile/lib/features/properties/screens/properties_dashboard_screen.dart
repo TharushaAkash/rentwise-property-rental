@@ -706,7 +706,11 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final role = ref.read(authStateProvider).value?.role;
+    _tabController = TabController(
+      length: isOwner(role) || isAdmin(role) ? 2 : 1,
+      vsync: this,
+    );
   }
 
   @override
@@ -819,32 +823,34 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final role = ref.watch(authStateProvider).value?.role;
+    final canManage = isOwner(role) || isAdmin(role);
     final appsAsync = ref.watch(applicationsProvider);
-    final agreementsAsync = ref.watch(agreementsProvider);
+    final agreementsAsync = canManage ? ref.watch(agreementsProvider) : null;
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text(
-          'Tenants & Applications',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          canManage ? 'Tenant bookings' : 'My bookings',
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.canvas,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.teal,
           unselectedLabelColor: AppColors.muted,
-          indicatorColor: AppColors.teal,
+          indicatorColor: AppColors.lime,
           indicatorWeight: 3,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,
           ),
-          tabs: const [
-            Tab(text: 'Inquiries & Applications'),
-            Tab(text: 'Active Leases'),
+          tabs: [
+            const Tab(text: 'Bookings'),
+            if (canManage) const Tab(text: 'Active Leases'),
           ],
         ),
       ),
@@ -894,12 +900,36 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                     final isAccepted =
                         status == 'Accepted' || status == 'Approved';
 
+                    final providedPhoto =
+                        (app['propertyPhotoUrl'] ??
+                                app['PropertyPhotoUrl'] ??
+                                '')
+                            .toString()
+                            .trim();
+                    final propertyId =
+                        (app['propertyId'] ?? app['PropertyId'] ?? '')
+                            .toString();
+                    final resolvedPhoto =
+                        providedPhoto.isEmpty && propertyId.isNotEmpty
+                        ? ref.watch(bookingPhotoProvider(propertyId))
+                        : null;
+                    final photoUrl = providedPhoto.isNotEmpty
+                        ? providedPhoto
+                        : resolvedPhoto?.value ?? '';
+                    final address = app['propertyAddress']?.toString() ?? '';
+                    String dateLabel(dynamic value) {
+                      final date = DateTime.tryParse(value?.toString() ?? '');
+                      return date == null
+                          ? 'Not specified'
+                          : '${date.day}/${date.month}/${date.year}';
+                    }
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: AppColors.line),
                         boxShadow: const [
                           BoxShadow(
@@ -912,6 +942,53 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: AspectRatio(
+                              aspectRatio: 1.9,
+                              child: photoUrl.isEmpty
+                                  ? Container(
+                                      color: AppColors.softTeal,
+                                      child: Center(
+                                        child: resolvedPhoto?.isLoading == true
+                                            ? const CircularProgressIndicator()
+                                            : const Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.image_outlined,
+                                                    size: 30,
+                                                    color: AppColors.muted,
+                                                  ),
+                                                  SizedBox(height: 6),
+                                                  Text(
+                                                    'Photo unavailable',
+                                                    style: TextStyle(
+                                                      color: AppColors.muted,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                      ),
+                                    )
+                                  : Image.network(
+                                      photoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, error, stack) =>
+                                          const ColoredBox(
+                                            color: AppColors.softTeal,
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.broken_image_outlined,
+                                                color: AppColors.muted,
+                                              ),
+                                            ),
+                                          ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -951,8 +1028,72 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
+                          if (address.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_on_outlined,
+                                    size: 14,
+                                    color: AppColors.muted,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      address,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.softTeal,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'LKR ${rent.toStringAsFixed(0)} / month',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${dateLabel(app['startDate'])} - ${dateLabel(app['endDate'])}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                                Text(
+                                  '${app['durationMonths'] ?? '-'} month lease',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
                             children: [
                               const Icon(
                                 Icons.person_rounded,
@@ -1001,7 +1142,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                               icon: const Icon(Icons.delete_outline),
                               label: const Text('Delete request'),
                             ),
-                          if (!isAccepted)
+                          if (canManage && status == 'Submitted')
                             Row(
                               children: [
                                 Expanded(
@@ -1044,7 +1185,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                                 ),
                               ],
                             )
-                          else
+                          else if (isAccepted)
                             const Row(
                               children: [
                                 Icon(
@@ -1073,111 +1214,112 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
           ),
 
           // TAB 2: Active Leases & Tenant Directory
-          agreementsAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: AppColors.teal),
-            ),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (agreements) {
-              if (agreements.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      'No active tenant leases found.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.muted),
+          if (canManage)
+            agreementsAsync!.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.teal),
+              ),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (agreements) {
+                if (agreements.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Text(
+                        'No active tenant leases found.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.muted),
+                      ),
                     ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  color: AppColors.teal,
+                  onRefresh: () async =>
+                      ref.read(agreementsProvider.notifier).refresh(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                    itemCount: agreements.length,
+                    itemBuilder: (context, i) {
+                      final ag = agreements[i];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    ag.propertyTitle,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: AppColors.ink,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: ag.hasPaid
+                                        ? AppColors.softTeal
+                                        : const Color(0xFFFEF9C3),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    ag.hasPaid
+                                        ? 'Active Lease'
+                                        : 'Awaiting Payment',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: ag.hasPaid
+                                          ? const Color(0xFF385345)
+                                          : const Color(0xFF854D0E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Tenant: ${ag.tenantName}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Monthly Rent: LKR ${ag.agreedMonthlyRent.toStringAsFixed(0)} | Deposit: LKR ${ag.securityDeposit.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 );
-              }
-
-              return RefreshIndicator(
-                color: AppColors.teal,
-                onRefresh: () async =>
-                    ref.read(agreementsProvider.notifier).refresh(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                  itemCount: agreements.length,
-                  itemBuilder: (context, i) {
-                    final ag = agreements[i];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.line),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  ag.propertyTitle,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: AppColors.ink,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: ag.hasPaid
-                                      ? AppColors.softTeal
-                                      : const Color(0xFFFEF9C3),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  ag.hasPaid
-                                      ? 'Active Lease'
-                                      : 'Awaiting Payment',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: ag.hasPaid
-                                        ? const Color(0xFF385345)
-                                        : const Color(0xFF854D0E),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Tenant: ${ag.tenantName}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: AppColors.ink,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Monthly Rent: LKR ${ag.agreedMonthlyRent.toStringAsFixed(0)} | Deposit: LKR ${ag.securityDeposit.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
+              },
+            ),
         ],
       ),
     );
