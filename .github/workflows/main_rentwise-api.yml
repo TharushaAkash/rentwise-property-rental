@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - rentwise-api
+name: Build and deploy ASP.Net Core app to Azure Web App - rentwise-api-v2
 
 on:
   push:
@@ -47,19 +47,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_833B43DC64A24C8AA4673905FEDF8161 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9B2350945F8E4573A944A26F71BD151A }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_AEC98BC38CBA43F2B383C02333620F30 }}
+          client-id: 'c53c7b28-045d-4344-b048-efb96477e5ff'
+          tenant-id: '44e3cf94-19c9-4e32-96c3-14f5bf01391a'
+          subscription-id: 'f6498d6d-43fb-4b2b-8126-a8e02215e97d'
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'rentwise-api'
+          app-name: 'rentwise-api-v2'
           slot-name: 'Production'
           package: .
-          
