@@ -3,7 +3,7 @@ class ApiConstants {
   // If running on iOS Simulator, localhost is 127.0.0.1
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://rentwise-api-drf3hpg8fgh4enht.eastasia-01.azurewebsites.net/api',
+    defaultValue: 'https://rentwise-api-v2-athfc8b8g7c2ahfc.eastasia-01.azurewebsites.net/api',
   );
 
   static const String loginEndpoint = '/auth/login';

@@ -31,6 +31,24 @@ listing.VerificationRecords.Add(new VerificationRecord { Comments = "[LISTING_FE
 setup.AddRange(owner, tenant, stranger, listing); await setup.SaveChangesAsync();
 var checks=0;
 void Check(bool result, string message) { if (!result) throw new Exception(message); checks++; }
+// Catalog projection excludes large verification reports while retaining listing visibility.
+listing.VerificationRecords.First().AgentReport = new string('x', 100_000);
+var hiddenListing = new Property { OwnerId=owner.Id, Title="Hidden", Status=PropertyStatus.PendingVerification };
+setup.Add(hiddenListing);
+await setup.SaveChangesAsync();
+await using (var catalogDb = NewDb()) {
+ var catalog = new PropertiesController(null!, catalogDb, null!) {
+  ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+ };
+ var catalogResult = (OkObjectResult)await catalog.GetProperties();
+ var catalogJson = JsonSerializer.Serialize(catalogResult.Value);
+ using var catalogDocument = JsonDocument.Parse(catalogJson);
+ Check(catalogDocument.RootElement.GetArrayLength() == 1, "Public catalog must exclude unverified listings");
+ Check(catalogDocument.RootElement[0].GetProperty("Id").GetGuid() == listing.Id, "Catalog must retain eligible listing");
+ Check(!catalogJson.Contains("AgentReport") && catalogJson.Length < 10_000, "Catalog must not serialize large verification reports");
+}
+setup.Remove(hiddenListing);
+await setup.SaveChangesAsync();
 PropertyApplicationsController Controller(ApplicationDbContext db, Guid id, string role) => new(db) {
  ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext {
  User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier,id.ToString()), new Claim(ClaimTypes.Role,role) }, "fixture")) } } };

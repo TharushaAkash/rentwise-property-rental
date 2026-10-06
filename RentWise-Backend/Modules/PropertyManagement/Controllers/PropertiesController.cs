@@ -35,20 +35,33 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
         [HttpGet]
         public async Task<IActionResult> GetProperties()
         {
-            var properties = await _propertyService.GetAllPropertiesAsync();
+            var query = _context.Properties.AsNoTracking();
             if (!(User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("SystemAdmin")))
-                properties = properties.Where(p => p.Status == PropertyStatus.Active &&
+                query = query.Where(p => p.Status == PropertyStatus.Active &&
                     p.VerificationRecords.Any(v => v.Comments.StartsWith("[LISTING_FEE_PAID:")));
             if (!CanManageListings(Guid.Empty))
             {
-                var reserved = await _context.PropertyApplications
+                var reserved = _context.PropertyApplications
                     .Where(a => a.Status == "Submitted" || a.Status == "Accepted")
-                    .Select(a => a.PropertyId).ToListAsync();
-                var leased = await _context.RentalAgreements
+                    .Select(a => a.PropertyId);
+                var leased = _context.RentalAgreements
                     .Where(a => a.Status != AgreementStatus.Ended && a.EndDate > DateTime.UtcNow)
-                    .Select(a => a.PropertyId).ToListAsync();
-                properties = properties.Where(p => !reserved.Contains(p.Id) && !leased.Contains(p.Id));
+                    .Select(a => a.PropertyId);
+                query = query.Where(p => !reserved.Contains(p.Id) && !leased.Contains(p.Id));
             }
+            // Keep the legacy array contract, but do not load reports or tracked entity graphs.
+            // Full records remain available from the property detail endpoints.
+            var properties = await query.OrderBy(p => p.Id).Select(p => new {
+                p.Id, p.OwnerId, p.Title, p.Description, p.Address, p.MonthlyRent,
+                p.Bedrooms, p.Bathrooms, p.Sqft, p.PropertyType, p.Facilities,
+                p.FeatureTags, p.PhotoCount, p.Status, p.CreatedAt, p.UpdatedAt,
+                owner = new { p.Owner.Id, p.Owner.Name, p.Owner.Email, p.Owner.PhoneNumber },
+                photos = p.Photos.OrderByDescending(photo => photo.IsPrimary).ThenBy(photo => photo.Id)
+                    .Select(photo => new { photo.Id, photo.PhotoUrl, photo.IsPrimary }).ToList(),
+                documents = p.Documents.Select(document => new {
+                    document.Id, document.DocumentType, document.DocumentUrl
+                }).ToList()
+            }).ToListAsync();
             return Ok(properties);
         }
 
