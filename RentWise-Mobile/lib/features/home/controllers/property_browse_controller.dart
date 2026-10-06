@@ -26,7 +26,7 @@ class PropertyBrowseController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> load({bool more = false}) async {
+  Future<void> load({bool more = false, bool background = false}) async {
     if (more && (loadingMore || !hasMore)) return;
     final version = more ? _requestVersion : ++_requestVersion;
     _update(() {
@@ -34,7 +34,7 @@ class PropertyBrowseController extends ChangeNotifier {
       if (more) {
         loadingMore = true;
       } else {
-        data = const AsyncLoading();
+        if (!background) data = const AsyncLoading();
         _cursor = null;
         hasMore = false;
         loadingMore = false;
@@ -76,7 +76,7 @@ class PropertyBrowseController extends ChangeNotifier {
     } catch (e, stack) {
       if (!_disposed && version == _requestVersion) {
         _update(() {
-          if (!more) {
+          if (!more && (!background || data.value == null)) {
             data = AsyncError(e, stack);
           } else {
             error = 'Could not load more properties. Try again.';
@@ -87,6 +87,31 @@ class PropertyBrowseController extends ChangeNotifier {
       if (!_disposed && version == _requestVersion) {
         _update(() => loadingMore = false);
       }
+    }
+  }
+
+  bool _refreshingAvailability = false;
+  Future<void> refreshAvailability() async {
+    if (_disposed || _refreshingAvailability || data.value == null) return;
+    _refreshingAvailability = true;
+    final version = _requestVersion;
+    try {
+      final ids = (await api.request('GET', '/properties/unavailable') as List)
+          .map((id) => id.toString())
+          .toSet();
+      if (_disposed || version != _requestVersion) return;
+      _update(() {
+        unavailableIds = ids;
+        data = AsyncData(
+          (data.value ?? <PropertyModel>[])
+              .where((p) => !ids.contains(p.id))
+              .toList(),
+        );
+      });
+    } catch (_) {
+      // Keep the displayed catalogue during temporary connectivity failures.
+    } finally {
+      _refreshingAvailability = false;
     }
   }
 

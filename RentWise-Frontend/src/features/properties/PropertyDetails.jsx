@@ -1,3 +1,4 @@
+import { PropertyLocationCard } from './PropertyLocationCard';
 import { accountStorage } from '../../utils/accountStorage';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -1081,6 +1082,8 @@ export const PropertyDetails = () => {
               )}
             </div>
           </div>
+
+          <PropertyLocationCard property={currentProperty} address={propertyAddress} />
 
           {/* Card 3: Facilities from Property Model */}
           <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-xs">

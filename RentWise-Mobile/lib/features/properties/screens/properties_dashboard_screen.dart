@@ -706,7 +706,11 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final role = ref.read(authStateProvider).value?.role;
+    _tabController = TabController(
+      length: isOwner(role) || isAdmin(role) ? 2 : 1,
+      vsync: this,
+    );
   }
 
   @override
@@ -822,7 +826,7 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
     final role = ref.watch(authStateProvider).value?.role;
     final canManage = isOwner(role) || isAdmin(role);
     final appsAsync = ref.watch(applicationsProvider);
-    final agreementsAsync = ref.watch(agreementsProvider);
+    final agreementsAsync = canManage ? ref.watch(agreementsProvider) : null;
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
@@ -844,9 +848,9 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
             fontWeight: FontWeight.w700,
             fontSize: 13,
           ),
-          tabs: const [
-            Tab(text: 'Bookings'),
-            Tab(text: 'Active Leases'),
+          tabs: [
+            const Tab(text: 'Bookings'),
+            if (canManage) const Tab(text: 'Active Leases'),
           ],
         ),
       ),
@@ -896,7 +900,22 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                     final isAccepted =
                         status == 'Accepted' || status == 'Approved';
 
-                    final photoUrl = app['propertyPhotoUrl']?.toString() ?? '';
+                    final providedPhoto =
+                        (app['propertyPhotoUrl'] ??
+                                app['PropertyPhotoUrl'] ??
+                                '')
+                            .toString()
+                            .trim();
+                    final propertyId =
+                        (app['propertyId'] ?? app['PropertyId'] ?? '')
+                            .toString();
+                    final resolvedPhoto =
+                        providedPhoto.isEmpty && propertyId.isNotEmpty
+                        ? ref.watch(bookingPhotoProvider(propertyId))
+                        : null;
+                    final photoUrl = providedPhoto.isNotEmpty
+                        ? providedPhoto
+                        : resolvedPhoto?.value ?? '';
                     final address = app['propertyAddress']?.toString() ?? '';
                     String dateLabel(dynamic value) {
                       final date = DateTime.tryParse(value?.toString() ?? '');
@@ -928,17 +947,43 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
                             child: AspectRatio(
                               aspectRatio: 1.9,
                               child: photoUrl.isEmpty
-                                  ? Image.asset(
-                                      'assets/property_placeholder.jpg',
-                                      fit: BoxFit.cover,
+                                  ? Container(
+                                      color: AppColors.softTeal,
+                                      child: Center(
+                                        child: resolvedPhoto?.isLoading == true
+                                            ? const CircularProgressIndicator()
+                                            : const Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.image_outlined,
+                                                    size: 30,
+                                                    color: AppColors.muted,
+                                                  ),
+                                                  SizedBox(height: 6),
+                                                  Text(
+                                                    'Photo unavailable',
+                                                    style: TextStyle(
+                                                      color: AppColors.muted,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                      ),
                                     )
                                   : Image.network(
                                       photoUrl,
                                       fit: BoxFit.cover,
                                       errorBuilder: (_, error, stack) =>
-                                          Image.asset(
-                                            'assets/property_placeholder.jpg',
-                                            fit: BoxFit.cover,
+                                          const ColoredBox(
+                                            color: AppColors.softTeal,
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.broken_image_outlined,
+                                                color: AppColors.muted,
+                                              ),
+                                            ),
                                           ),
                                     ),
                             ),
@@ -1169,111 +1214,112 @@ class _PropertyBookingsScreenState extends ConsumerState<PropertyBookingsScreen>
           ),
 
           // TAB 2: Active Leases & Tenant Directory
-          agreementsAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: AppColors.teal),
-            ),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (agreements) {
-              if (agreements.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      'No active tenant leases found.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.muted),
+          if (canManage)
+            agreementsAsync!.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.teal),
+              ),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (agreements) {
+                if (agreements.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Text(
+                        'No active tenant leases found.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.muted),
+                      ),
                     ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  color: AppColors.teal,
+                  onRefresh: () async =>
+                      ref.read(agreementsProvider.notifier).refresh(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                    itemCount: agreements.length,
+                    itemBuilder: (context, i) {
+                      final ag = agreements[i];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    ag.propertyTitle,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: AppColors.ink,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: ag.hasPaid
+                                        ? AppColors.softTeal
+                                        : const Color(0xFFFEF9C3),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    ag.hasPaid
+                                        ? 'Active Lease'
+                                        : 'Awaiting Payment',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: ag.hasPaid
+                                          ? const Color(0xFF385345)
+                                          : const Color(0xFF854D0E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Tenant: ${ag.tenantName}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Monthly Rent: LKR ${ag.agreedMonthlyRent.toStringAsFixed(0)} | Deposit: LKR ${ag.securityDeposit.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 );
-              }
-
-              return RefreshIndicator(
-                color: AppColors.teal,
-                onRefresh: () async =>
-                    ref.read(agreementsProvider.notifier).refresh(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                  itemCount: agreements.length,
-                  itemBuilder: (context, i) {
-                    final ag = agreements[i];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.line),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  ag.propertyTitle,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: AppColors.ink,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: ag.hasPaid
-                                      ? AppColors.softTeal
-                                      : const Color(0xFFFEF9C3),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  ag.hasPaid
-                                      ? 'Active Lease'
-                                      : 'Awaiting Payment',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: ag.hasPaid
-                                        ? const Color(0xFF385345)
-                                        : const Color(0xFF854D0E),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Tenant: ${ag.tenantName}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: AppColors.ink,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Monthly Rent: LKR ${ag.agreedMonthlyRent.toStringAsFixed(0)} | Deposit: LKR ${ag.securityDeposit.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
+              },
+            ),
         ],
       ),
     );

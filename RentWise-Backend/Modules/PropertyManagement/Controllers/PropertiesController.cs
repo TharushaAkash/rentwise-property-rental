@@ -385,18 +385,52 @@ namespace RentWise.API.Modules.PropertyManagement.Controllers
                 ? $"FEE-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}" 
                 : dto.PaymentReference;
 
+            // Payment after successful verification must complete the same activation flow.
+            var activate = false;
+            if (property.Status == PropertyStatus.PendingVerification &&
+                !await _context.DocumentReviewRequests.AnyAsync(r => r.PropertyId == id))
+            {
+                var decision = await _context.VerificationRecords.Where(v => v.PropertyId == id &&
+                    (v.Comments.StartsWith("[AI_PROPERTY_VERIFICATION]") || v.AdminId != null || v.Comments.StartsWith("[REJECTED:")))
+                    .OrderByDescending(v => v.CreatedAt).FirstOrDefaultAsync();
+                if (decision?.Comments.StartsWith("[AI_PROPERTY_VERIFICATION]") == true)
+                {
+                    try
+                    {
+                        using var parsed = System.Text.Json.JsonDocument.Parse(decision.AgentReport);
+                        var report = parsed.RootElement;
+                        if (report.TryGetProperty("recommendation", out var recommendation) && recommendation.GetString() == "Approve-ready" &&
+                            report.TryGetProperty("propertyAddress", out var address) && address.GetString() == property.Address &&
+                            report.TryGetProperty("documentUrl", out var documentUrl) && documentUrl.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            var proofUrl = documentUrl.GetString();
+                            activate = await _context.PropertyDocuments.AnyAsync(d => d.PropertyId == id && d.DocumentUrl == proofUrl) &&
+                                !await _context.PropertyDocuments.AnyAsync(d => d.PropertyId == id && d.CreatedAt > decision.CreatedAt &&
+                                    (d.DocumentType == "OwnershipProof" || d.DocumentType == "UtilityBill" || d.DocumentType == "Deed"));
+                        }
+                    }
+                    catch (System.Text.Json.JsonException) { }
+                    catch (InvalidOperationException) { }
+                }
+            }
+            if (activate)
+            {
+                property.Status = PropertyStatus.Active;
+                property.UpdatedAt = DateTime.UtcNow;
+            }
+
             var record = new VerificationRecord
             {
                 PropertyId = id,
-                IsApproved = false, // Stays pending until Admin reviews and approves
+                IsApproved = false, // A fee receipt does not replace the verification decision
                 Comments = $"[LISTING_FEE_PAID: LKR {feeAmount:N2} | Ref: {paymentRef} | Method: {dto.PaymentMethod ?? "Card"} | Date: {DateTime.UtcNow:o}]",
-                AgentReport = $"Listing verification fee paid (LKR {feeAmount:N2}). Ready for Admin Approval."
+                AgentReport = $"Listing verification fee paid (LKR {feeAmount:N2})."
             };
 
             _context.VerificationRecords.Add(record);
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Listing fee of Rs. 2,500 successfully paid. Your property is now under Admin Review.", paymentReference = paymentRef });
+            return Ok(new { success = true, message = activate ? "Listing fee recorded. Verification passed and your property is now Active." : "Listing fee recorded. Your property is awaiting verification or administrator review.", paymentReference = paymentRef, status = property.Status.ToString() });
         }
 
         [HttpGet("{id}/verification-status")]
