@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'RentWise-Frontend/**'
+      - '.github/workflows/main_rentwise-frontend.yml'
   workflow_dispatch:
 
 jobs:
@@ -32,7 +33,7 @@ jobs:
         working-directory: ./RentWise-Frontend
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: 'https://rentwise-api-v2-athfc8b8g7c2ahfc.eastasia-01.azurewebsites.net/api'
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
