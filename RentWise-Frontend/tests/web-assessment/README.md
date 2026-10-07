@@ -33,7 +33,7 @@ Dependencies already exist in package.json. On a fresh checkout, install depende
 | WEB-14 | Existing property prefills, changed fields submitted via PUT, success state | `unit/property-form.spec.jsx`, `unit/property-management.spec.jsx`; browser screenshot |
 | WEB-15 | Confirmation before DELETE, correct endpoint and list refresh | `unit/property-management.spec.jsx`; browser confirmation/success screenshots |
 | WEB-16 | Guest management access redirects; tenant UI excludes owner actions | `e2e/workflows.spec.js` |
-| WEB-17 | Owner login ? Add Property ? valid submit ? POST verified ? new row/success | `e2e/workflows.spec.js` |
+| WEB-17 | Property Creation UI Workflow: mock login -> Property Management -> Add Property -> fill form -> submit -> mocked success response -> success message and new property UI | `e2e/workflows.spec.js` (Playwright) |
 | WEB-18 | Load and create failures show safe messages; failed form available for retry | `unit/property-management.spec.jsx`; browser screenshot |
 
 Vitest writes `evidence/vitest-results.json`. Playwright writes `evidence/playwright-report/index.html` and `evidence/browser-results/` with screenshots. Named screenshots use their WEB IDs; every browser test also captures an automatic final screenshot. Failed browser tests retain traces. Generated evidence is ignored by Git; copy it into the submission separately when required.

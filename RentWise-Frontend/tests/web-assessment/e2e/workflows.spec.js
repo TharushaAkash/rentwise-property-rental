@@ -43,7 +43,8 @@ test('WEB-09 login, browse, open details and save a property', async ({ page }, 
   await page.getByRole('button', { name: 'Save', exact: true }).click(); await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]').includes('p-1'))).toBe(true); await shot(page, info, 'WEB-09-saved');
 });
-test('WEB-17 owner login, add property, submit and confirm creation', async ({ page }, info) => {
+// UI workflow with mocked authentication and API responses; no backend persistence is verified.
+test('WEB-17 Property Creation UI Workflow', async ({ page }, info) => {
   await mockApi(page); await login(page); await shot(page, info, 'WEB-01'); await page.getByRole('button', { name: 'Add Property', exact: true }).click(); await fillProperty(page); await shot(page, info, 'WEB-10-form');
   const request = page.waitForRequest(req => /\/api\/properties$/.test(new URL(req.url()).pathname) && req.method() === 'POST');
   await page.getByRole('button', { name: 'Create Property Listing' }).click(); expect((await request).postDataJSON()).toMatchObject({ title: 'New assessment house', monthlyRent: 50000, ownerId: 'owner-1' });
