@@ -1,0 +1,21 @@
+{
+  "name": "RentWise dedicated test backend",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://YOUR-TEST-BACKEND/api",
+      "enabled": true
+    },
+    {
+      "key": "tenantToken",
+      "value": "REPLACE_WITH_VALID_TENANT_ACCESS_TOKEN",
+      "enabled": true,
+      "type": "secret"
+    },
+    {
+      "key": "ownerId",
+      "value": "REPLACE_WITH_TEST_OWNER_GUID",
+      "enabled": true
+    }
+  ]
+}

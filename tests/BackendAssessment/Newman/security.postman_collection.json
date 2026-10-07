@@ -1,0 +1,91 @@
+{
+  "info": {
+    "name": "RentWise Backend Assessment Security",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "API-11 Protected agreements without authentication",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/agreements",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Unauthenticated request is 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Confirm authenticated Tenant fixture",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/auth/profile",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tenantToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Profile is authenticated', () => pm.response.to.have.status(200));",
+              "pm.test('Fixture account has Tenant role', () => pm.expect(pm.response.json().role).to.eql('Tenant'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "API-12 Tenant cannot create property",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/properties",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tenantToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"title\": \"Newman restricted test property\",\n  \"description\": \"Property creation should be blocked for Tenant\",\n  \"address\": \"12 Assessment Road, Colombo\",\n  \"monthlyRent\": 50000,\n  \"bedrooms\": 3,\n  \"bathrooms\": 2,\n  \"sqft\": 1200,\n  \"propertyType\": \"House\",\n  \"photoUrls\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Authenticated wrong role is 403', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
