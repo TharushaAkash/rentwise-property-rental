@@ -52,6 +52,7 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
   const isAdmin = ['Administrator', 'Admin', 'SystemAdmin'].includes(user?.role);
   
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [photoUploadError, setPhotoUploadError] = useState('');
   const [previews, setPreviews] = useState([]);
   const [urlPhotos, setUrlPhotos] = useState([]);
   const [photoUrlInput, setPhotoUrlInput] = useState('');
@@ -436,11 +437,20 @@ export function PropertyForm({ initialData, onSubmit, onCancel, isLoading }) {
           onChange={(e) => {
             if (e.target.files && e.target.files.length > 0) {
               const filesArray = Array.from(e.target.files);
-              setSelectedFiles(prev => [...prev, ...filesArray]);
+              const validImages = filesArray.filter(file => /^image\/.+/i.test(file.type));
+              setPhotoUploadError(validImages.length !== filesArray.length
+                ? 'Only image files are allowed. Unsupported files were not attached.'
+                : '');
+              setSelectedFiles(prev => [...prev, ...validImages]);
+              e.target.value = '';
             }
           }}
           className="flex w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
         />
+
+        {photoUploadError && (
+          <p role="alert" className="text-sm text-rose-500">{photoUploadError}</p>
+        )}
 
         {/* 2. Direct Photo URL Input */}
         <div className="flex items-center gap-2">
