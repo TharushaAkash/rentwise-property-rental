@@ -1,0 +1,187 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Length 3199 >>
+stream
+BT /F2 17 Tf 42 795 Td (Flutter Mobile Tests) Tj ET
+BT /F1 8 Tf 42 774 Td (Root: E:\\Y3S1\\Software Engineering Framworks\\project-demo\\RentWiseAI) Tj ET
+BT /F1 8.4 Tf 42 749 Td (Terminal path: <repository root>\\RentWise-Mobile) Tj ET
+BT /F1 8.4 Tf 42 734 Td (From repository root:) Tj ET
+BT /F1 8.4 Tf 42 719 Td (  cd RentWise-Mobile) Tj ET
+BT /F1 8.4 Tf 42 704 Td () Tj ET
+BT /F1 8.4 Tf 42 689 Td (1. Install dependencies:) Tj ET
+BT /F1 8.4 Tf 42 674 Td (  flutter pub get) Tj ET
+BT /F1 8.4 Tf 42 659 Td () Tj ET
+BT /F1 8.4 Tf 42 644 Td (2. Run all assessment unit/widget tests \(mocked API; no emulator required\):) Tj ET
+BT /F1 8.4 Tf 42 629 Td (  flutter test test/mobile_assessment --reporter expanded) Tj ET
+BT /F1 8.4 Tf 42 614 Td () Tj ET
+BT /F1 8.4 Tf 42 599 Td (3. Run one test group:) Tj ET
+BT /F1 8.4 Tf 42 584 Td (  flutter test test/mobile_assessment/auth_widgets_test.dart) Tj ET
+BT /F1 8.4 Tf 42 569 Td (  flutter test test/mobile_assessment/browse_widgets_test.dart) Tj ET
+BT /F1 8.4 Tf 42 554 Td (  flutter test test/mobile_assessment/details_session_test.dart) Tj ET
+BT /F1 8.4 Tf 42 539 Td () Tj ET
+BT /F1 8.4 Tf 42 524 Td (4. Run one test ID:) Tj ET
+BT /F1 8.4 Tf 42 509 Td (  flutter test test/mobile_assessment --plain-name MOB-13) Tj ET
+BT /F1 8.4 Tf 42 494 Td () Tj ET
+BT /F1 8.4 Tf 42 479 Td (5. Run all existing and assessment unit/widget tests \(regression\):) Tj ET
+BT /F1 8.4 Tf 42 464 Td (  flutter test --reporter expanded) Tj ET
+BT /F1 8.4 Tf 42 449 Td () Tj ET
+BT /F1 8.4 Tf 42 434 Td (6. Real backend integration setup:) Tj ET
+BT /F1 8.4 Tf 42 419 Td (  Start Android emulator / connect phone with USB debugging.) Tj ET
+BT /F1 8.4 Tf 42 404 Td (  flutter devices) Tj ET
+BT /F1 8.4 Tf 42 389 Td (  Copy-Item integration_test/mobile_assessment/live-config.example.json `) Tj ET
+BT /F1 8.4 Tf 42 374 Td (    integration_test/mobile_assessment/live-config.json) Tj ET
+BT /F1 8.4 Tf 42 359 Td (  Copy only if live-config.json does not already exist; preserve your configured file.) Tj ET
+BT /F1 8.4 Tf 42 344 Td (  Edit live-config.json: API_BASE_URL, E2E_EMAIL, E2E_PASSWORD, E2E_PROPERTY_ID.) Tj ET
+BT /F1 8.4 Tf 42 329 Td (  URL must end in /api. Use a Tenant test account and an active, unbooked listing) Tj ET
+BT /F1 8.4 Tf 42 314 Td (  visible on the first browse page. Start local backend if using a local URL.) Tj ET
+BT /F1 8.4 Tf 42 299 Td () Tj ET
+BT /F1 8.4 Tf 42 284 Td (7. Run real backend integration \(replace DEVICE_ID from flutter devices\):) Tj ET
+BT /F1 8.4 Tf 42 269 Td (  flutter test integration_test/mobile_assessment/live_backend_test.dart `) Tj ET
+BT /F1 8.4 Tf 42 254 Td (    -d DEVICE_ID `) Tj ET
+BT /F1 8.4 Tf 42 239 Td (    --dart-define-from-file=integration_test/mobile_assessment/live-config.json `) Tj ET
+BT /F1 8.4 Tf 42 224 Td (    --reporter expanded) Tj ET
+BT /F1 8.4 Tf 42 209 Td () Tj ET
+BT /F1 8.4 Tf 42 194 Td (All mobile coverage: run step 5 and step 7 separately.) Tj ET
+BT /F1 8.4 Tf 42 179 Td (The standard flutter test command does not include device integration tests.) Tj ET
+BT /F1 8.4 Tf 42 164 Td (For Android emulator, a PC-local backend uses 10.0.2.2, not localhost.) Tj ET
+BT /F1 8 Tf 42 28 Td (Page 1 of 3) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 3237 >>
+stream
+BT /F2 17 Tf 42 795 Td (Backend API and Database Tests) Tj ET
+BT /F1 8 Tf 42 774 Td (Root: E:\\Y3S1\\Software Engineering Framworks\\project-demo\\RentWiseAI) Tj ET
+BT /F1 8.4 Tf 42 749 Td (Terminal path: <repository root>) Tj ET
+BT /F1 8.4 Tf 42 734 Td (If currently inside RentWise-Backend: cd ..) Tj ET
+BT /F1 8.4 Tf 42 719 Td () Tj ET
+BT /F1 8.4 Tf 42 704 Td (1. Prepare:) Tj ET
+BT /F1 8.4 Tf 42 689 Td (  Install .NET 8 SDK.) Tj ET
+BT /F1 8.4 Tf 42 674 Td (  Start Docker Desktop with Linux containers for API/database tests.) Tj ET
+BT /F1 8.4 Tf 42 659 Td (  Unit-only tests do not need Docker.) Tj ET
+BT /F1 8.4 Tf 42 644 Td () Tj ET
+BT /F1 8.4 Tf 42 629 Td (2. Restore packages:) Tj ET
+BT /F1 8.4 Tf 42 614 Td (  dotnet restore tests/BackendAssessment/BackendAssessment.Tests.csproj) Tj ET
+BT /F1 8.4 Tf 42 599 Td () Tj ET
+BT /F1 8.4 Tf 42 584 Td (3. Run all backend assessment tests \(unit + API/security + database\):) Tj ET
+BT /F1 8.4 Tf 42 569 Td (  dotnet test tests/BackendAssessment/BackendAssessment.Tests.csproj) Tj ET
+BT /F1 8.4 Tf 42 554 Td () Tj ET
+BT /F1 8.4 Tf 42 539 Td (4. Run unit tests only:) Tj ET
+BT /F1 8.4 Tf 42 524 Td (  dotnet test tests/BackendAssessment/BackendAssessment.Tests.csproj `) Tj ET
+BT /F1 8.4 Tf 42 509 Td (    --filter "Area=Unit" --logger "console;verbosity=normal") Tj ET
+BT /F1 8.4 Tf 42 494 Td () Tj ET
+BT /F1 8.4 Tf 42 479 Td (5. Run API integration and security tests:) Tj ET
+BT /F1 8.4 Tf 42 464 Td (  dotnet test tests/BackendAssessment/BackendAssessment.Tests.csproj `) Tj ET
+BT /F1 8.4 Tf 42 449 Td (    --filter "Area=API|Area=Security" --logger "console;verbosity=normal") Tj ET
+BT /F1 8.4 Tf 42 434 Td () Tj ET
+BT /F1 8.4 Tf 42 419 Td (6. Run database tests only:) Tj ET
+BT /F1 8.4 Tf 42 404 Td (  dotnet test tests/BackendAssessment/BackendAssessment.Tests.csproj `) Tj ET
+BT /F1 8.4 Tf 42 389 Td (    --filter "Area=Database" --logger "console;verbosity=normal") Tj ET
+BT /F1 8.4 Tf 42 374 Td () Tj ET
+BT /F1 8.4 Tf 42 359 Td (7. Retest one test ID:) Tj ET
+BT /F1 8.4 Tf 42 344 Td (  dotnet test tests/BackendAssessment/BackendAssessment.Tests.csproj `) Tj ET
+BT /F1 8.4 Tf 42 329 Td (    --filter "FullyQualifiedName~API_08") Tj ET
+BT /F1 8.4 Tf 42 314 Td (  dotnet test tests/BackendAssessment/BackendAssessment.Tests.csproj `) Tj ET
+BT /F1 8.4 Tf 42 299 Td (    --filter "FullyQualifiedName~DB_02") Tj ET
+BT /F1 8.4 Tf 42 284 Td () Tj ET
+BT /F1 8.4 Tf 42 269 Td (API tests: in-process WebApplicationFactory + real services + disposable PostgreSQL.) Tj ET
+BT /F1 8.4 Tf 42 254 Td (DB-01: relationships. DB-02: NOT NULL / unique / FK constraints.) Tj ET
+BT /F1 8.4 Tf 42 239 Td (DB-03: actual migrations, transaction rollback and commit.) Tj ET
+BT /F1 8.4 Tf 42 224 Td (The database container is created and cleaned up automatically.) Tj ET
+BT /F1 8.4 Tf 42 209 Td (You do not manually start backend/frontend/Python services for these xUnit tests.) Tj ET
+BT /F1 8.4 Tf 42 194 Td () Tj ET
+BT /F1 8.4 Tf 42 179 Td (If running from RentWise-Backend instead, use:) Tj ET
+BT /F1 8.4 Tf 42 164 Td (  dotnet test ../tests/BackendAssessment/BackendAssessment.Tests.csproj `) Tj ET
+BT /F1 8.4 Tf 42 149 Td (    --filter "Area=Database") Tj ET
+BT /F1 8 Tf 42 28 Td (Page 2 of 3) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3286 >>
+stream
+BT /F2 17 Tf 42 795 Td (Postman / Newman and Evidence Steps) Tj ET
+BT /F1 8 Tf 42 774 Td (Root: E:\\Y3S1\\Software Engineering Framworks\\project-demo\\RentWiseAI) Tj ET
+BT /F1 8.4 Tf 42 749 Td (Terminal path: <repository root>\\tests\\BackendAssessment\\Newman) Tj ET
+BT /F1 8.4 Tf 42 734 Td (From repository root:) Tj ET
+BT /F1 8.4 Tf 42 719 Td (  cd tests/BackendAssessment/Newman) Tj ET
+BT /F1 8.4 Tf 42 704 Td () Tj ET
+BT /F1 8.4 Tf 42 689 Td (1. Install Newman:) Tj ET
+BT /F1 8.4 Tf 42 674 Td (  npm install) Tj ET
+BT /F1 8.4 Tf 42 659 Td () Tj ET
+BT /F1 8.4 Tf 42 644 Td (2. Set up environment \(copy only if the local file does not exist\):) Tj ET
+BT /F1 8.4 Tf 42 629 Td (  Copy-Item environment.example.json environment.local.json) Tj ET
+BT /F1 8.4 Tf 42 614 Td (  Edit baseUrl \(ending in /api\), tenantToken and ownerId.) Tj ET
+BT /F1 8.4 Tf 42 599 Td (  tenantToken: valid Tenant JWT, without the Bearer prefix.) Tj ET
+BT /F1 8.4 Tf 42 584 Td (  ownerId: test owner GUID. Use a dedicated test backend/account.) Tj ET
+BT /F1 8.4 Tf 42 569 Td (  A backend must be running/reachable; this does not use the xUnit container.) Tj ET
+BT /F1 8.4 Tf 42 554 Td () Tj ET
+BT /F1 8.4 Tf 42 539 Td (3. Run the full Newman security collection:) Tj ET
+BT /F1 8.4 Tf 42 524 Td (  New-Item -ItemType Directory -Force ../evidence) Tj ET
+BT /F1 8.4 Tf 42 509 Td (  npm test) Tj ET
+BT /F1 8.4 Tf 42 494 Td () Tj ET
+BT /F1 8.4 Tf 42 479 Td (Checks: API-11 unauthenticated request -> 401; valid Tenant profile;) Tj ET
+BT /F1 8.4 Tf 42 464 Td (API-12 wrong-role property creation -> 403.) Tj ET
+BT /F1 8.4 Tf 42 449 Td (Report: tests/BackendAssessment/evidence/newman-results.json) Tj ET
+BT /F1 8.4 Tf 42 434 Td () Tj ET
+BT /F1 8.4 Tf 42 419 Td (Postman option: import security.postman_collection.json and) Tj ET
+BT /F1 8.4 Tf 42 404 Td (environment.example.json; fill test values and run the collection.) Tj ET
+BT /F1 8.4 Tf 42 389 Td () Tj ET
+BT /F1 8.4 Tf 42 374 Td (Steps to follow for every suite:) Tj ET
+BT /F1 8.4 Tf 42 359 Td (1. Run initial tests; save console output and applicable TRX/JSON report.) Tj ET
+BT /F1 8.4 Tf 42 344 Td (2. Preserve initial evidence before another run overwrites it.) Tj ET
+BT /F1 8.4 Tf 42 329 Td (3. If a test fails, reproduce the exact ID and record it in DEFECTS.md.) Tj ET
+BT /F1 8.4 Tf 42 314 Td (4. Separate application defects from test/configuration errors.) Tj ET
+BT /F1 8.4 Tf 42 299 Td (5. Fix important defects; rerun the failing test and save retest evidence.) Tj ET
+BT /F1 8.4 Tf 42 284 Td (6. Run the full suite for regression; record the actual outcome.) Tj ET
+BT /F1 8.4 Tf 42 269 Td (7. Close a defect only after a passing retest.) Tj ET
+BT /F1 8.4 Tf 42 254 Td () Tj ET
+BT /F1 8.4 Tf 42 239 Td (Defect registers:) Tj ET
+BT /F1 8.4 Tf 42 224 Td (  RentWise-Mobile/test/mobile_assessment/DEFECTS.md) Tj ET
+BT /F1 8.4 Tf 42 209 Td (  tests/BackendAssessment/DEFECTS.md) Tj ET
+BT /F1 8.4 Tf 42 194 Td () Tj ET
+BT /F1 8.4 Tf 42 179 Td (Never commit live-config.json, environment.local.json or secrets/tokens.) Tj ET
+BT /F1 8.4 Tf 42 164 Td (All commands are PowerShell. A trailing backtick continues a command) Tj ET
+BT /F1 8.4 Tf 42 149 Td (on the next line; do not put spaces after the backtick.) Tj ET
+BT /F1 8 Tf 42 28 Td (Page 3 of 3) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R >>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000134 00000 n 
+0000000202 00000 n 
+0000000277 00000 n 
+0000003528 00000 n 
+0000003664 00000 n 
+0000006953 00000 n 
+0000007089 00000 n 
+0000010427 00000 n 
+trailer
+<< /Size 11 /Root 1 0 R >>
+startxref
+10564
+%%EOF
