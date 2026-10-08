@@ -1,0 +1,9 @@
+{
+  "apiBaseUrl": "https://rentwise-api-v2-athfc8b8g7c2ahfc.eastasia-01.azurewebsites.net/api",
+  "ownerEmail": "",
+  "ownerPassword": "",
+  "tenantEmail": "",
+  "tenantPassword": "",
+  "rentalPropertyId": "",
+  "searchLocation": "Colombo"
+}

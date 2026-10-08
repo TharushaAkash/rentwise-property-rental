@@ -1,0 +1,23 @@
+{
+  "name": "RentWise integration owner test account",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://rentwise-api-v2-athfc8b8g7c2ahfc.eastasia-01.azurewebsites.net/api",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "ownerEmail",
+      "value": "",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "ownerPassword",
+      "value": "",
+      "enabled": true,
+      "type": "secret"
+    }
+  ]
+}

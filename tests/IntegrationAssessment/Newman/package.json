@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "newman run property.postman_collection.json -e environment.local.json --bail -r cli,json --reporter-json-export ../evidence/INT-01-newman.json"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  }
+}

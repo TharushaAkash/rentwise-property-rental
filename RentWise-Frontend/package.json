@@ -13,7 +13,9 @@
     "test:web:e2e": "playwright test --config tests/web-assessment/playwright.config.js",
     "test:web:all": "npm run test:web && npm run test:web:e2e",
     "test:web:report": "playwright show-report tests/web-assessment/evidence/playwright-report",
-    "test:web:live": "playwright test --config tests/web-assessment/playwright.live.config.js"
+    "test:web:live": "playwright test --config tests/web-assessment/playwright.live.config.js",
+    "test:nf:compatibility": "playwright test --config tests/non-functional/playwright.config.js",
+    "test:integration:workflows": "playwright test --config tests/integration-workflows/playwright.config.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
