@@ -1,146 +1,128 @@
-# Frontend WEB assessment tests (WEB-01–WEB-18)
+# Final frontend React assessment: WEB-01?WEB-18
 
-This suite is separate from `src/test`. It imports the real frontend components and uses its own Vitest and Playwright configurations. Existing tests and application code are unchanged.
+No tests were executed while preparing this suite. Previous test code and existing reports were archived under `evidence/previous-suite-20261008-160753/`. Existing `evidence/previous-run/` and WEB-13 initial failure/fix evidence remain intact. Old IDs/results do not prove the final scenarios passed.
 
-Run from `RentWise-Frontend`:
+## 1. Start from the frontend directory
 
-```powershell
-npm run test:web
-npm run test:web:e2e
-npm run test:web:all
-npm run test:web:report
-```
-
-Dependencies already exist in package.json. On a fresh checkout, install dependencies with `npm ci`. If Chromium is missing, run `npx playwright install chromium` before browser tests.
-
-## Coverage and evidence
-
-| ID | Check | Test file |
-| --- | --- | --- |
-| WEB-01 | Valid login request, session login action and dashboard navigation | `unit/login.spec.jsx`; browser success screenshot in WEB-17 |
-| WEB-02 | Empty login fields display errors without API request | `unit/login.spec.jsx`; browser validation screenshot |
-| WEB-03 | Invalid credentials display backend message; form remains usable | `unit/login.spec.jsx`; browser error screenshot |
-| WEB-04 | Direct unauthenticated protected route redirects to login | `e2e/workflows.spec.js` |
-| WEB-05 | Sample listing title, image, rent, area and selection action render | `unit/listings.spec.jsx` |
-| WEB-06 | Empty listing state and reset action | `unit/listings.spec.jsx` |
-| WEB-07 | Failed AI search request displays message and retry action | `unit/listings.spec.jsx` |
-| WEB-08 | Actual login boundary: one-character password accepted; blank email rejected | `unit/login.spec.jsx` |
-| WEB-09 | Tenant login ? browse ? Details ? public listing ? save, verify storage | `e2e/workflows.spec.js` |
-| WEB-10 | Valid property form action; dashboard create payload and success state | `unit/property-form.spec.jsx`, `unit/property-management.spec.jsx`; browser form screenshot |
-| WEB-11 | Empty required property fields block submission | `unit/property-form.spec.jsx`; browser screenshot |
-| WEB-12 | Negative, zero and non-numeric rent rejected; minimum rent 1 accepted | `unit/property-form.spec.jsx`; browser negative-rent screenshot |
-| WEB-13 | Image chooser accept filter, supported image preview, submitted file; known handler validation gap | `unit/property-form.spec.jsx`; browser upload screenshot |
-| WEB-14 | Existing property prefills, changed fields submitted via PUT, success state | `unit/property-form.spec.jsx`, `unit/property-management.spec.jsx`; browser screenshot |
-| WEB-15 | Confirmation before DELETE, correct endpoint and list refresh | `unit/property-management.spec.jsx`; browser confirmation/success screenshots |
-| WEB-16 | Guest management access redirects; tenant UI excludes owner actions | `e2e/workflows.spec.js` |
-| WEB-17 | Property Creation UI Workflow: mock login -> Property Management -> Add Property -> fill form -> submit -> mocked success response -> success message and new property UI | `e2e/workflows.spec.js` (Playwright) |
-| WEB-18 | Load and create failures show safe messages; failed form available for retry | `unit/property-management.spec.jsx`; browser screenshot |
-
-Vitest writes `evidence/vitest-results.json`. Playwright writes `evidence/playwright-report/index.html` and `evidence/browser-results/` with screenshots. Named screenshots use their WEB IDs; every browser test also captures an automatic final screenshot. Failed browser tests retain traces. Generated evidence is ignored by Git; copy it into the submission separately when required.
-
-## Test boundaries and actual rules
-
-API calls are mocked with Vitest spies/hook fixtures and Playwright network interception. These tests exercise real UI behavior but do not prove backend persistence, real credentials, authorization at the API layer, or live service integration. WEB-16 verifies the actual route behavior: `/properties` gives tenants their tenant portal rather than an access-denied page.
-
-Property validation requires title at least 3 characters, description at least 10, address at least 5, and finite rent at least 1. There is no implemented upper rent limit. Login requires a valid email and a nonempty password; its schema does not enforce the registration password length.
-
-WEB-13 contains a normal regression test requiring unsupported files to be rejected by the property photo handler. DEF-001 was reproduced in the user's initial run. Runtime image MIME validation and an error alert have now been implemented in PropertyForm.jsx. Retesting is pending user execution; see DEFECTS.md. Utility-bill validation is outside this fix.
-
-WEB-07 covers the AI search failure UI. Normal browse currently does not render `browse.error`, so this suite does not claim that normal search has a correct API failure state. WEB-18 independently tests the property dashboard load/create failure UI.
-
-
-## Assignment workflow: defects, fixes and retesting
-
-All artifacts from the earlier agent test runs have been removed. Only test source/configuration and documentation remain. No tests were run during this cleanup. Generate your own evidence using the following steps.
-
-### 1. Prepare
-
-Open a terminal in `RentWise-Frontend`. Install dependencies only if needed:
+PowerShell:
 
 ```powershell
-npm ci
+Set-Location "E:\Y3S1\Software Engineering Framworks\project-demo\RentWiseAI\RentWise-Frontend"
+node --version
+npm install
 npx playwright install chromium
 ```
 
-Record your commit/version, Node version, browser and OS in the report. Tests mock API responses, so no backend or real login account is needed.
+Use the Node version required by package.json (24.15 or later). `npm install` installs MSW and updates package-lock.json. RTL runs React components inside Vitest/jsdom. MSW intercepts HTTP in the specified component tests. Playwright opens Chromium. WEB-18 alone uses the actual API.
 
-### 2. Execute the initial suite
+## 2. Run component/unit tests
+
+```powershell
+npm run test:web
+```
+
+Individual files:
+
+```powershell
+npm run test:web -- tests/web-assessment/unit/login.spec.jsx
+npm run test:web -- tests/web-assessment/unit/property-form.spec.jsx
+npm run test:web -- tests/web-assessment/unit/property-management.spec.jsx
+npm run test:web -- tests/web-assessment/unit/listings.spec.jsx
+npm run test:web -- tests/web-assessment/unit/search.spec.jsx
+npm run test:web -- tests/web-assessment/unit/agreements.spec.jsx
+npm run test:web -- tests/web-assessment/unit/maintenance.spec.jsx
+```
+
+## 3. Run mocked browser UI workflows
+
+No backend or credentials required; test fixtures provide authentication/API responses.
+
+```powershell
+npm run test:web:e2e -- --headed
+```
+
+Individual browser tests:
+
+```powershell
+npm run test:web:e2e -- --headed --grep WEB-01
+npm run test:web:e2e -- --headed --grep WEB-03
+npm run test:web:e2e -- --headed --grep WEB-05
+npm run test:web:e2e -- --headed --grep WEB-09
+npm run test:web:e2e -- --headed --grep WEB-16
+```
+
+The config starts the frontend on port 4178 automatically. Close an old assessment frontend if it serves outdated code/config.
+
+## 4. Run real API integration: WEB-18
+
+Start the ASP.NET backend and its database, or use your deployed test API. For local API hosting, run this in a separate terminal from the repository root:
+
+```powershell
+dotnet run --project RentWise-Backend/RentWise.API.csproj
+```
+
+Use the API URL printed by the backend; replace the example port below. The URL must include `/api`. Allow the frontend origin `http://127.0.0.1:4179` in backend CORS. Ensure at least one verified Active, unbooked property exists. An empty database cannot prove returned-property rendering.
+
+From RentWise-Frontend:
+
+```powershell
+$env:LIVE_API_URL = "http://localhost:YOUR_PORT/api"
+npm run test:web:live -- --headed
+```
+
+For a deployed backend, set LIVE_API_URL to its actual HTTPS API base URL instead. WEB-18 has no mocked responses or fake authentication; it loads public property browse data and checks the actual response plus the matching title in the browser. The config starts a separate frontend on port 4179 with VITE_API_URL set to this URL.
+
+## 5. Run all final assessment tests
+
+After configuring LIVE_API_URL:
 
 ```powershell
 npm run test:web
 npm run test:web:e2e
+npm run test:web:live
+```
+
+Or stop automatically on a failed stage:
+
+```powershell
+npm run test:web:all
+if ($LASTEXITCODE -eq 0) { npm run test:web:live }
+```
+
+`test:web:all` includes component tests and mocked browser workflows. WEB-18 is a separate explicit live stage. `npm test` also includes the older src/test suite and is not the final assessment-only command.
+
+## 6. Reports, defects and retesting
+
+```powershell
 npm run test:web:report
+npx playwright show-report tests/web-assessment/evidence/live-playwright-report
 ```
 
-Run the two suites separately: an initial Vitest failure must not prevent you collecting Playwright results. For each WEB ID, record actual Pass/Fail/Blocked and link its test source and applicable evidence. A simulated API error with a correctly displayed UI is a passing negative test, not a defect.
+Vitest output: `evidence/vitest-results.json`. Mocked browser screenshots/traces: `evidence/browser-results/`; report: `evidence/playwright-report/`. Live screenshots/traces: `evidence/live-browser-results/`; report: `evidence/live-playwright-report/`.
 
-Before rerunning, copy the complete generated `tests/web-assessment/evidence` folder to your own submission folder named `initial-run`. Subsequent runs overwrite evidence. Keep the JSON output, HTML report with its companion files, screenshots and failure traces together. Record the command, date and output summary; do not infer results from old runs.
+Each run overwrites current reports. Copy output/reports/screenshots to a dated initial-run folder before fixes or retests. Preserve both failing and passing evidence. Follow DEFECTS.md: record actual failure, reproduce, fix app code, rerun the failed ID, then run the complete regression suite. Never change assertions just to hide an application defect.
 
-### 3. Record defects found
+## Final coverage mapping
 
-Use `DEFECTS.md` in this folder as the defect register. Add one entry per reproducible application defect with:
+| ID | Active file | Tool / API |
+|---|---|---|
+| WEB-01 | e2e/workflows.spec.js | Playwright; mocked successful login |
+| WEB-02 | unit/login.spec.jsx | Vitest + RTL; validation/rejected login |
+| WEB-03 | e2e/workflows.spec.js | Playwright; unauthenticated route |
+| WEB-04 | unit/listings.spec.jsx | Vitest + RTL; listing fields |
+| WEB-05 | e2e/workflows.spec.js | Playwright; mocked creation |
+| WEB-06 | unit/property-form.spec.jsx | Vitest + RTL; required/rent/image boundaries |
+| WEB-07 | unit/property-form.spec.jsx, unit/property-management.spec.jsx | Vitest + RTL; edited values/request/success |
+| WEB-08 | unit/property-management.spec.jsx | Vitest + RTL; confirmation/delete/refresh |
+| WEB-09 | e2e/workflows.spec.js | Playwright; mocked search criteria/results |
+| WEB-10 | unit/search.spec.jsx | Vitest + RTL + MSW; actual browse hook/filter request/results |
+| WEB-11 | unit/search.spec.jsx | Vitest + RTL + MSW; empty/error/retry |
+| WEB-12 | unit/agreements.spec.jsx | Vitest + RTL + MSW fixture; agreement details in list |
+| WEB-13 | unit/agreements.spec.jsx | Vitest + RTL + MSW fixture; signature/request/status |
+| WEB-14 | unit/agreements.spec.jsx | Vitest + RTL + MSW; failed load |
+| WEB-15 | unit/maintenance.spec.jsx | Vitest + RTL + MSW fixture; request fields |
+| WEB-16 | e2e/workflows.spec.js | Playwright; mocked maintenance creation |
+| WEB-17 | unit/maintenance.spec.jsx | Vitest + RTL + MSW; description validation/failed submission |
+| WEB-18 | live/real-api.spec.js | Playwright + real ASP.NET API |
 
-- Defect ID and related WEB ID.
-- Summary, affected file/page, environment/version and reproduction steps.
-- Expected result, actual result, screenshot/output path and severity with reason.
-- Root cause, proposed/applied fix, changed files and status.
-- Retest command, actual result, evidence path and regression result.
-
-Separate application defects from incorrect test assertions, missing browser installations and environment failures. Fixing a test assertion is a test correction; it is not an application defect fix.
-
-### 4. Reproduce and prioritize
-
-Run the failing test alone to confirm the same behavior:
-
-```powershell
-npm run test:web -- tests/web-assessment/unit/property-form.spec.jsx -t 'WEB-13 handler'
-npm run test:web:e2e -- --grep 'WEB-09'
-```
-
-For WEB-13, the initial run showed a directly supplied text file forwarded to the create action. The handler fix has since been implemented; retest it now. The normal regression assertion should fail until the handler rejects that file. Do not turn the test into `it.fails`, skip it, or weaken the assertion to make the report green.
-
-Prioritize reproducible defects affecting access control, data integrity, core user workflows or validation. Record the reason for your priority. The missing upload handler validation is a candidate important defect; establish its severity from actual impact rather than calling it critical automatically.
-
-### 5. Correct important defects
-
-For upload validation, update the real photo/utility-bill handlers in `src/features/properties/PropertyForm.jsx`:
-
-1. Establish supported file types from the actual upload contract; the utility-bill UI advertises PNG/JPG/JPEG/WEBP and a 10MB limit.
-2. Validate files before adding them to state or reading/previewing them. `accept` alone does not enforce runtime validation.
-3. Show a clear error for rejected inputs, preserve previously valid attachments, and prevent invalid files being passed to the create action.
-4. Enforce the advertised utility-bill size limit. Define whether 10MB is decimal or binary and keep UI/test expectations consistent.
-5. Add meaningful regression tests for invalid types, valid images, exact allowed size and one byte above the limit for the relevant upload control. Validate file content server-side as well if backend upload security is in scope; a frontend MIME check alone does not prove file safety.
-
-Another code-review candidate is normal browse failure handling: `FindRentals.jsx` currently does not render `browse.error`. To claim it as a tested defect, first add a failing RTL test that supplies a browse error, expects a friendly error and retry control, and verifies retry invokes `browse.refresh`. Then implement that error/retry UI and retest. WEB-07 currently covers AI-search failures only.
-
-Keep fixes focused. Record the actual diff and root cause. DEF-001 property photo MIME validation is implemented; utility-bill validation and browse error handling remain suggestions. Do not claim pending retests have passed.
-
-### 6. Retest the fixed defects
-
-Run the exact regression test against the corrected application:
-
-```powershell
-npm run test:web -- tests/web-assessment/unit/property-form.spec.jsx -t 'WEB-13'
-```
-
-Use the relevant file/WEB ID for each additional fix. If the result is still Fail, reopen the defect, adjust the fix and repeat. Close a defect only after recording an actual passing retest and evidence. An unexecuted test is Pending, not Pass.
-
-### 7. Perform regression testing
-
-After focused retests pass:
-
-```powershell
-npm run test:web
-npm run test:web:e2e
-npm test
-```
-
-The final command runs the existing frontend suite too. Check that the fix did not break login, create/edit/delete, uploads, tenant restrictions or the smoke workflow. Copy the final complete evidence folder to `retest-run` in your submission folder. Never overwrite `initial-run`.
-
-### 8. Write the assignment findings
-
-Include the WEB coverage/results table, initial failure evidence, defect register, important fixes with code references/diffs, focused retest results and final regression summary. State any open defects or untested limitations. Report only your observed results. Example structure:
-
-`DEF-001 / WEB-13: initial Fail -> handler validation change -> focused retest [actual result] -> regression [actual result].`
-
-These are workflow instructions, not a claim that the defects have been fixed or that retesting has passed.
+Multiple automated checks can implement one assessment ID. Mocked browser tests demonstrate UI workflows, not real backend persistence. Current status of every final scenario is **not run** until you provide the new run output.
