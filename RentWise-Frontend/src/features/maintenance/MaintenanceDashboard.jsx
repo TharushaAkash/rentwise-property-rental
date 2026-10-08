@@ -592,13 +592,10 @@ export const MaintenanceDashboard = () => {
         status: formData.status || (formData.assignedProviderName ? 'Assigned' : 'Reported')
       };
 
-      let savedRecord = null;
-      try {
-        const res = await api.post('/maintenance-requests', payload);
-        savedRecord = res.data;
-      } catch (postErr) {
-        console.warn('Backend maintenance-requests POST error, persisting locally:', postErr);
-      }
+      // Persist locally only after the backend accepts the request.
+      // Rejections reach the error handler and keep the form open for retry.
+      const res = await api.post('/maintenance-requests', payload);
+      const savedRecord = res.data;
 
       // Persist to localStorage for client-side resilience and immediate sync
       try {

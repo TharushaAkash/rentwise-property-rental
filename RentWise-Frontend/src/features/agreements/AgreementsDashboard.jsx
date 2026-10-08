@@ -29,6 +29,7 @@ export const AgreementsDashboard = () => {
   // Agreements State
   const [agreements, setAgreements] = useState([]);
   const [isLoadingAgreements, setIsLoadingAgreements] = useState(true);
+  const [agreementsError, setAgreementsError] = useState('');
 
   // Properties State (for owner/admin)
   const [properties, setProperties] = useState([]);
@@ -153,6 +154,7 @@ export const AgreementsDashboard = () => {
   // =========================================================================
   const fetchAgreements = async () => {
     setIsLoadingAgreements(true);
+    setAgreementsError('');
     try {
       const res = await api.get(isAdmin ? '/agreements' : '/agreements/mine');
       let list = Array.isArray(res.data) ? res.data : [];
@@ -183,6 +185,7 @@ export const AgreementsDashboard = () => {
       setAgreements(list.filter(a => belongsToAccount(a, user)));
     } catch (err) {
       console.error('Failed to load agreements:', err);
+      setAgreementsError('Could not load agreements. Please try again.');
     } finally {
       setIsLoadingAgreements(false);
     }
@@ -395,6 +398,13 @@ export const AgreementsDashboard = () => {
           {isLoadingAgreements ? (
             <div className="py-20 text-center text-gray-400 font-medium">
               Loading lease agreements...
+            </div>
+          ) : agreementsError ? (
+            <div className="py-12 text-center space-y-3">
+              <p role="alert" className="text-red-700">{agreementsError}</p>
+              <button type="button" onClick={fetchAgreements} className="rounded-lg bg-[#008037] px-4 py-2 text-white">
+                Try again
+              </button>
             </div>
           ) : agreements.length === 0 ? (
             <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-300 p-8">
