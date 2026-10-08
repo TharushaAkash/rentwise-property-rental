@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "RentWise INT-01 real property create and retrieve",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Owner login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{ownerEmail}}\", \"password\": \"{{ownerPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(() => {",
+              "pm.test('Login is 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) return;",
+              "const data = pm.response.json(); pm.expect(data.token).to.be.a('string').and.not.empty; pm.collectionVariables.set('ownerToken', data.token);",
+              "const claims = JSON.parse(atob(data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); pm.collectionVariables.set('ownerId', claims.sub || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']); pm.expect(pm.collectionVariables.get('ownerId')).to.be.ok;",
+              "pm.collectionVariables.set('title', 'INT-01 assessment ' + Date.now());",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "INT-01 Create property",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/properties",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"ownerId\": \"{{ownerId}}\", \"title\": \"{{title}}\", \"description\": \"Integration assessment property with valid details\", \"address\": \"12 Integration Road, Colombo\", \"monthlyRent\": 55000, \"bedrooms\": 2, \"bathrooms\": 1, \"sqft\": 850, \"propertyType\": \"House\", \"photoUrls\": [], \"featureTags\": [], \"facilities\": \"Water, Electricity\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(() => {",
+              "pm.test('Create is 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code !== 201) return;",
+              "const data = pm.response.json(); pm.test('Saved ID returned', () => pm.expect(data.id).to.be.a('string').and.not.empty); pm.collectionVariables.set('propertyId', data.id);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "INT-01 Retrieve same persisted property",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/properties/{{propertyId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(() => {",
+              "pm.test('Retrieve is 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) return;",
+              "const data = pm.response.json();",
+              "pm.test('Same record and saved fields', () => { pm.expect(data.id).to.eql(pm.collectionVariables.get('propertyId')); pm.expect(data.ownerId).to.eql(pm.collectionVariables.get('ownerId')); pm.expect(data.title).to.eql(pm.collectionVariables.get('title')); pm.expect(data.description).to.eql('Integration assessment property with valid details'); pm.expect(data.address).to.eql('12 Integration Road, Colombo'); pm.expect(data.monthlyRent).to.eql(55000); pm.expect(data.bedrooms).to.eql(2); pm.expect(data.bathrooms).to.eql(1); });",
+              "})();"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

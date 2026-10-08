@@ -9,22 +9,10 @@ const browse = vi.hoisted(() => ({ items: [], loading: false, refresh: vi.fn(), 
 vi.mock('../../../src/hooks/usePropertyBrowse', () => ({ usePropertyBrowse: () => browse }));
 vi.mock('../../../src/hooks/useAuth', () => ({ useAuth: () => ({ user: null }) }));
 beforeEach(() => { browse.items = []; });
-it('WEB-05 listing card renders sample API fields and opens selected property', () => {
+it('WEB-04 listing card renders sample API fields and opens selected property', () => {
   const property = { id: 'p-1', title: 'Colombo family house', address: '12 Main Road, Colombo', monthlyRent: 50000, bedrooms: 3, sqft: 1200, propertyType: 'House', photoUrl: '/house.png' };
   const select = vi.fn(); render(<LankaPropertyCard property={property} onSelect={select} />);
   expect(screen.getByText(property.title)).toBeInTheDocument(); expect(screen.getByText(/1,200 sqft/)).toBeInTheDocument();
   expect(screen.getByAltText(property.title)).toHaveAttribute('src', '/house.png');
   expect(screen.getByText(/50,000/)).toBeInTheDocument(); fireEvent.click(screen.getByRole('button', { name: 'View & Book' })); expect(select).toHaveBeenCalledWith(property);
-});
-it('WEB-06 empty browse results render reset action', () => {
-  render(<MemoryRouter><FindRentals /></MemoryRouter>);
-  expect(screen.getByText('No properties match your filters')).toBeInTheDocument(); expect(screen.getByRole('button', { name: 'Reset all filters' })).toBeInTheDocument();
-});
-it('WEB-07 AI search API failure renders message and allows retry', async () => {
-  const post = vi.spyOn(api, 'post').mockRejectedValue({ response: { data: { message: 'AI service unavailable. Please retry.' } } });
-  render(<MemoryRouter><FindRentals /></MemoryRouter>);
-  fireEvent.change(screen.getByPlaceholderText(/I'm a student at SLIIT/), { target: { value: 'House in Colombo' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Run Match' }));
-  expect(await screen.findByText('AI service unavailable. Please retry.')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Run Match' })).toBeEnabled(); expect(post).toHaveBeenCalledTimes(1);
 });

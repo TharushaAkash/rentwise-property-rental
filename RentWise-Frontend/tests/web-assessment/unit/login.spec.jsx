@@ -13,25 +13,18 @@ function submit(container, email = 'tenant@example.com', password = 'Password123
   fireEvent.change(container.querySelector('[name=password]'), { target: { value: password } });
   fireEvent.submit(container.querySelector('form'));
 }
-it('WEB-01 valid login sends credentials, stores session and navigates', async () => {
-  const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { token: 'test-token', user: { role: 'Tenant' } } });
-  const { container } = show(); submit(container);
-  expect(await screen.findByText('Dashboard reached')).toBeInTheDocument();
-  expect(post).toHaveBeenCalledWith('/auth/login', { email: 'tenant@example.com', password: 'Password123!' });
-  expect(auth.login).toHaveBeenCalledWith('test-token');
-});
 it('WEB-02 empty required fields show validation and block request', async () => {
   const post = vi.spyOn(api, 'post'); const { container } = show(); submit(container, '', '');
   expect(await screen.findByText('Password is required')).toBeInTheDocument();
   expect(screen.getByText('Invalid email address')).toBeInTheDocument(); expect(post).not.toHaveBeenCalled();
 });
-it('WEB-03 rejected credentials display friendly error and preserve login form', async () => {
+it('WEB-02 rejected credentials display friendly error and preserve login form', async () => {
   vi.spyOn(api, 'post').mockRejectedValue({ response: { data: { message: 'Invalid email or password.' } } });
   const { container } = show(); submit(container);
   expect(await screen.findByText('Invalid email or password.')).toBeInTheDocument();
   expect(auth.login).not.toHaveBeenCalled(); expect(screen.getByRole('button', { name: 'Sign In' })).toBeEnabled();
 });
-it('WEB-08 minimum password length is one; whitespace-only email is invalid', async () => {
+it('WEB-02 minimum password length is one; whitespace-only email is invalid', async () => {
   const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { token: 'boundary', user: { role: 'Tenant' } } });
   const { container } = show(); submit(container, '   ', 'x');
   expect(await screen.findByText('Invalid email address')).toBeInTheDocument(); expect(post).not.toHaveBeenCalled();

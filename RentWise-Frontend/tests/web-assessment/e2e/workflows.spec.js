@@ -6,12 +6,16 @@ async function mockApi(page, role = 'PropertyOwner', options = {}) {
   await page.route('**/api/**', async route => {
     const request = route.request(); const path = new URL(request.url()).pathname.replace(/^.*?\/api/, '');
     let body = [];
+    if (path === '/agentic/workflow/maintenance-triage') return route.fulfill({ status: 503, json: { message: 'AI triage unavailable' } });
     if (path === '/auth/login') body = { token: token(role), user: { role } };
     else if (path === '/properties' && request.method() === 'POST') {
       if (options.createFailure) return route.fulfill({ status: 500, json: { message: 'Service unavailable' } });
       const item = { ...request.postDataJSON(), id: 'created-1', status: 'PendingVerification' }; created.push(item); body = item;
     } else if (path.startsWith('/properties/owner/')) body = [property, ...created];
-    else if (path.startsWith('/properties/browse')) body = { items: [property], hasMore: false };
+    else if (path.startsWith('/properties/browse')) body = { items: new URL(request.url()).searchParams.get('location')?.includes('Kandy') ? [] : [property], hasMore: false };
+    else if (path === '/agreements/mine') body = [{ id: 'a-1', tenantId: 'tenant-1', ownerId: 'owner-1', propertyId: property.id, property, status: 'Active' }];
+    else if (path === '/properties') body = [property];
+    else if (path === '/maintenance-requests' && request.method() === 'POST') body = { ...request.postDataJSON(), id: 'm-new' };
     else if (path === '/properties/p-1') body = property;
     await route.fulfill({ status: 200, json: body });
   });
@@ -28,50 +32,36 @@ async function fillProperty(page) {
   await page.locator('textarea[name=description]').fill(property.description); await page.getByLabel('Address & City').fill(property.address);
   await page.getByLabel('Monthly Rent (Rs.)', { exact: true }).fill('50000');
 }
-test('WEB-04 unauthenticated protected route redirects to login', async ({ page }, info) => {
-  await page.goto('/rental-workflows'); await expect(page).toHaveURL(/\/login$/); await expect(page.getByRole('heading', { name: 'Welcome Back' })).toBeVisible(); await shot(page, info, 'WEB-04');
+
+test('WEB-01 valid browser login with mocked successful authentication', async ({ page }, info) => {
+  await mockApi(page); await login(page); await expect(page.getByRole('button', { name: 'Add Property', exact: true })).toBeVisible(); await shot(page, info, 'WEB-01');
 });
-test('WEB-16 unauthenticated property management redirects; tenant has no management actions', async ({ page }, info) => {
-  await mockApi(page, 'Tenant'); await page.goto('/properties'); await expect(page).toHaveURL(/\/login$/); await shot(page, info, 'WEB-16-guest');
-  await login(page, 'Tenant'); await expect(page.getByRole('button', { name: 'Add Property', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0); await shot(page, info, 'WEB-16-tenant');
+test('WEB-03 unauthenticated protected route is blocked', async ({ page }, info) => {
+  await page.goto('/agreements'); await expect(page).toHaveURL(/\/login$/); await shot(page, info, 'WEB-03');
 });
-test('WEB-09 login, browse, open details and save a property', async ({ page }, info) => {
-  await mockApi(page, 'Tenant'); await login(page, 'Tenant'); await page.goto('/find-rentals');
-  await expect(page.getByText(property.title, { exact: true }).first()).toBeVisible(); await shot(page, info, 'WEB-09-listing');
-  await page.getByRole('button', { name: 'Details', exact: true }).first().click(); await page.getByRole('button', { name: 'View Full Public Listing Page' }).click(); await expect(page).toHaveURL(/\/properties\/p-1$/); await expect(page.getByText(property.title, { exact: true }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Save', exact: true }).click(); await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('rentwise_saved_properties') || '[]').includes('p-1'))).toBe(true); await shot(page, info, 'WEB-09-saved');
+test('WEB-05 browser creates property with mocked success and updated listing', async ({ page }, info) => {
+  const created = await mockApi(page); await login(page);
+  await page.getByRole('button', { name: 'Add Property', exact: true }).click(); await fillProperty(page);
+  await page.getByRole('button', { name: 'Create Property Listing' }).click();
+  await expect(page.getByText(/created successfully!/)).toBeVisible();
+  expect(created[0]).toMatchObject({ title: 'New assessment house', monthlyRent: 50000, ownerId: 'owner-1' });
+  await expect(page.getByText('New assessment house', { exact: true }).first()).toBeVisible(); await shot(page, info, 'WEB-05');
 });
-// UI workflow with mocked authentication and API responses; no backend persistence is verified.
-test('WEB-17 Property Creation UI Workflow', async ({ page }, info) => {
-  await mockApi(page); await login(page); await shot(page, info, 'WEB-01'); await page.getByRole('button', { name: 'Add Property', exact: true }).click(); await fillProperty(page); await shot(page, info, 'WEB-10-form');
-  const request = page.waitForRequest(req => /\/api\/properties$/.test(new URL(req.url()).pathname) && req.method() === 'POST');
-  await page.getByRole('button', { name: 'Create Property Listing' }).click(); expect((await request).postDataJSON()).toMatchObject({ title: 'New assessment house', monthlyRent: 50000, ownerId: 'owner-1' });
-  await expect(page.getByText(/created successfully!/)).toBeVisible(); await expect(page.getByText('New assessment house', { exact: true }).first()).toBeVisible(); await shot(page, info, 'WEB-17');
+test('WEB-09 browser search sends criteria and renders matching results', async ({ page }, info) => {
+  await mockApi(page, 'Tenant'); await page.goto('/find-rentals');
+  await page.getByPlaceholder('City or neighbourhood').fill('Kandy');
+  await expect(page.getByText('No properties match your filters')).toBeVisible();
+  const request = page.waitForRequest(r => r.url().includes('/properties/browse') && new URL(r.url()).searchParams.get('location') === 'Colombo');
+  await page.getByPlaceholder('City or neighbourhood').fill('Colombo'); await request;
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page.getByText(property.title, { exact: true }).first()).toBeVisible(); await shot(page, info, 'WEB-09');
 });
-test('WEB-02 WEB-03 login validation/error screenshots', async ({ page }, info) => {
-  await page.route('**/api/auth/login', route => route.fulfill({ status: 401, json: { message: 'Invalid email or password.' } }));
-  await page.goto('/login'); await page.getByRole('button', { name: 'Sign In', exact: true }).click(); await expect(page.getByText('Password is required', { exact: true })).toBeVisible(); await shot(page, info, 'WEB-02');
-  await page.locator('[name=email]').fill('test@example.com'); await page.locator('[name=password]').fill('WrongPassword'); await page.getByRole('button', { name: 'Sign In', exact: true }).click();
-  await expect(page.getByText('Invalid email or password.', { exact: true })).toBeVisible(); await shot(page, info, 'WEB-03');
-});
-test('WEB-11 WEB-12 WEB-13 property validation and upload screenshots', async ({ page }, info) => {
-  await mockApi(page); await login(page); await page.getByRole('button', { name: 'Add Property', exact: true }).click();
-  await page.getByRole('button', { name: 'Create Property Listing' }).click(); await expect(page.getByText('Title must be at least 3 characters')).toBeVisible(); await shot(page, info, 'WEB-11');
-  await fillProperty(page); await page.getByLabel('Monthly Rent (Rs.)', { exact: true }).fill('-1'); await page.getByRole('button', { name: 'Create Property Listing' }).click();
-  await expect(page.getByText('Rent must be greater than 0')).toBeVisible(); await shot(page, info, 'WEB-12');
-  await page.locator('input[type=file][multiple]').setInputFiles({ name: 'house.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1cAAAAASUVORK5CYII=', 'base64') });
-  await expect(page.getByAltText('preview-0')).toBeVisible(); await shot(page, info, 'WEB-13');
-});
-test('WEB-14 WEB-15 update and delete screenshots', async ({ page }, info) => {
-  await mockApi(page); await login(page); await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
-  await page.getByLabel('Property Title', { exact: true }).fill('Updated assessment house'); await page.getByRole('button', { name: 'Save & Update Details' }).click();
-  await expect(page.getByText(/updated successfully!/)).toBeVisible(); await shot(page, info, 'WEB-14');
-  await page.getByRole('button', { name: 'Delete', exact: true }).first().click(); await expect(page.getByText('Are you sure you want to delete this property?')).toBeVisible(); await shot(page, info, 'WEB-15-confirmation');
-  await page.getByRole('button', { name: 'Yes, Delete Property' }).click(); await expect(page.getByText(/has been deleted/)).toBeVisible(); await shot(page, info, 'WEB-15');
-});
-test('WEB-18 failed property creation screenshot', async ({ page }, info) => {
-  await mockApi(page, 'PropertyOwner', { createFailure: true }); await login(page); await page.getByRole('button', { name: 'Add Property', exact: true }).click(); await fillProperty(page);
-  await page.getByRole('button', { name: 'Create Property Listing' }).click(); await expect(page.getByText('Failed to create property listing. Please check the inputs.')).toBeVisible(); await shot(page, info, 'WEB-18');
+test('WEB-16 browser submits maintenance request with mocked success', async ({ page }, info) => {
+  await mockApi(page, 'Tenant'); await login(page, 'Tenant'); await page.goto('/maintenance');
+  await page.getByRole('button', { name: 'Request Maintenance', exact: true }).first().click();
+  await page.locator('textarea[name=description]').fill('Bathroom tap leaking continuously');
+  const request = page.waitForRequest(r => r.method() === 'POST' && new URL(r.url()).pathname.endsWith('/maintenance-requests'));
+  await page.getByRole('button', { name: 'Submit Request', exact: true }).click();
+  expect((await request).postDataJSON()).toMatchObject({ propertyId: 'p-1', description: 'Bathroom tap leaking continuously', tenantId: 'tenant-1' });
+  await expect(page.getByText(/Maintenance request created successfully!/)).toBeVisible(); await shot(page, info, 'WEB-16');
 });

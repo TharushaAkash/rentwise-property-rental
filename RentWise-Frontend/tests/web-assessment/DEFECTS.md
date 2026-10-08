@@ -1,29 +1,78 @@
-# Defect register
+# Final frontend assessment defects and retesting
 
-| Defect ID | WEB ID | Summary | Severity / reason | Status | Initial evidence | Fix / files | Retest result / evidence |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| DEF-001 | WEB-13 | Unsupported file forwarded by property photo upload handler | Medium: invalid attachments can enter the create/upload workflow | Fix implemented; awaiting retest | User-provided Vitest output: 20 passed, 1 failed | Runtime image MIME validation in src/features/properties/PropertyForm.jsx | Pending user execution |
+Final scope WEB-01?WEB-18. Prepared tests have not been executed by the agent. Previous passing reports belong to the old mapping and are archived, not reused as final passing evidence.
 
-## DEF-001 detail
+## Preserved legacy defect
 
-- Environment / commit: User's local Windows frontend; commit not recorded.
-- Initial run: 2026-10-07, 11:32:07 (time shown in user-provided output).
-- Preconditions: Render the property form with valid required details.
-- Steps: Supply a text/plain document.txt directly to the property photo input handler; submit.
-- Expected: Unsupported attachment is rejected and not forwarded to the create action.
-- Actual before fix: The submit action received the unsupported File. Assertion failed: expected [ File{} ] to not include File{}.
-- Initial results: 20 passed, 1 failed; 3 test files passed, 1 failed.
-- Evidence: User-provided Vitest output. Preserve your initial-run JSON/output separately before retesting; screenshots are not inferred from console output.
-- Root cause: The handler appended every supplied file without validation. The accept=image/* attribute only filters normal chooser selection.
-- Severity / priority: Medium; invalid attachments can enter the property creation/upload workflow. This does not establish a backend security vulnerability.
-- Fix: Validate image MIME types before adding files to state. Discard unsupported files, display an alert, preserve existing valid attachments, and allow valid images from a mixed selection. Reset the file input so selecting the same file again triggers change.
-- Application file changed: src/features/properties/PropertyForm.jsx.
-- Regression test changed: tests/web-assessment/unit/property-form.spec.jsx. The existing WEB-13 test remains a normal test and now also checks the error alert and absence of an invalid preview.
-- Scope: Property photo file selection. Utility-bill size/type validation and photo URL validation are separate concerns and are not fixed by this change. MIME metadata validation alone does not validate actual file content; backend validation remains necessary.
-- Focused retest command: npm run test:web -- tests/web-assessment/unit/property-form.spec.jsx -t 'WEB-13'
-- Retest actual result / evidence: Pending. Tests were not run by the agent after this fix, as requested.
-- Full regression commands: npm run test:web; npm run test:web:e2e; npm test (run separately).
-- Full regression result / evidence: Pending.
-- Final status: Fix implemented; awaiting retest. Close only after an observed passing retest.
+LEGACY-WEB-13 / DEF-001: unsupported files could bypass the image chooser and enter the property photo array. Fixed in `src/features/properties/PropertyForm.jsx` (commit 178e509). Initial failure, fix patch and retest evidence remain under evidence/previous-run/ and the previous-suite archive. The user supplied a focused two-check passing retest and later a nine-check property-form passing output for the old suite. Its final regression mapping is **WEB-06**, not the new Agreement WEB-13. Final suite retest remains pending.
 
-Testing-only branch note: The PropertyForm.jsx fix remains an uncommitted working-tree change and is excluded from the test-suite commit. A clean checkout of this commit still exposes DEF-001 until the application fix is committed separately.
+## Code-review candidates: execution required
+
+| Candidate | Final case | Observed implementation | Expected behaviour | Status |
+|---|---|---|---|---|
+| CAND-01 | WEB-14 | AgreementsDashboard fetchAgreements catch only logs failure and can render normal empty-list UI | Show safe error state instead of implying no agreements | Suspected; run test before recording confirmed defect |
+| CAND-02 | WEB-17 | MaintenanceDashboard handleCreate catches POST failure, stores locally and shows created successfully | Show failure or clearly identified unsynced local state; permit retry | Suspected; run test before recording confirmed defect |
+
+These tests deliberately assert the requested error handling. Do not skip them or mark them passed before execution. Application code was not changed for these candidates.
+
+## Steps when a test fails
+
+1. Save terminal output, JSON/HTML report and screenshots into a dated evidence/initial-run folder before rerunning.
+2. Reproduce the failing ID individually using the README command and `--testNamePattern WEB-14` or `--testNamePattern WEB-17` for Vitest.
+3. Check fixtures/selectors/config/network first. Distinguish test defect, environment failure and application defect.
+4. Record defect ID, scenario ID, severity, steps, expected/actual results, evidence location and affected source file.
+5. Correct important confirmed application defects in application source; preserve the original failure evidence.
+6. Rerun the failed ID and save separate evidence/retest output.
+7. Run all component tests, mocked browser workflows and WEB-18 real API regression. Record remaining failures honestly.
+8. Close only after passing retest evidence; record user-executed date/output and fix commit.
+
+Template:
+
+| Field | Value |
+|---|---|
+| Defect ID / scenario | |
+| Severity / priority | |
+| Reproduction steps | |
+| Expected behaviour | |
+| Actual behaviour | |
+| Initial evidence | |
+| Application/test/environment classification | |
+| Fix file / commit | |
+| Focused retest command and result | |
+| Regression result and evidence | |
+| Status | Open / Fixed-awaiting-retest / Closed |
+
+
+## Initial final-suite run: 2026-10-08 16:12:40 (user executed)
+
+25 checks: 21 passed, 4 failed; 5 files passed, 2 failed. Preserved JSON, submitted output excerpt, original affected source and original agreement tests in `evidence/initial-run-20261008-161240/`.
+
+| ID | Cases | Classification / cause | Correction | Status |
+|---|---|---|---|---|
+| TEST-001 | WEB-12, WEB-13 | Test defect: middle-dot labels were written as question marks during source generation | Match both meaningful status phrases with regex, preserving status assertions and request verification | Closed; user confirmed retest/regression passed on 2026-10-08 |
+| DEF-002 (CAND-01 confirmed) | WEB-14 | Application defect: failed agreement loading rendered normal empty state | AgreementsDashboard.jsx adds explicit error state and retry button; suppresses empty state on failure | Closed; user confirmed retest/regression passed on 2026-10-08 |
+| DEF-003 (CAND-02 confirmed) | WEB-17 | Application defect: rejected maintenance POST still cached the request and displayed success | MaintenanceDashboard.jsx propagates POST rejection to error handler, preserving entered form and preventing local success/cache | Closed; user confirmed retest/regression passed on 2026-10-08 |
+
+No tests were executed by the agent. These fixes are not marked passed or closed.
+
+Focused retest from RentWise-Frontend:
+
+```powershell
+npm run test:web -- tests/web-assessment/unit/agreements.spec.jsx tests/web-assessment/unit/maintenance.spec.jsx
+```
+
+Then full component regression and mocked browser creation regression:
+
+```powershell
+npm run test:web
+npm run test:web:e2e -- --headed
+```
+
+Save retest results separately before overwriting reports. WEB-18 still requires the configured real API regression command in README.md.
+
+
+## User-confirmed final retest: 2026-10-08
+
+The user confirmed "hari okkoma pass" after the component, mocked browser and real API run instructions, including resolution of the missing LIVE_API_URL configuration. Record the final suite as **passed according to the user**, with TEST-001, DEF-002 and DEF-003 closed on that basis. The legacy image-validation regression is included under final WEB-06.
+
+The agent did not execute tests or independently inspect the final passing reports in this update. Exact final counts and report contents are not asserted. Preserve the actual passing JSON/HTML reports, screenshots and terminal output as assignment retest/regression evidence, alongside the archived initial failure.
