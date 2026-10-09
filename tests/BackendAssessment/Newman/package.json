@@ -1,0 +1,10 @@
+{
+  "name": "rentwise-backend-assessment-newman",
+  "private": true,
+  "scripts": {
+    "test": "newman run security.postman_collection.json -e environment.local.json --bail -r cli,json --reporter-json-export ../evidence/newman-results.json"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  }
+}

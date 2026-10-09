@@ -150,6 +150,8 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Auto-initialize Database and synchronize schema
+// Assessment hosts initialize their disposable database explicitly and avoid external startup calls.
+if (!app.Environment.IsEnvironment("Testing"))
 using (var scope = app.Services.CreateScope())
 {
     try
@@ -348,3 +350,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
