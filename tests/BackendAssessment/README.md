@@ -1,6 +1,6 @@
 ﻿# Backend API and PostgreSQL assessment
 
-Separate test project for API-01 to API-12 and DB-01 to DB-03. The agent has not run, built, restored or installed these tests. All results are pending user execution. No commit/push has been performed.
+Separate test project for API-01 to API-12 and DB-01 to DB-03. The agent has not run, built, restored or installed these tests. On 2026-10-07 the user supplied a passing xUnit run: 33 passed, 0 failed, 0 skipped, duration 2 minutes 17 seconds. The user also supplied passing Newman output: 3 requests, 4 assertions, 0 failures, duration 6.1 seconds. The test suite was committed and pushed on test/api-db-sadila (cee0a9b); this result documentation update is not yet committed.
 
 ## Tools and coverage
 
@@ -115,4 +115,6 @@ No HTML Newman reporter is installed; the suite provides CLI/JSON and xUnit TRX 
 6. Run the full assessment suite again; record regressions separately. Repeat relevant Newman requests for a security fix.
 7. Close only after observed passing retest. Keep initial evidence and describe remaining gaps honestly.
 
-No application defects or passing outcomes have been assumed. Add more cases for discovered defects rather than treating every simulated failure as a defect.
+The user-supplied xUnit output confirms all 33 tests passed with no skipped tests. No application defect was reported in that run. The separate user-pasted Newman result confirms 3 requests and 4 assertions passed with 0 failures. Preserve console/TRX and Newman JSON evidence separately. Add more cases for discovered defects rather than treating every simulated failure as a defect.
+
+
